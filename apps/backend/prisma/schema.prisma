@@ -1,0 +1,373 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  BUYER_ADMIN
+  SUPPLIER_ADMIN
+  PLATFORM_ADMIN
+}
+
+enum CompanyType {
+  BUYER
+  SUPPLIER
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+}
+
+enum ListingStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum RFQStatus {
+  OPEN
+  CLOSED
+  AWARDED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum DealStatus {
+  AWARDED
+  IN_PROGRESS
+  DELIVERED
+  COMPLETED
+  CANCELLED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  avatarUrl    String?
+  role         Role
+  isActive     Boolean  @default(true)
+
+  company   Company @relation(fields: [companyId], references: [id])
+  companyId String
+
+  refreshTokens RefreshToken[]
+  sentMessages  Message[]
+  auditLogs     AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([companyId])
+}
+
+model Company {
+  id                  String             @id @default(cuid())
+  nameAr              String
+  nameEn              String
+  crNumber            String             @unique
+  type                CompanyType
+  verificationStatus  VerificationStatus @default(PENDING)
+  city                String?
+  phone               String?
+  website             String?
+  logoUrl             String?
+  descriptionAr       String?            @db.Text
+  descriptionEn       String?            @db.Text
+  plan                SubscriptionPlan   @default(FREE)
+  quotesUsedThisMonth Int                @default(0)
+  quotaResetAt        DateTime?
+  isActive            Boolean            @default(true)
+
+  users              User[]
+  listings           Listing[]
+  rfqs               RFQ[]
+  quotesSubmitted    Quote[]
+  dealsAsBuyer       Deal[]         @relation("BuyerDeals")
+  dealsAsSupplier    Deal[]         @relation("SupplierDeals")
+  ratingsGiven       Rating[]       @relation("RaterCompany")
+  ratingsReceived    Rating[]       @relation("RatedCompany")
+  conversations      Conversation[] @relation("CompanyConversations")
+  categories         Category[]     @relation("CompanyCategories")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([verificationStatus])
+  @@index([crNumber])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Category {
+  id        String  @id @default(cuid())
+  nameAr    String
+  nameEn    String
+  slug      String  @unique
+  iconUrl   String?
+  parentId  String?
+
+  parent   Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryChildren")
+  companies Company[] @relation("CompanyCategories")
+  listings  Listing[]
+  rfqs      RFQ[]
+
+  isActive  Boolean  @default(true)
+  sortOrder Int      @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([slug])
+}
+
+model Listing {
+  id            String        @id @default(cuid())
+  titleAr       String
+  titleEn       String
+  descriptionAr String?       @db.Text
+  descriptionEn String?       @db.Text
+  price         Decimal?      @db.Decimal(12, 2)
+  currency      String        @default("SAR")
+  unit          String?
+  minOrderQty   Int?
+  status        ListingStatus @default(ACTIVE)
+
+  supplier   Company  @relation(fields: [supplierId], references: [id])
+  supplierId String
+
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  images ListingImage[]
+  quotes Quote[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model ListingImage {
+  id        String  @id @default(cuid())
+  url       String
+  alt       String?
+  isPrimary Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  listingId String
+
+  @@index([listingId])
+}
+
+model RFQ {
+  id          String    @id @default(cuid())
+  title       String
+  description String    @db.Text
+  quantity    Int?
+  unit        String?
+  budget      Decimal?  @db.Decimal(12, 2)
+  currency    String    @default("SAR")
+  deadline    DateTime?
+  status      RFQStatus @default(OPEN)
+
+  buyer      Company @relation(fields: [buyerId], references: [id])
+  buyerId    String
+
+  category   Category @relation(fields: [categoryId], references: [id])
+  categoryId String
+
+  quotes      Quote[]
+  attachments FileUpload[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([categoryId])
+  @@index([status])
+}
+
+model Quote {
+  id           String      @id @default(cuid())
+  price        Decimal     @db.Decimal(12, 2)
+  currency     String      @default("SAR")
+  deliveryDays Int?
+  notes        String?     @db.Text
+  status       QuoteStatus @default(PENDING)
+  validUntil   DateTime?
+
+  rfq        RFQ     @relation(fields: [rfqId], references: [id])
+  rfqId      String
+
+  supplier   Company  @relation(fields: [supplierId], references: [id])
+  supplierId String
+
+  listing   Listing? @relation(fields: [listingId], references: [id])
+  listingId String?
+
+  deal        Deal?
+  attachments FileUpload[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rfqId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model Deal {
+  id          String     @id @default(cuid())
+  status      DealStatus @default(AWARDED)
+  totalAmount Decimal    @db.Decimal(12, 2)
+  currency    String     @default("SAR")
+  notes       String?    @db.Text
+
+  quote    Quote   @relation(fields: [quoteId], references: [id])
+  quoteId  String  @unique
+
+  buyer      Company @relation("BuyerDeals", fields: [buyerId], references: [id])
+  buyerId    String
+
+  supplier   Company @relation("SupplierDeals", fields: [supplierId], references: [id])
+  supplierId String
+
+  rating Rating?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([supplierId])
+  @@index([status])
+}
+
+model Rating {
+  id      String @id @default(cuid())
+  score   Int
+  comment String? @db.Text
+
+  deal   Deal   @relation(fields: [dealId], references: [id])
+  dealId String @unique
+
+  rater   Company @relation("RaterCompany", fields: [raterId], references: [id])
+  raterId String
+
+  rated   Company @relation("RatedCompany", fields: [ratedId], references: [id])
+  ratedId String
+
+  createdAt DateTime @default(now())
+
+  @@index([ratedId])
+  @@index([raterId])
+}
+
+model Conversation {
+  id      String  @id @default(cuid())
+  subject String?
+
+  participants Company[] @relation("CompanyConversations")
+  messages     Message[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id     String  @id @default(cuid())
+  body   String  @db.Text
+  isRead Boolean @default(false)
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+
+  sender   User   @relation(fields: [senderId], references: [id])
+  senderId String
+
+  attachments FileUpload[]
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+model FileUpload {
+  id           String @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+
+  rfq       RFQ?     @relation(fields: [rfqId], references: [id])
+  rfqId     String?
+
+  quote     Quote?   @relation(fields: [quoteId], references: [id])
+  quoteId   String?
+
+  message   Message? @relation(fields: [messageId], references: [id])
+  messageId String?
+
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id        String  @id @default(cuid())
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ipAddress String?
+  userAgent String?
+  requestId String?
+
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
