@@ -12,11 +12,17 @@ import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 export class RFQsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string }) {
+  async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string }) {
     const where: any = {};
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.status) where.status = query.status;
     if (query.buyerId) where.buyerId = query.buyerId;
+    if (query.search) {
+      where.OR = [
+        { title: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
 
     const [items, total] = await Promise.all([
       this.prisma.rFQ.findMany({

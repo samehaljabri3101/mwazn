@@ -109,12 +109,15 @@ export default function SupplierQuotesPage() {
               return (
                 <div key={quote.id} className="card">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <Link
+                      href={`/${locale}/dashboard/supplier/rfqs/${quote.rfqId}`}
+                      className="flex items-start gap-3 flex-1 min-w-0 group"
+                    >
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
                         <ScrollText className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 truncate">
+                        <p className="font-semibold text-slate-800 truncate group-hover:text-brand-700 transition-colors cursor-pointer">
                           {quote.rfq?.title || (ar ? 'طلب عرض' : 'RFQ')}
                         </p>
                         {quote.rfq?.buyer && (
@@ -139,7 +142,7 @@ export default function SupplierQuotesPage() {
                           </span>
                         </div>
                       </div>
-                    </div>
+                    </Link>
 
                     <div className="flex items-center gap-2">
                       <Badge variant={meta.color}>{ar ? meta.ar : meta.en}</Badge>

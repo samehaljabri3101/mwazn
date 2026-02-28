@@ -1,14 +1,13 @@
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Navbar } from '@/components/layout/Navbar';
-import { SearchBar } from '@/components/ui/SearchBar';
 import { StarRating } from '@/components/ui/StarRating';
 import { Badge } from '@/components/ui/Badge';
 import {
-  ArrowRight, CheckCircle2, FileText, BarChart3, MessageSquare,
-  Star, Shield, TrendingUp, Building2, Package, ChevronRight,
-  Zap, Globe2, Award, Users, ShoppingBag, HandshakeIcon,
-  ArrowUpRight,
+  ArrowRight, CheckCircle2, FileText, BarChart3,
+  Shield, TrendingUp, TrendingDown, Building2, Package,
+  Award, ShoppingBag, HandshakeIcon, ArrowUpRight,
+  Minus, Activity, Layers,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -32,6 +31,17 @@ interface Showroom extends Vendor {
   listings: Array<{ id: string; titleEn: string; titleAr: string; images: Array<{ url: string }> }>;
 }
 
+// ─── Static mock data for comparison preview ──────────────────────────────────
+
+const MOCK_QUOTES: Array<{
+  nameAr: string; nameEn: string; price: string;
+  delivery: number; rating: number; tag: 'below' | 'above' | 'market';
+}> = [
+  { nameAr: 'شركة الرياض التقنية', nameEn: 'Riyadh Tech Co.', price: '230', delivery: 3, rating: 4.8, tag: 'below' },
+  { nameAr: 'مؤسسة الخليج الرقمي', nameEn: 'Gulf Digital Est.', price: '295', delivery: 5, rating: 4.2, tag: 'above' },
+  { nameAr: 'تقنية النجم السعودي', nameEn: 'Star Saudi Tech', price: '258', delivery: 4, rating: 4.5, tag: 'market' },
+];
+
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -43,6 +53,29 @@ async function fetchJSON<T>(path: string): Promise<T | null> {
     const json = await res.json();
     return (json.data ?? json) as T;
   } catch { return null; }
+}
+
+// ─── Price Tag ───────────────────────────────────────────────────────────────
+
+function PriceTag({ tag, ar }: { tag: 'below' | 'above' | 'market'; ar: boolean }) {
+  if (tag === 'below') return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+      <TrendingDown className="h-3 w-3" />
+      {ar ? 'أقل من السوق' : 'Below Market'}
+    </span>
+  );
+  if (tag === 'above') return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+      <TrendingUp className="h-3 w-3" />
+      {ar ? 'أعلى من السوق' : 'Above Market'}
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
+      <Minus className="h-3 w-3" />
+      {ar ? 'السعر السوقي' : 'Market Rate'}
+    </span>
+  );
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -67,88 +100,124 @@ export default async function HomePage() {
     <div className="min-h-screen bg-white">
       <Navbar />
 
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-900 via-brand-800 to-brand-700">
-        {/* Grid texture */}
-        <div className="absolute inset-0 opacity-[0.06]"
-          style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
-        {/* Glow */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-brand-600/20 blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-gold-400/10 blur-3xl" />
+        {/* Dot grid */}
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '28px 28px' }}
+        />
+        {/* Glow orbs */}
+        <div className="absolute -top-32 -end-32 h-[500px] w-[500px] rounded-full bg-brand-600/20 blur-3xl" />
+        <div className="absolute -bottom-20 -start-20 h-[400px] w-[400px] rounded-full blur-3xl" style={{ background: 'rgba(201,163,73,0.08)' }} />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-32 text-center">
-          {/* Pill badge */}
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/80 mb-8 backdrop-blur border border-white/10">
-            <Shield className="h-3.5 w-3.5 text-gold-400" />
-            {ar ? 'موردون موثقون بالسجل التجاري' : 'CR-verified suppliers only'}
-            <span className="flex h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-20 pb-12 text-center">
+          {/* Pill */}
+          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-1.5 text-sm text-white/80 mb-8 backdrop-blur">
+            <Shield className="h-3.5 w-3.5" style={{ color: '#C9A349' }} />
+            {ar ? 'طبقة القرار الذكية · موردون موثقون بالسجل التجاري' : 'Smart Decision Layer · CR-Verified Suppliers'}
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
           </div>
 
-          <h1 className="text-4xl sm:text-5xl lg:text-7xl font-extrabold text-white leading-[1.1] tracking-tight mb-6">
+          {/* Heading */}
+          <h1 className="text-4xl sm:text-5xl lg:text-[3.75rem] font-extrabold text-white leading-[1.1] tracking-tight mb-5">
             {ar ? (
               <>
-                سوق <span className="text-gold-400">B2B</span><br />
-                الذكي للمملكة العربية السعودية
+                طبقة القرار الذكية<br />
+                <span style={{ color: '#C9A349' }}>لسوق التوريد في السعودية</span>
               </>
             ) : (
               <>
-                Saudi Arabia's Smart<br />
-                <span className="text-gold-400">B2B Procurement</span> Marketplace
+                The Smart Decision Layer<br />
+                <span style={{ color: '#C9A349' }}>for Saudi Supply Markets</span>
               </>
             )}
           </h1>
 
+          {/* Sub-headline */}
           <p className="mx-auto max-w-2xl text-lg sm:text-xl text-white/70 mb-10 leading-relaxed">
             {ar
-              ? 'أنشر طلبات الأسعار، واستقبل عروضاً من موردين موثقين، وأتمم صفقاتك — كل ذلك في منصة واحدة متكاملة.'
-              : 'Post RFQs, receive competitive quotes from verified suppliers, and close deals — all in one intelligent platform.'}
+              ? 'قارن الموردين، تحقق من مؤشرات الأسعار، واتخذ قرارات شراء أكثر ذكاءً — في منصة واحدة متكاملة.'
+              : 'Compare suppliers, verify price indicators, and make smarter purchasing decisions — all in one intelligent platform.'}
           </p>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          {/* CTAs */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
             <Link
               href={`/${locale}/auth/register?type=BUYER`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-brand-700 shadow-lift hover:bg-slate-50 transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-brand-800 shadow-lift hover:bg-slate-50 transition-all hover:-translate-y-0.5"
             >
               <FileText className="h-4 w-4" />
-              {ar ? 'أنشر طلب عرض أسعار' : 'Raise an RFQ'}
+              {ar ? 'ابدأ طلب عرض سعر' : 'Start an RFQ'}
             </Link>
             <Link
               href={`/${locale}/suppliers`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 border border-white/20 px-7 py-3.5 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
             >
               <Building2 className="h-4 w-4" />
-              {ar ? 'تصفح الموردين' : 'Browse Vendors'}
-            </Link>
-            <Link
-              href={`/${locale}/suppliers?tab=products`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gold-400/20 border border-gold-400/30 px-7 py-3.5 text-sm font-semibold text-gold-300 hover:bg-gold-400/30 transition-all hover:-translate-y-0.5 backdrop-blur"
-            >
-              <Package className="h-4 w-4" />
-              {ar ? 'استكشف المنتجات' : 'Explore Products'}
+              {ar ? 'استكشف الموردين' : 'Explore Suppliers'}
             </Link>
           </div>
 
-          {/* Search Bar */}
+          {/* Floating comparison mockup */}
           <div className="mx-auto max-w-2xl">
-            <SearchBar size="lg" className="text-slate-800" />
-            <p className="mt-3 text-xs text-white/40">
-              {ar ? 'ابحث عن موردين، منتجات، فئات...' : 'Search 25+ categories, 240+ products, verified suppliers'}
-            </p>
+            <div className="rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur overflow-hidden shadow-lift">
+              {/* Window chrome */}
+              <div className="flex items-center gap-2 border-b border-white/10 px-5 py-3 text-xs text-white/60">
+                <div className="flex gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-400/60" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400/60" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/60" />
+                </div>
+                <span className="ms-2">{ar ? 'معيار — مقارنة العروض' : 'Mwazn — Quote Comparison'}</span>
+                <span className="ms-auto flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {ar ? 'مباشر' : 'Live'}
+                </span>
+              </div>
+              {/* RFQ label row */}
+              <div className="flex items-center gap-2 border-b border-white/10 bg-white/[0.04] px-5 py-2.5 text-sm">
+                <FileText className="h-3.5 w-3.5 flex-shrink-0" style={{ color: '#C9A349' }} />
+                <span className="text-white/80 font-medium">
+                  {ar ? 'طلب عرض: أجهزة كمبيوتر وملحقاتها' : 'RFQ: Computer Equipment & Accessories'}
+                </span>
+                <span className="ms-auto rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-400 flex-shrink-0">
+                  {ar ? '٣ عروض' : '3 quotes'}
+                </span>
+              </div>
+              {/* Quote rows */}
+              {MOCK_QUOTES.map((q, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 px-5 py-3.5 text-sm ${i < MOCK_QUOTES.length - 1 ? 'border-b border-white/[0.06]' : ''} ${q.tag === 'below' ? 'bg-emerald-500/[0.05]' : ''}`}
+                >
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-white/70">
+                    {(ar ? q.nameAr : q.nameEn).charAt(0)}
+                  </div>
+                  <span className="flex-1 text-start text-white/80 font-medium truncate">
+                    {ar ? q.nameAr : q.nameEn}
+                  </span>
+                  <span className="font-bold text-white">
+                    {q.price} <span className="text-white/40 font-normal text-xs">SAR</span>
+                  </span>
+                  <PriceTag tag={q.tag} ar={ar} />
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* Live Stats Strip */}
-          <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+          {/* Stats strip */}
+          <div className="mt-10 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
             {[
-              { icon: <FileText className="h-5 w-5" />, value: safeStats.totalRFQs.toLocaleString(), labelEn: 'Total RFQs', labelAr: 'طلبات عروض' },
-              { icon: <Building2 className="h-5 w-5" />, value: safeStats.totalVendors.toLocaleString(), labelEn: 'Verified Vendors', labelAr: 'مورد موثق' },
-              { icon: <Package className="h-5 w-5" />, value: safeStats.totalProducts.toLocaleString(), labelEn: 'Active Products', labelAr: 'منتج نشط' },
-              { icon: <HandshakeIcon className="h-5 w-5" />, value: safeStats.totalTransactions.toLocaleString(), labelEn: 'Transactions', labelAr: 'صفقة منجزة' },
+              { icon: <FileText className="h-4 w-4" />, value: safeStats.totalRFQs > 0 ? safeStats.totalRFQs.toLocaleString() : '500+', labelEn: 'RFQs Posted', labelAr: 'طلب عروض' },
+              { icon: <Building2 className="h-4 w-4" />, value: safeStats.totalVendors > 0 ? safeStats.totalVendors.toLocaleString() : '200+', labelEn: 'Verified Suppliers', labelAr: 'مورد موثق' },
+              { icon: <Package className="h-4 w-4" />, value: safeStats.totalProducts > 0 ? safeStats.totalProducts.toLocaleString() : '5K+', labelEn: 'Active Products', labelAr: 'منتج نشط' },
+              { icon: <HandshakeIcon className="h-4 w-4" />, value: safeStats.totalTransactions > 0 ? safeStats.totalTransactions.toLocaleString() : '1K+', labelEn: 'Deals Closed', labelAr: 'صفقة منجزة' },
             ].map((s) => (
-              <div key={s.labelEn} className="rounded-2xl bg-white/10 border border-white/10 backdrop-blur px-4 py-5 text-center">
-                <div className="flex justify-center mb-2 text-gold-400">{s.icon}</div>
-                <p className="text-2xl font-bold text-white">{s.value}</p>
-                <p className="text-xs text-white/60 mt-0.5">{ar ? s.labelAr : s.labelEn}</p>
+              <div key={s.labelEn} className="rounded-xl border border-white/10 bg-white/[0.08] px-4 py-4 text-center backdrop-blur">
+                <div className="flex justify-center mb-1.5" style={{ color: '#C9A349' }}>{s.icon}</div>
+                <p className="text-xl font-bold text-white">{s.value}</p>
+                <p className="text-xs text-white/50 mt-0.5">{ar ? s.labelAr : s.labelEn}</p>
               </div>
             ))}
           </div>
@@ -156,92 +225,111 @@ export default async function HomePage() {
 
         {/* Wave */}
         <div className="absolute bottom-0 left-0 right-0">
-          <svg viewBox="0 0 1440 72" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 72L1440 72L1440 0C1200 55 240 55 0 0L0 72Z" fill="#F8FAFC" />
+          <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 60L1440 60L1440 0C1200 48 240 48 0 0L0 60Z" fill="#F8FAFC" />
           </svg>
         </div>
       </section>
 
-      {/* ── Trust Strip ───────────────────────────────────────────────────── */}
+      {/* ── Trust Bar ───────────────────────────────────────────────────────── */}
       <section className="bg-surface border-b border-slate-100 py-5">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center gap-x-10 gap-y-3">
+          <div className="flex flex-wrap justify-center gap-x-10 gap-y-4">
             {[
-              { icon: <Shield className="h-4 w-4 text-emerald-600" />, text: ar ? 'توثيق السجل التجاري' : 'CR Verified Suppliers' },
-              { icon: <Award className="h-4 w-4 text-brand-600" />, text: ar ? 'نظام تقييم موثوق' : 'Trusted Rating System' },
-              { icon: <Zap className="h-4 w-4 text-gold-500" />, text: ar ? 'طلبات عروض سريعة' : 'Fast RFQ Process' },
-              { icon: <Globe2 className="h-4 w-4 text-purple-600" />, text: ar ? 'ثنائي اللغة AR/EN' : 'Bilingual AR/EN Platform' },
-              { icon: <Users className="h-4 w-4 text-slate-600" />, text: ar ? 'شركات سعودية موثوقة' : 'Saudi-Registered Companies' },
+              { icon: <Shield className="h-4 w-4 text-emerald-600" />, textAr: 'موردون موثقو السجل التجاري', textEn: 'CR-Verified Suppliers' },
+              { icon: <BarChart3 className="h-4 w-4 text-brand-600" />, textAr: 'ذكاء تسعير فوري', textEn: 'Real-time Price Intelligence' },
+              { icon: <CheckCircle2 className="h-4 w-4" style={{ color: '#C9A349' }} />, textAr: 'مقارنة شفافة ودقيقة', textEn: 'Transparent Comparison' },
+              { icon: <Award className="h-4 w-4 text-purple-600" />, textAr: 'مُقيَّم من المشترين الفعليين', textEn: 'Rated by Real Buyers' },
             ].map((item) => (
-              <div key={item.text} className="flex items-center gap-2 text-sm text-slate-600">
+              <div key={item.textEn} className="flex items-center gap-2 text-sm font-medium text-slate-600">
                 {item.icon}
-                <span>{item.text}</span>
+                <span>{ar ? item.textAr : item.textEn}</span>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── How It Works ──────────────────────────────────────────────────── */}
-      <section className="py-20 bg-surface" id="how-it-works">
+      {/* ── Why Mwazn / لماذا معيار؟ ────────────────────────────────────────── */}
+      <section className="py-20 bg-surface" id="why">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
-            <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 mb-3">
-              {ar ? 'آلية العمل' : 'How It Works'}
+            <span
+              className="inline-block rounded-full px-3 py-1 text-xs font-semibold mb-3"
+              style={{ background: 'rgba(201,163,73,0.12)', color: '#8B6420' }}
+            >
+              {ar ? 'لماذا معيار؟' : 'Why Mwazn?'}
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3">
-              {ar ? 'من الطلب إلى الصفقة في 3 خطوات' : 'From Request to Deal in 3 Steps'}
+              {ar ? 'ليست مجرد سوق — بل طبقة قرار' : 'Not Just a Marketplace — A Decision Layer'}
             </h2>
-            <p className="text-slate-500 max-w-xl mx-auto">
+            <p className="text-slate-500 max-w-xl mx-auto text-base">
               {ar
-                ? 'منصة موازن تبسّط دورة الشراء B2B بالكامل — من نشر الطلب حتى إتمام الصفقة.'
-                : 'Mwazn simplifies the entire B2B procurement cycle — from posting to closing.'}
+                ? 'معيار يمنحك أدوات الذكاء التي تحتاجها لاتخاذ قرارات شراء مبنية على البيانات.'
+                : 'Mwazn gives you the intelligence tools you need to make data-driven purchasing decisions.'}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
-            {/* Connector line */}
-            <div className="hidden md:block absolute top-12 left-1/6 right-1/6 h-0.5 bg-gradient-to-r from-transparent via-brand-200 to-transparent" />
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
               {
-                n: '01',
-                icon: <FileText className="h-7 w-7" />,
-                titleEn: 'Post an RFQ',
-                titleAr: 'انشر طلب عرض أسعار',
-                descEn: 'Describe your requirements, set your budget and deadline. Takes 2 minutes.',
-                descAr: 'صف متطلباتك وحدد ميزانيتك وموعدك النهائي. يستغرق دقيقتين فقط.',
-                color: 'bg-brand-700 text-white',
+                icon: <Layers className="h-6 w-6" />,
+                titleAr: 'مقارنة ذكية',
+                titleEn: 'Smart Comparison',
+                descAr: 'قارن عروضاً متعددة جنباً إلى جنب بالسعر والتسليم والتقييم — اتخذ القرار الصحيح.',
+                descEn: 'Compare multiple quotes side-by-side by price, delivery, and rating — pick the right one.',
+                border: '#1B4F8A',
+                iconBg: 'rgba(27,79,138,0.08)',
+                iconColor: '#1B4F8A',
               },
               {
-                n: '02',
-                icon: <BarChart3 className="h-7 w-7" />,
-                titleEn: 'Compare Quotes',
-                titleAr: 'قارن العروض',
-                descEn: 'Verified suppliers submit competitive offers. Compare side-by-side.',
-                descAr: 'يتقدم الموردون الموثقون بأفضل عروضهم. قارن بينها بسهولة.',
-                color: 'bg-gold-400 text-white',
+                icon: <BarChart3 className="h-6 w-6" />,
+                titleAr: 'مؤشرات سعرية',
+                titleEn: 'Price Indicators',
+                descAr: 'اعرف على الفور إذا كان السعر أقل أو أعلى من متوسط السوق — وفّر ميزانيتك.',
+                descEn: 'Know instantly if a price is below or above market average — protect your budget.',
+                border: '#C9A349',
+                iconBg: 'rgba(201,163,73,0.10)',
+                iconColor: '#C9A349',
               },
               {
-                n: '03',
-                icon: <Award className="h-7 w-7" />,
-                titleEn: 'Award & Track',
-                titleAr: 'ارسِ وتابع',
-                descEn: 'Accept the best quote, track the deal lifecycle, then rate your supplier.',
-                descAr: 'اقبل أفضل عرض وتابع مراحل الصفقة ثم قيّم مورّدك.',
-                color: 'bg-emerald-500 text-white',
+                icon: <Shield className="h-6 w-6" />,
+                titleAr: 'موردون موثقون',
+                titleEn: 'Verified Suppliers',
+                descAr: 'كل مورد موثق بالسجل التجاري السعودي ومُقيَّم من مشترين فعليين.',
+                descEn: 'Every supplier is verified by Saudi Commercial Registration and rated by real buyers.',
+                border: '#10B981',
+                iconBg: 'rgba(16,185,129,0.08)',
+                iconColor: '#10B981',
               },
-            ].map((step) => (
-              <div key={step.n} className="card card-hover relative text-center group">
-                <div className={`mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl ${step.color}`}>
-                  {step.icon}
+              {
+                icon: <Activity className="h-6 w-6" />,
+                titleAr: 'رؤية كاملة',
+                titleEn: 'Full Visibility',
+                descAr: 'تابع كل صفقة من طلب العرض حتى التسليم — لا غموض في أي مرحلة.',
+                descEn: 'Track every deal from RFQ to delivery — no ambiguity at any stage.',
+                border: '#8B5CF6',
+                iconBg: 'rgba(139,92,246,0.08)',
+                iconColor: '#8B5CF6',
+              },
+            ].map((feat) => (
+              <div
+                key={feat.titleEn}
+                className="card card-hover group flex flex-col relative overflow-hidden"
+              >
+                <div
+                  className="absolute top-0 start-0 end-0 h-[3px] rounded-t-2xl"
+                  style={{ background: feat.border }}
+                />
+                <div
+                  className="mb-5 mt-2 flex h-12 w-12 items-center justify-center rounded-2xl"
+                  style={{ background: feat.iconBg, color: feat.iconColor }}
+                >
+                  {feat.icon}
                 </div>
-                <div className="absolute top-4 end-4 text-5xl font-black text-slate-50 select-none">{step.n}</div>
-                <h3 className="text-lg font-semibold text-slate-800 mb-2">
-                  {ar ? step.titleAr : step.titleEn}
-                </h3>
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  {ar ? step.descAr : step.descEn}
+                <h3 className="font-bold text-slate-800 mb-2">{ar ? feat.titleAr : feat.titleEn}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed flex-1">
+                  {ar ? feat.descAr : feat.descEn}
                 </p>
               </div>
             ))}
@@ -249,13 +337,95 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Top Products ──────────────────────────────────────────────────── */}
+      {/* ── Comparison Preview ───────────────────────────────────────────────── */}
+      <section className="py-20 bg-white">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <span className="inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 mb-3">
+              {ar ? 'مقارنة الموردين' : 'Supplier Comparison'}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3">
+              {ar ? 'اتخذ قرارات شراء بمعلومات كاملة' : 'Purchase with Complete Information'}
+            </h2>
+            <p className="text-slate-500 max-w-xl mx-auto">
+              {ar
+                ? 'معيار يوضح لك على الفور إذا كان العرض أقل أو أعلى من متوسط السوق — لا حدس، بل بيانات.'
+                : 'Mwazn instantly shows you if a quote is below or above market average — no guessing, just data.'}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-card">
+            {/* Table header */}
+            <div className="grid grid-cols-5 gap-4 border-b border-slate-200 bg-slate-50 px-6 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+              <div className="col-span-2">{ar ? 'المورد' : 'Supplier'}</div>
+              <div className="text-center">{ar ? 'السعر / وحدة' : 'Unit Price'}</div>
+              <div className="text-center">{ar ? 'التسليم' : 'Delivery'}</div>
+              <div className="text-center">{ar ? 'مؤشر السوق' : 'Market Signal'}</div>
+            </div>
+
+            {MOCK_QUOTES.map((q, i) => (
+              <div
+                key={i}
+                className={`grid grid-cols-5 gap-4 items-center px-6 py-4 transition-colors hover:bg-slate-50/70 ${i < MOCK_QUOTES.length - 1 ? 'border-b border-slate-100' : ''} ${q.tag === 'below' ? 'bg-emerald-50/40' : ''}`}
+              >
+                <div className="col-span-2 flex items-center gap-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50 text-sm font-bold text-brand-700">
+                    {(ar ? q.nameAr : q.nameEn).charAt(0)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{ar ? q.nameAr : q.nameEn}</p>
+                    <div className="mt-0.5 flex items-center gap-1">
+                      <Shield className="h-3 w-3 text-emerald-600" />
+                      <span className="text-xs text-emerald-600">{ar ? 'موثق' : 'Verified'}</span>
+                      <span className="mx-1 text-slate-300">·</span>
+                      <span className="text-xs text-slate-400">{q.rating} ★</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <span className="text-base font-bold text-slate-800">{q.price}</span>
+                  <span className="ms-1 text-xs text-slate-400">SAR</span>
+                </div>
+                <div className="text-center">
+                  <span className="text-sm text-slate-600">
+                    {ar ? `${q.delivery} أيام` : `${q.delivery} days`}
+                  </span>
+                </div>
+                <div className="flex justify-center">
+                  <PriceTag tag={q.tag} ar={ar} />
+                </div>
+              </div>
+            ))}
+
+            {/* Footer row */}
+            <div className="flex items-center justify-between gap-4 border-t border-slate-200 bg-slate-50 px-6 py-4">
+              <p className="text-sm text-slate-500">
+                {ar
+                  ? 'هذا مثال توضيحي — طلبك الحقيقي يجلب عروضاً من موردين موثقين.'
+                  : 'Illustrative example — your real RFQ attracts quotes from verified suppliers.'}
+              </p>
+              <Link
+                href={`/${locale}/auth/register?type=BUYER`}
+                className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-xl bg-brand-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-800"
+              >
+                {ar ? 'ابدأ الآن' : 'Get Started'}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Top Products ──────────────────────────────────────────────────────── */}
       {safeProducts.length > 0 && (
-        <section className="py-20 bg-white">
+        <section className="py-20 bg-surface">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
-                <span className="inline-block rounded-full bg-gold-400/10 px-3 py-1 text-xs font-semibold text-gold-600 mb-2">
+                <span
+                  className="mb-2 inline-block rounded-full px-3 py-1 text-xs font-semibold"
+                  style={{ background: 'rgba(201,163,73,0.12)', color: '#8B6420' }}
+                >
                   {ar ? 'المنتجات الأكثر طلباً' : 'Most Requested Products'}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
@@ -264,47 +434,44 @@ export default async function HomePage() {
               </div>
               <Link
                 href={`/${locale}/suppliers`}
-                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+                className="hidden items-center gap-1.5 text-sm font-semibold text-brand-700 transition-colors hover:text-brand-800 sm:inline-flex"
               >
                 {ar ? 'عرض الكل' : 'View All'}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               {safeProducts.map((product) => (
                 <Link
                   key={product.id}
                   href={`/${locale}/suppliers/${product.supplier.slug ?? product.supplier.id}`}
-                  className="group card card-hover p-0 overflow-hidden"
+                  className="card card-hover group overflow-hidden p-0"
                 >
-                  {/* Image */}
-                  <div className="relative h-44 bg-slate-50 overflow-hidden">
+                  <div className="relative h-44 overflow-hidden bg-slate-50">
                     {product.images[0] ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={product.images[0].url}
                         alt={product.titleEn}
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div className="flex h-full w-full items-center justify-center">
                         <Package className="h-12 w-12 text-slate-200" />
                       </div>
                     )}
-                    <div className="absolute top-2 start-2">
-                      <span className="rounded-lg bg-white/90 backdrop-blur px-2 py-0.5 text-xs font-medium text-slate-600">
+                    <div className="absolute start-2 top-2">
+                      <span className="rounded-lg bg-white/90 px-2 py-0.5 text-xs font-medium text-slate-600 backdrop-blur">
                         {ar ? product.category.nameAr : product.category.nameEn}
                       </span>
                     </div>
                   </div>
-
-                  {/* Info */}
                   <div className="p-4">
-                    <p className="text-sm font-semibold text-slate-800 line-clamp-2 mb-1">
+                    <p className="mb-1 line-clamp-2 text-sm font-semibold text-slate-800">
                       {ar ? product.titleAr : product.titleEn}
                     </p>
-                    <p className="text-xs text-slate-400 mb-3 truncate">
+                    <p className="mb-3 truncate text-xs text-slate-400">
                       {ar ? product.supplier.nameAr : product.supplier.nameEn}
                     </p>
                     <div className="flex items-center justify-between">
@@ -316,7 +483,9 @@ export default async function HomePage() {
                         <span className="text-xs text-slate-400">{ar ? 'استفسر للسعر' : 'Request quote'}</span>
                       )}
                       {product._count.quotes > 0 && (
-                        <span className="text-xs text-slate-400">{product._count.quotes} {ar ? 'عرض' : 'quotes'}</span>
+                        <span className="text-xs text-slate-400">
+                          {product._count.quotes} {ar ? 'عرض' : 'quotes'}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -327,13 +496,13 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Top Rated Vendors ─────────────────────────────────────────────── */}
+      {/* ── Top Rated Vendors ────────────────────────────────────────────────── */}
       {safeVendors.length > 0 && (
-        <section className="py-20 bg-surface">
+        <section className="py-20 bg-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
-                <span className="inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 mb-2">
+                <span className="mb-2 inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
                   {ar ? 'أعلى الموردين تقييماً' : 'Top Rated Vendors'}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
@@ -342,61 +511,69 @@ export default async function HomePage() {
               </div>
               <Link
                 href={`/${locale}/suppliers`}
-                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+                className="hidden items-center gap-1.5 text-sm font-semibold text-brand-700 transition-colors hover:text-brand-800 sm:inline-flex"
               >
                 {ar ? 'عرض الكل' : 'View All'}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
               {safeVendors.map((vendor) => (
                 <Link
                   key={vendor.id}
                   href={`/${locale}/suppliers/${vendor.slug ?? vendor.id}`}
-                  className="card card-hover group flex flex-col"
+                  className="card card-hover group flex flex-col overflow-hidden p-0"
                 >
-                  {/* Logo / Avatar */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700 text-lg font-bold">
+                  {/* Banner */}
+                  <div className="relative h-16 flex-shrink-0 bg-gradient-to-br from-brand-900 to-brand-700">
+                    {vendor.plan === 'PRO' && (
+                      <span
+                        className="absolute end-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
+                        style={{ background: 'rgba(201,163,73,0.85)' }}
+                      >
+                        PRO
+                      </span>
+                    )}
+                  </div>
+                  {/* Logo + verified badge */}
+                  <div className="-mt-6 mb-3 flex items-end justify-between px-4">
+                    <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-white bg-white text-lg font-bold text-brand-700 shadow-card">
                       {vendor.logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={vendor.logoUrl} alt="" className="h-12 w-12 rounded-xl object-cover" />
+                        <img src={vendor.logoUrl} alt="" className="h-14 w-14 object-cover" />
                       ) : (
                         (ar ? vendor.nameAr : vendor.nameEn).charAt(0)
                       )}
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {vendor.plan === 'PRO' && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">PRO</span>
-                      )}
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 flex items-center gap-1">
-                        <Shield className="h-3 w-3" />
-                        {ar ? 'موثق' : 'Verified'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <h3 className="font-semibold text-slate-800 mb-1 group-hover:text-brand-700 transition-colors line-clamp-2">
-                    {ar ? vendor.nameAr : vendor.nameEn}
-                  </h3>
-                  <p className="text-xs text-slate-400 mb-3">{vendor.city}</p>
-
-                  {/* Rating */}
-                  <div className="mt-auto flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <StarRating score={vendor.averageRating} />
-                      <span className="text-xs font-semibold text-slate-700">{vendor.averageRating.toFixed(1)}</span>
-                    </div>
-                    <span className="text-xs text-slate-400">
-                      {vendor._count.listings} {ar ? 'منتج' : 'products'}
+                    <span className="mb-1 flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                      <Shield className="h-3 w-3" />
+                      {ar ? 'موثق' : 'Verified'}
                     </span>
                   </div>
-                  {vendor.totalRatings > 0 && (
-                    <p className="text-xs text-slate-400 mt-1">
-                      {vendor.totalRatings} {ar ? 'تقييم' : 'reviews'}
-                    </p>
-                  )}
+                  {/* Info */}
+                  <div className="flex flex-1 flex-col px-4 pb-4">
+                    <h3 className="mb-0.5 line-clamp-2 text-sm font-semibold text-slate-800 transition-colors group-hover:text-brand-700">
+                      {ar ? vendor.nameAr : vendor.nameEn}
+                    </h3>
+                    <p className="mb-3 text-xs text-slate-400">{vendor.city}</p>
+                    <div className="mt-auto flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <StarRating score={vendor.averageRating} />
+                        <span className="text-xs font-semibold text-slate-700">
+                          {vendor.averageRating.toFixed(1)}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        {vendor._count.listings} {ar ? 'منتج' : 'products'}
+                      </span>
+                    </div>
+                    {vendor.totalRatings > 0 && (
+                      <p className="mt-1 text-xs text-slate-400">
+                        {vendor.totalRatings} {ar ? 'تقييم' : 'reviews'}
+                      </p>
+                    )}
+                  </div>
                 </Link>
               ))}
             </div>
@@ -404,13 +581,13 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Featured Showrooms ────────────────────────────────────────────── */}
+      {/* ── Featured Showrooms ───────────────────────────────────────────────── */}
       {safeShowrooms.length > 0 && (
-        <section className="py-20 bg-white">
+        <section className="py-20 bg-surface">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
-                <span className="inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700 mb-2">
+                <span className="mb-2 inline-block rounded-full bg-purple-50 px-3 py-1 text-xs font-semibold text-purple-700">
                   {ar ? 'معارض المورّدين' : 'Featured Showrooms'}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
@@ -419,21 +596,20 @@ export default async function HomePage() {
               </div>
               <Link
                 href={`/${locale}/suppliers`}
-                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700"
+                className="hidden items-center gap-1.5 text-sm font-semibold text-brand-700 sm:inline-flex"
               >
                 {ar ? 'عرض الكل' : 'View All'}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {safeShowrooms.map((showroom) => (
                 <Link
                   key={showroom.id}
                   href={`/${locale}/suppliers/${showroom.slug ?? showroom.id}`}
-                  className="card card-hover group p-0 overflow-hidden"
+                  className="card card-hover group overflow-hidden p-0"
                 >
-                  {/* Product image strip */}
                   <div className="grid grid-cols-4 h-24 bg-slate-50">
                     {showroom.listings.slice(0, 4).map((listing, i) =>
                       listing.images[0] ? (
@@ -442,38 +618,33 @@ export default async function HomePage() {
                           key={listing.id}
                           src={listing.images[0].url}
                           alt={listing.titleEn}
-                          className={`h-24 w-full object-cover ${i === 0 ? '' : 'border-s border-white'} transition-opacity group-hover:opacity-90`}
+                          className={`h-24 w-full object-cover transition-opacity group-hover:opacity-90 ${i === 0 ? '' : 'border-s border-white'}`}
                         />
                       ) : (
-                        <div key={listing.id} className="h-24 bg-slate-100 flex items-center justify-center border-s border-white">
+                        <div key={listing.id} className="flex h-24 items-center justify-center border-s border-white bg-slate-100">
                           <Package className="h-5 w-5 text-slate-300" />
                         </div>
                       )
                     )}
                     {showroom.listings.length === 0 && (
-                      <div className="col-span-4 h-24 flex items-center justify-center bg-slate-50">
+                      <div className="col-span-4 flex h-24 items-center justify-center bg-slate-50">
                         <Building2 className="h-10 w-10 text-slate-200" />
                       </div>
                     )}
                   </div>
-
-                  {/* Company info */}
                   <div className="p-4">
-                    <div className="flex items-start justify-between mb-3">
+                    <div className="mb-3 flex items-start justify-between">
                       <div>
-                        <h3 className="font-semibold text-slate-800 group-hover:text-brand-700 transition-colors">
+                        <h3 className="font-semibold text-slate-800 transition-colors group-hover:text-brand-700">
                           {ar ? showroom.nameAr : showroom.nameEn}
                         </h3>
                         <p className="text-xs text-slate-400">{showroom.city}</p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        {showroom.plan === 'PRO' && (
-                          <Badge variant="purple">PRO</Badge>
-                        )}
+                        {showroom.plan === 'PRO' && <Badge variant="purple">PRO</Badge>}
                         <Badge variant="green">{ar ? 'موثق' : 'Verified'}</Badge>
                       </div>
                     </div>
-
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-1.5">
                         <StarRating score={showroom.averageRating} />
@@ -482,7 +653,7 @@ export default async function HomePage() {
                           <span className="text-slate-400">({showroom.totalRatings})</span>
                         )}
                       </div>
-                      <span className="text-brand-700 font-semibold flex items-center gap-1">
+                      <span className="flex items-center gap-1 font-semibold text-brand-700">
                         {ar ? 'زيارة المعرض' : 'View Showroom'}
                         <ArrowUpRight className="h-3 w-3" />
                       </span>
@@ -495,112 +666,40 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Platform Features ─────────────────────────────────────────────── */}
-      <section className="py-20 bg-surface" id="features">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-14">
-            <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 mb-3">
-              {ar ? 'لماذا موازن؟' : 'Why Mwazn?'}
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3">
-              {ar ? 'كل ما تحتاجه لإدارة مشترياتك' : 'Everything you need for B2B procurement'}
-            </h2>
-            <p className="text-slate-500 max-w-xl mx-auto">
-              {ar
-                ? 'منصة متكاملة تجمع الموردين والمشترين في تجربة سلسة ومؤمنة.'
-                : 'A complete platform connecting buyers and suppliers in a seamless, secure experience.'}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {[
-              {
-                icon: <FileText className="h-6 w-6" />,
-                color: 'bg-brand-50 text-brand-700 group-hover:bg-brand-700 group-hover:text-white',
-                titleEn: 'Smart RFQ System', titleAr: 'نظام طلبات ذكي',
-                descEn: 'Create detailed RFQs with attachments and receive competitive quotes from verified suppliers within hours.',
-                descAr: 'أنشئ طلبات عروض مفصّلة واستقبل عروضاً تنافسية من موردين موثقين في غضون ساعات.',
-              },
-              {
-                icon: <Shield className="h-6 w-6" />,
-                color: 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white',
-                titleEn: 'CR-Verified Suppliers', titleAr: 'موردون موثقو السجل',
-                descEn: 'Every supplier is manually verified against their Saudi Commercial Registration — no fakes.',
-                descAr: 'كل مورد يُتحقق منه يدوياً بموجب سجله التجاري السعودي — لا وجود لموردين مزيّفين.',
-              },
-              {
-                icon: <BarChart3 className="h-6 w-6" />,
-                color: 'bg-gold-400/10 text-gold-600 group-hover:bg-gold-400 group-hover:text-white',
-                titleEn: 'Side-by-Side Comparison', titleAr: 'مقارنة العروض',
-                descEn: 'Compare quotes side by side by price, delivery time, and supplier rating to make data-driven decisions.',
-                descAr: 'قارن العروض جنباً إلى جنب بالسعر ومدة التسليم وتقييم المورد.',
-              },
-              {
-                icon: <MessageSquare className="h-6 w-6" />,
-                color: 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white',
-                titleEn: 'Built-in Messaging', titleAr: 'مراسلة داخلية',
-                descEn: 'Direct communication between buyers and suppliers — all within the platform, traceable and archived.',
-                descAr: 'تواصل مباشر بين المشترين والموردين داخل المنصة، قابل للتتبع والأرشفة.',
-              },
-              {
-                icon: <TrendingUp className="h-6 w-6" />,
-                color: 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white',
-                titleEn: 'Full Deal Lifecycle', titleAr: 'دورة الصفقة الكاملة',
-                descEn: 'Track every deal from award to delivery to completion. Full visibility at every step.',
-                descAr: 'تابع كل صفقة من الإرساء حتى التسليم والإتمام. رؤية كاملة في كل مرحلة.',
-              },
-              {
-                icon: <Star className="h-6 w-6" />,
-                color: 'bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white',
-                titleEn: 'Trust & Ratings', titleAr: 'الثقة والتقييمات',
-                descEn: 'Rate suppliers after deal completion. Build a reputation-driven marketplace ecosystem.',
-                descAr: 'قيّم الموردين بعد إتمام الصفقة. ابنِ سوقاً قائماً على السمعة والثقة.',
-              },
-            ].map((feat) => (
-              <div key={feat.titleEn} className="card card-hover group">
-                <div className={`mb-5 flex h-12 w-12 items-center justify-center rounded-2xl transition-all duration-200 ${feat.color}`}>
-                  {feat.icon}
-                </div>
-                <h3 className="font-semibold text-slate-800 mb-2 text-lg">
-                  {ar ? feat.titleAr : feat.titleEn}
-                </h3>
-                <p className="text-sm text-slate-500 leading-relaxed">
-                  {ar ? feat.descAr : feat.descEn}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA Banner ────────────────────────────────────────────────────── */}
-      <section className="py-20 bg-gradient-to-r from-brand-900 to-brand-700 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.04]"
-          style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+      {/* ── CTA Banner ──────────────────────────────────────────────────────── */}
+      <section
+        className="relative overflow-hidden py-20"
+        style={{ background: 'linear-gradient(135deg, #1E2D4D 0%, #1B4F8A 100%)' }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        />
+        <div className="absolute end-0 top-0 h-80 w-80 rounded-full blur-3xl" style={{ background: 'rgba(201,163,73,0.08)' }} />
         <div className="relative mx-auto max-w-4xl px-4 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/80 mb-6">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white/80">
             <CheckCircle2 className="h-4 w-4 text-emerald-400" />
             {ar ? 'مجاني للبدء — لا بطاقة ائتمان' : 'Free to start — no credit card required'}
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            {ar ? 'هل أنت جاهز لتحسين مشترياتك؟' : 'Ready to transform your procurement?'}
+          <h2 className="mb-4 text-3xl font-bold text-white sm:text-4xl">
+            {ar ? 'انضم إلى طبقة القرار' : 'Join the Decision Layer'}
           </h2>
-          <p className="text-white/70 mb-10 text-lg max-w-xl mx-auto">
+          <p className="mx-auto mb-10 max-w-xl text-lg text-white/70">
             {ar
-              ? 'انضم إلى مئات الشركات السعودية التي تستخدم موازن لتبسيط مشترياتها.'
-              : 'Join hundreds of Saudi companies using Mwazn to streamline B2B purchasing.'}
+              ? 'انضم إلى مئات الشركات السعودية التي تتخذ قرارات شرائها بذكاء على منصة معيار.'
+              : 'Join hundreds of Saudi companies making smarter purchasing decisions on Mwazn.'}
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
             <Link
               href={`/${locale}/auth/register?type=BUYER`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-3.5 font-semibold text-brand-700 hover:bg-slate-50 transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-3.5 font-semibold text-brand-700 transition-all hover:-translate-y-0.5 hover:bg-slate-50"
             >
               <ShoppingBag className="h-5 w-5" />
               {ar ? 'سجّل كمشترٍ مجاناً' : 'Register as Buyer — Free'}
             </Link>
             <Link
               href={`/${locale}/auth/register?type=SUPPLIER`}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 border border-white/20 px-8 py-3.5 font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-3.5 font-semibold text-white backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-white/20"
             >
               <Building2 className="h-5 w-5" />
               {ar ? 'انضم كمورّد' : 'Join as Supplier'}
@@ -609,49 +708,40 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Footer ────────────────────────────────────────────────────────── */}
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer className="bg-slate-900 text-slate-400">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-16 pb-10">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 mb-12">
-            {/* Brand */}
+          <div className="grid grid-cols-2 gap-8 mb-12 sm:grid-cols-4">
             <div className="col-span-2 sm:col-span-1">
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-700">
                   <span className="text-sm font-bold text-white">م</span>
                 </div>
-                <span className="text-lg font-bold text-white">
-                  {ar ? 'موازن' : 'Mwazn'}
-                </span>
+                <span className="text-lg font-bold text-white">{ar ? 'موازن' : 'Mwazn'}</span>
               </div>
               <p className="text-sm leading-relaxed max-w-xs">
                 {ar
-                  ? 'منصة الشراء B2B الأذكى في المملكة العربية السعودية.'
-                  : "Saudi Arabia's smartest B2B procurement marketplace."}
+                  ? 'طبقة القرار الذكية لسوق التوريد في المملكة العربية السعودية.'
+                  : 'The Smart Decision Layer for Saudi Supply Markets.'}
               </p>
             </div>
-
-            {/* Platform */}
             <div>
               <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'المنصة' : 'Platform'}</h4>
               <ul className="space-y-2.5 text-sm">
                 <li><Link href={`/${locale}/suppliers`} className="hover:text-white transition-colors">{ar ? 'الموردون' : 'Suppliers'}</Link></li>
                 <li><Link href={`/${locale}/auth/register?type=BUYER`} className="hover:text-white transition-colors">{ar ? 'أنشر طلب عرض' : 'Post RFQ'}</Link></li>
                 <li><Link href={`/${locale}/auth/register?type=SUPPLIER`} className="hover:text-white transition-colors">{ar ? 'انضم كمورّد' : 'Join as Supplier'}</Link></li>
-                <li><Link href={`/${locale}#how-it-works`} className="hover:text-white transition-colors">{ar ? 'كيف يعمل' : 'How It Works'}</Link></li>
+                <li><Link href={`/${locale}#why`} className="hover:text-white transition-colors">{ar ? 'لماذا معيار' : 'Why Mwazn'}</Link></li>
               </ul>
             </div>
-
-            {/* For Buyers */}
             <div>
               <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'للمشترين' : 'For Buyers'}</h4>
               <ul className="space-y-2.5 text-sm">
                 <li><Link href={`/${locale}/auth/register?type=BUYER`} className="hover:text-white transition-colors">{ar ? 'إنشاء حساب' : 'Create Account'}</Link></li>
                 <li><Link href={`/${locale}/auth/login`} className="hover:text-white transition-colors">{ar ? 'تسجيل الدخول' : 'Login'}</Link></li>
-                <li><Link href={`/${locale}#features`} className="hover:text-white transition-colors">{ar ? 'المزايا' : 'Features'}</Link></li>
+                <li><Link href={`/${locale}#why`} className="hover:text-white transition-colors">{ar ? 'المزايا' : 'Features'}</Link></li>
               </ul>
             </div>
-
-            {/* For Suppliers */}
             <div>
               <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'للموردين' : 'For Suppliers'}</h4>
               <ul className="space-y-2.5 text-sm">
@@ -660,11 +750,8 @@ export default async function HomePage() {
               </ul>
             </div>
           </div>
-
           <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm">
-              © 2026 Mwazn. {ar ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}
-            </p>
+            <p className="text-sm">© 2026 Mwazn. {ar ? 'جميع الحقوق محفوظة.' : 'All rights reserved.'}</p>
             <div className="flex items-center gap-4 text-sm">
               <span className="flex items-center gap-1.5">
                 <span className="flex h-2 w-2 rounded-full bg-emerald-400" />

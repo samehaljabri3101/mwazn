@@ -25,7 +25,8 @@ export class RFQsController {
   @ApiOperation({ summary: 'List open RFQs (suppliers browse)' })
   @ApiQuery({ name: 'categoryId', required: false })
   @ApiQuery({ name: 'status', enum: RFQStatus, required: false })
-  findAll(@Query() query: PaginationDto & { categoryId?: string; status?: RFQStatus }) {
+  @ApiQuery({ name: 'search', required: false })
+  findAll(@Query() query: PaginationDto & { categoryId?: string; status?: RFQStatus; search?: string }) {
     return this.rfqsService.findAll(query);
   }
 

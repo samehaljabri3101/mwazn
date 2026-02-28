@@ -63,7 +63,7 @@ export default function RegisterPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const canNext = () => {
-    if (step === 1) return form.nameAr && form.nameEn && form.crNumber.length >= 10 && form.city;
+    if (step === 1) return form.nameAr && form.nameEn && /^\d{10}$/.test(form.crNumber) && form.city;
     if (step === 2) return form.fullName && form.email && form.password.length >= 8 && form.password === form.confirmPassword;
     return true;
   };
@@ -73,10 +73,10 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       await api.post('/auth/register', {
-        nameAr: form.nameAr,
-        nameEn: form.nameEn,
+        companyNameAr: form.nameAr,
+        companyNameEn: form.nameEn,
         crNumber: form.crNumber,
-        type: form.type,
+        companyType: form.type,
         city: form.city,
         phone: form.phone,
         fullName: form.fullName,
@@ -85,7 +85,10 @@ export default function RegisterPage() {
       });
       // Auto-login after registration
       await login(form.email, form.password);
-      router.push(`/${locale}/dashboard`);
+      const destination = form.type === 'BUYER'
+        ? `/${locale}/dashboard/buyer`
+        : `/${locale}/dashboard/supplier`;
+      router.push(destination);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       setError(Array.isArray(msg) ? msg[0] : msg || (ar ? 'حدث خطأ. حاول مجدداً.' : 'Registration failed. Please try again.'));

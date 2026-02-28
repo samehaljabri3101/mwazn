@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -8,7 +8,7 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import type { Category } from '@/types';
-import { FileText, ChevronLeft, Layers } from 'lucide-react';
+import { FileText, ChevronLeft, Layers, ImagePlus, X } from 'lucide-react';
 import Link from 'next/link';
 
 const UNITS = ['piece', 'kg', 'ton', 'liter', 'meter', 'box', 'pallet', 'set', 'unit'];
@@ -94,6 +94,10 @@ export default function NewRFQPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [imageError, setImageError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [form, setForm] = useState({
     title: searchParams?.get('title') || '',
@@ -124,12 +128,46 @@ export default function NewRFQPage() {
     }));
   };
 
+  const handleFileChange = (files: FileList | null) => {
+    if (!files) return;
+    setImageError('');
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    const newFiles: File[] = [];
+    const newUrls: string[] = [];
+
+    for (const file of Array.from(files)) {
+      if (pendingFiles.length + newFiles.length >= 8) {
+        setImageError(ar ? 'الحد الأقصى 8 صور' : 'Maximum 8 images allowed');
+        break;
+      }
+      if (!allowed.includes(file.type)) {
+        setImageError(ar ? 'نوع الملف غير مدعوم (JPEG، PNG، WebP فقط)' : 'Only JPEG, PNG, WebP images are allowed');
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setImageError(ar ? 'حجم الصورة يجب أن يكون أقل من 5 ميجابايت' : 'Each image must be under 5 MB');
+        continue;
+      }
+      newFiles.push(file);
+      newUrls.push(URL.createObjectURL(file));
+    }
+
+    setPendingFiles((prev) => [...prev, ...newFiles]);
+    setPreviewUrls((prev) => [...prev, ...newUrls]);
+  };
+
+  const removeFile = (index: number) => {
+    URL.revokeObjectURL(previewUrls[index]);
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await api.post('/rfqs', {
+      const res = await api.post('/rfqs', {
         title: form.title,
         description: form.description,
         categoryId: form.categoryId || undefined,
@@ -139,6 +177,17 @@ export default function NewRFQPage() {
         currency: 'SAR',
         deadline: form.deadline || undefined,
       });
+
+      const rfqId = res.data.data?.id;
+      if (pendingFiles.length > 0 && rfqId) {
+        const fd = new FormData();
+        pendingFiles.forEach((f) => fd.append('images', f));
+        await api.post(`/rfqs/${rfqId}/images`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      }
+
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
       router.push(`/${locale}/dashboard/buyer/rfqs`);
     } catch (err: any) {
       const msg = err?.response?.data?.message;
@@ -284,6 +333,56 @@ export default function NewRFQPage() {
                 min={new Date().toISOString().split('T')[0]}
               />
             </div>
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="label-base">{ar ? 'صور المنتج (اختياري)' : 'Product Images (optional)'}</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => handleFileChange(e.target.files)}
+            />
+            {imageError && (
+              <p className="text-xs text-red-500 mb-2">{imageError}</p>
+            )}
+            {/* Drop zone */}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => { e.preventDefault(); handleFileChange(e.dataTransfer.files); }}
+              className="w-full rounded-xl border-2 border-dashed border-slate-200 hover:border-brand-300 hover:bg-brand-50 transition-colors px-4 py-6 flex flex-col items-center gap-2 text-slate-400"
+            >
+              <ImagePlus className="h-6 w-6" />
+              <p className="text-sm font-medium">
+                {ar ? 'اضغط لإضافة صور أو اسحب وأفلت هنا' : 'Click to add images or drag & drop'}
+              </p>
+              <p className="text-xs">
+                {ar ? 'JPEG، PNG، WebP — حتى 8 صور، 5 ميجابايت لكل صورة' : 'JPEG, PNG, WebP — up to 8 images, 5 MB each'}
+              </p>
+            </button>
+            {/* Preview grid */}
+            {previewUrls.length > 0 && (
+              <div className="mt-3 grid grid-cols-4 gap-2">
+                {previewUrls.map((url, i) => (
+                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="absolute top-1 end-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tips */}
