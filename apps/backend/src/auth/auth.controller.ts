@@ -15,6 +15,9 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterSupplierDto } from './dto/register-supplier.dto';
+import { RegisterBuyerDto } from './dto/register-buyer.dto';
+import { RegisterFreelancerDto } from './dto/register-freelancer.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
@@ -27,11 +30,35 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  @ApiOperation({ summary: 'Register a new company and admin user' })
+  @ApiOperation({ summary: 'Register a new company and admin user (legacy — use typed endpoints below)' })
   @ApiResponse({ status: 201, description: 'Returns tokens + user + company' })
   @ApiResponse({ status: 409, description: 'Email or CR already registered' })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Post('register/supplier')
+  @ApiOperation({ summary: 'Register a new supplier company and its admin user' })
+  @ApiResponse({ status: 201, description: 'Returns tokens + user + company (verificationStatus: PENDING)' })
+  @ApiResponse({ status: 409, description: 'Email or CR number already registered' })
+  registerSupplier(@Body() dto: RegisterSupplierDto) {
+    return this.authService.registerSupplier(dto);
+  }
+
+  @Post('register/buyer')
+  @ApiOperation({ summary: 'Register a new buyer company and its admin user' })
+  @ApiResponse({ status: 201, description: 'Returns tokens + user + company (verificationStatus: VERIFIED)' })
+  @ApiResponse({ status: 409, description: 'Email or CR number already registered' })
+  registerBuyer(@Body() dto: RegisterBuyerDto) {
+    return this.authService.registerBuyer(dto);
+  }
+
+  @Post('register/freelancer')
+  @ApiOperation({ summary: 'Register an individual freelancer using National ID / Iqama' })
+  @ApiResponse({ status: 201, description: 'Returns tokens + user + profile (verificationStatus: PENDING)' })
+  @ApiResponse({ status: 409, description: 'Email or National ID already registered' })
+  registerFreelancer(@Body() dto: RegisterFreelancerDto) {
+    return this.authService.registerFreelancer(dto);
   }
 
   @Post('login')

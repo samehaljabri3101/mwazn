@@ -1,28 +1,40 @@
-import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import { CompanyType } from '@prisma/client';
 
-export class UpdateCompanyDto {
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() nameAr?: string;
+export class CreateCompanyDto {
+  @ApiProperty({ example: 'شركة النخبة التجارية' })
+  @IsString()
+  @IsNotEmpty()
+  nameAr: string;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() nameEn?: string;
+  @ApiProperty({ example: 'Elite Trading Co.' })
+  @IsString()
+  @IsNotEmpty()
+  nameEn: string;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() city?: string;
+  @ApiProperty({ example: '1234567890' })
+  @IsString()
+  @IsNotEmpty()
+  @Matches(/^\d{10}$/, { message: 'CR number must be 10 digits' })
+  crNumber: string;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() phone?: string;
+  @ApiProperty({ enum: CompanyType })
+  @IsEnum(CompanyType)
+  type: CompanyType;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() website?: string;
+  @ApiPropertyOptional({ example: 'Riyadh' })
+  @IsOptional()
+  @IsString()
+  city?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() descriptionAr?: string;
+  @ApiPropertyOptional({ example: '+966501234567' })
+  @IsOptional()
+  @IsString()
+  phone?: string;
 
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() descriptionEn?: string;
-
-  @ApiPropertyOptional()
-  @IsOptional() @IsString() logoUrl?: string;
+  @ApiPropertyOptional({ example: 'https://example.sa' })
+  @IsOptional()
+  @IsString()
+  website?: string;
 }

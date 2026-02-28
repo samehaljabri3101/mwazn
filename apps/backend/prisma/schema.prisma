@@ -13,6 +13,7 @@ enum Role {
   BUYER_ADMIN
   SUPPLIER_ADMIN
   PLATFORM_ADMIN
+  FREELANCER
 }
 
 enum CompanyType {

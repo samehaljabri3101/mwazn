@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { CompanyType, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { UpdateCompanyDto } from './dto/create-company.dto';
+import { UpdateCompanyDto } from './dto/update-company.dto';
 import { VerifyCompanyDto } from './dto/verify-company.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 

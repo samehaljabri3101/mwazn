@@ -11,6 +11,9 @@ import { CompanyType, Role, VerificationStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterSupplierDto } from './dto/register-supplier.dto';
+import { RegisterBuyerDto } from './dto/register-buyer.dto';
+import { RegisterFreelancerDto } from './dto/register-freelancer.dto';
 import { LoginDto } from './dto/login.dto';
 
 @Injectable()
@@ -136,6 +139,100 @@ export class AuthService {
     });
     if (!user) throw new UnauthorizedException();
     return { user: this.sanitizeUser(user), company: this.sanitizeCompany(user.company) };
+  }
+
+  async registerSupplier(dto: RegisterSupplierDto) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    const existingCR = await this.prisma.company.findUnique({ where: { crNumber: dto.crNumber } });
+    if (existingCR) throw new ConflictException('CR number already registered');
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const company = await this.prisma.company.create({
+      data: {
+        nameAr: dto.companyNameAr,
+        nameEn: dto.companyNameEn,
+        crNumber: dto.crNumber,
+        type: CompanyType.SUPPLIER,
+        city: dto.city,
+        phone: dto.phone,
+        verificationStatus: VerificationStatus.PENDING,
+        users: {
+          create: { email: dto.email, passwordHash, fullName: dto.fullName, role: Role.SUPPLIER_ADMIN },
+        },
+      },
+      include: { users: true },
+    });
+
+    const user = company.users[0];
+    const tokens = await this.generateTokens(user.id, user.email, user.role, company.id);
+    this.logger.log(`New SUPPLIER registered: ${dto.email}`);
+    return { ...tokens, user: this.sanitizeUser(user), company: this.sanitizeCompany(company) };
+  }
+
+  async registerBuyer(dto: RegisterBuyerDto) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    const existingCR = await this.prisma.company.findUnique({ where: { crNumber: dto.crNumber } });
+    if (existingCR) throw new ConflictException('CR number already registered');
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const company = await this.prisma.company.create({
+      data: {
+        nameAr: dto.companyNameAr,
+        nameEn: dto.companyNameEn,
+        crNumber: dto.crNumber,
+        type: CompanyType.BUYER,
+        city: dto.city,
+        phone: dto.phone,
+        verificationStatus: VerificationStatus.VERIFIED,
+        users: {
+          create: { email: dto.email, passwordHash, fullName: dto.fullName, role: Role.BUYER_ADMIN },
+        },
+      },
+      include: { users: true },
+    });
+
+    const user = company.users[0];
+    const tokens = await this.generateTokens(user.id, user.email, user.role, company.id);
+    this.logger.log(`New BUYER registered: ${dto.email}`);
+    return { ...tokens, user: this.sanitizeUser(user), company: this.sanitizeCompany(company) };
+  }
+
+  async registerFreelancer(dto: RegisterFreelancerDto) {
+    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
+    if (existing) throw new ConflictException('Email already registered');
+
+    const existingNID = await this.prisma.company.findUnique({ where: { crNumber: dto.nationalId } });
+    if (existingNID) throw new ConflictException('National ID / Iqama already registered');
+
+    const passwordHash = await bcrypt.hash(dto.password, 12);
+
+    const company = await this.prisma.company.create({
+      data: {
+        nameAr: dto.fullName,
+        nameEn: dto.fullName,
+        crNumber: dto.nationalId,
+        type: CompanyType.SUPPLIER,
+        city: dto.city,
+        phone: dto.phone,
+        descriptionEn: dto.bio,
+        verificationStatus: VerificationStatus.PENDING,
+        users: {
+          create: { email: dto.email, passwordHash, fullName: dto.fullName, role: Role.FREELANCER },
+        },
+      },
+      include: { users: true },
+    });
+
+    const user = company.users[0];
+    const tokens = await this.generateTokens(user.id, user.email, user.role, company.id);
+    this.logger.log(`New FREELANCER registered: ${dto.email}`);
+    return { ...tokens, user: this.sanitizeUser(user), company: this.sanitizeCompany(company) };
   }
 
   // ── Private ──────────────────────────────────────────────────────────────
