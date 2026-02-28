@@ -23,6 +23,8 @@ services:
     restart: unless-stopped
     ports:
       - '3001:3001'
+    volumes:
+      - uploads_data:/app/uploads
     env_file:
       - ./apps/backend/.env
     environment:
@@ -41,9 +43,10 @@ services:
     env_file:
       - ./apps/frontend/.env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001/api
+      NEXT_PUBLIC_API_URL: http://backend:3001/api
     depends_on:
       - backend
 
 volumes:
   postgres_data:
+  uploads_data:
