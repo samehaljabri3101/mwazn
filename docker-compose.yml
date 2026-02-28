@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   db:
     image: postgres:16-alpine
@@ -9,11 +7,11 @@ services:
       POSTGRES_PASSWORD: mwazn
       POSTGRES_DB: mwazn
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U mwazn -d mwazn_db']
+      test: ['CMD-SHELL', 'pg_isready -U mwazn -d mwazn']
       interval: 5s
       timeout: 5s
       retries: 10
@@ -43,7 +41,7 @@ services:
     env_file:
       - ./apps/frontend/.env
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
     depends_on:
       - backend
 

@@ -77,32 +77,39 @@ export class CompaniesService {
     });
   }
 
-  async getShowroom(id: string) {
-    const company = await this.prisma.company.findUnique({
-      where: { id, verificationStatus: VerificationStatus.VERIFIED },
+  async getShowroom(idOrSlug: string) {
+    // Support both UUID (id) and friendly slug (e.g. "demo-8")
+    const company = await this.prisma.company.findFirst({
+      where: {
+        OR: [{ id: idOrSlug }, { slug: idOrSlug }],
+        type: CompanyType.SUPPLIER,
+        verificationStatus: VerificationStatus.VERIFIED,
+      },
       include: {
         listings: {
           where: { status: 'ACTIVE' },
           include: { images: true, category: true },
           take: 20,
-        },
-        categories: true,
-        ratingsReceived: {
-          include: { rater: { select: { nameAr: true, nameEn: true } } },
           orderBy: { createdAt: 'desc' },
-          take: 10,
         },
-        _count: { select: { listings: true, ratingsReceived: true } },
+        ratingsReceived: {
+          orderBy: { createdAt: 'desc' },
+          take: 100,
+        },
       },
     });
     if (!company) throw new NotFoundException('Supplier not found or not verified');
 
-    const avgRating =
-      company.ratingsReceived.length > 0
-        ? company.ratingsReceived.reduce((acc, r) => acc + r.score, 0) /
-          company.ratingsReceived.length
-        : null;
+    const { listings, ratingsReceived, ...companyData } = company;
 
-    return { ...company, avgRating };
+    const totalRatings = ratingsReceived.length;
+    const averageRating =
+      totalRatings > 0
+        ? Math.round(
+            (ratingsReceived.reduce((sum, r) => sum + r.score, 0) / totalRatings) * 10,
+          ) / 10
+        : 0;
+
+    return { company: companyData, listings, averageRating, totalRatings };
   }
 }

@@ -1,12 +1,11 @@
 import { cn } from '@/lib/utils';
-import { Button } from './Button';
 import { PackageSearch } from 'lucide-react';
 
 interface EmptyStateProps {
   icon?: React.ReactNode;
   title: string;
   description?: string;
-  action?: { label: string; onClick: () => void };
+  action?: React.ReactNode;
   className?: string;
 }
 
@@ -18,11 +17,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
       </div>
       <h3 className="mb-1 text-base font-semibold text-slate-700">{title}</h3>
       {description && <p className="mb-4 max-w-sm text-sm text-slate-400">{description}</p>}
-      {action && (
-        <Button size="sm" onClick={action.onClick}>
-          {action.label}
-        </Button>
-      )}
+      {action && <div className="mt-2">{action}</div>}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { Globe, Menu, X, ChevronDown } from 'lucide-react';
+import { Globe, Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -46,8 +46,14 @@ export function Navbar({ transparent = false }: NavbarProps) {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            <Link href={`/${locale}/marketplace`} className="btn-ghost text-sm">
-              {t('nav.marketplace')}
+            <Link href={`/${locale}/suppliers`} className="btn-ghost text-sm">
+              {locale === 'ar' ? 'الموردون' : 'Vendors'}
+            </Link>
+            <Link href={`/${locale}/products`} className="btn-ghost text-sm">
+              {locale === 'ar' ? 'المنتجات' : 'Products'}
+            </Link>
+            <Link href={`/${locale}/auth/register?type=BUYER`} className="btn-ghost text-sm">
+              {locale === 'ar' ? 'أنشر طلب' : 'Post RFQ'}
             </Link>
             <Link href={`/${locale}#how-it-works`} className="btn-ghost text-sm">
               {t('nav.how_it_works')}
@@ -93,7 +99,7 @@ export function Navbar({ transparent = false }: NavbarProps) {
       {/* Mobile Menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-slate-100 bg-white px-4 py-4 space-y-2 animate-slide-up">
-          <Link href={`/${locale}/marketplace`} className="block sidebar-link">{t('nav.marketplace')}</Link>
+          <Link href={`/${locale}/suppliers`} className="block sidebar-link">{locale === 'ar' ? 'الموردون' : 'Suppliers'}</Link>
           <button onClick={switchLocale} className="block sidebar-link w-full text-start">
             <Globe className="h-4 w-4" />
             {otherLocale === 'ar' ? 'عربي' : 'English'}

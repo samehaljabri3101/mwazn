@@ -1,7 +1,13 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller, Get, Post, Patch, Delete, Body, Param, Query,
+  UseGuards, UseInterceptors, UploadedFiles,
+} from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
+import { memoryStorage } from 'multer';
 import { RFQStatus } from '@prisma/client';
 import { RFQsService } from './rfqs.service';
+import { RfqImagesService } from './rfq-images.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -10,7 +16,10 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 @ApiTags('RFQs')
 @Controller('rfqs')
 export class RFQsController {
-  constructor(private readonly rfqsService: RFQsService) {}
+  constructor(
+    private readonly rfqsService: RFQsService,
+    private readonly rfqImagesService: RfqImagesService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'List open RFQs (suppliers browse)' })
@@ -23,13 +32,13 @@ export class RFQsController {
   @Get('my')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Get my company\'s RFQs (buyer)' })
+  @ApiOperation({ summary: "Get my company's RFQs (buyer)" })
   getMyRFQs(@CurrentUser('id') userId: string, @Query() query: PaginationDto) {
     return this.rfqsService.getMyRFQs(userId, query);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get RFQ details' })
+  @ApiOperation({ summary: 'Get RFQ details with images' })
   findOne(@Param('id') id: string) {
     return this.rfqsService.findOne(id);
   }
@@ -56,5 +65,44 @@ export class RFQsController {
   @ApiOperation({ summary: 'Cancel RFQ' })
   cancel(@Param('id') id: string, @CurrentUser('id') userId: string) {
     return this.rfqsService.cancel(id, userId);
+  }
+
+  // ─── Image Endpoints ──────────────────────────────────────────────────────
+
+  @Get(':id/images')
+  @ApiOperation({ summary: 'Get all images for an RFQ' })
+  getImages(@Param('id') rfqId: string) {
+    return this.rfqImagesService.getImages(rfqId);
+  }
+
+  @Post(':id/images')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Upload images to RFQ (max 8, 5MB each, JPEG/PNG/WebP)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FilesInterceptor('images', 8, {
+      storage: memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    }),
+  )
+  uploadImages(
+    @Param('id') rfqId: string,
+    @UploadedFiles() files: Express.Multer.File[],
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.rfqImagesService.uploadImages(rfqId, files, userId);
+  }
+
+  @Delete(':id/images/:imageId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Delete an RFQ image' })
+  deleteImage(
+    @Param('id') rfqId: string,
+    @Param('imageId') imageId: string,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.rfqImagesService.deleteImage(rfqId, imageId, userId);
   }
 }

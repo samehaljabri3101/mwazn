@@ -10,13 +10,12 @@ import {
   FileText,
   MessageSquare,
   Package,
-  Star,
   Users,
-  Tag,
-  Settings,
   ScrollText,
   ShieldCheck,
   Briefcase,
+  Zap,
+  BarChart2,
 } from 'lucide-react';
 
 interface NavItem {
@@ -50,12 +49,15 @@ export function Sidebar() {
     { href: `${base}/supplier/deals`,    label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['SUPPLIER_ADMIN'] },
 
     // Common
-    { href: `${base}/messages`,          label: t('messages'),  icon: <MessageSquare className="h-4 w-4" /> },
+    { href: `${base}/messages`,      label: t('messages'),  icon: <MessageSquare className="h-4 w-4" /> },
+    { href: `${base}/analytics`,     label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart2 className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'SUPPLIER_ADMIN'] },
+
+    // Supplier subscription
+    { href: `${base}/subscription`,  label: locale === 'ar' ? 'الاشتراك' : 'Subscription', icon: <Zap className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN'] },
 
     // Admin
-    { href: `${base}/admin/companies`,   label: t('companies'), icon: <Users className="h-4 w-4" />,      roles: ['PLATFORM_ADMIN'] },
-    { href: `${base}/admin/categories`,  label: t('categories'),icon: <Tag className="h-4 w-4" />,        roles: ['PLATFORM_ADMIN'] },
-    { href: `${base}/admin`,             label: 'Dashboard',    icon: <ShieldCheck className="h-4 w-4" />,roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin`,             label: 'Dashboard',    icon: <ShieldCheck className="h-4 w-4" />, roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin/companies`,   label: t('companies'), icon: <Users className="h-4 w-4" />,       roles: ['PLATFORM_ADMIN'] },
   ];
 
   const visibleItems = allItems.filter(

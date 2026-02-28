@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('Companies')
@@ -48,7 +49,8 @@ export class CompaniesController {
   }
 
   @Get(':id/showroom')
-  @ApiOperation({ summary: 'Get supplier public showroom' })
+  @Public()
+  @ApiOperation({ summary: 'Get supplier public showroom (no auth required)' })
   getShowroom(@Param('id') id: string) {
     return this.companiesService.getShowroom(id);
   }

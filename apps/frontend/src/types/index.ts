@@ -58,20 +58,45 @@ export interface ListingImage {
 
 export interface Listing {
   id: string;
+  slug?: string;
   titleAr: string;
   titleEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
   price?: number;
+  priceTo?: number;
   currency: string;
   unit?: string;
   minOrderQty?: number;
+  leadTimeDays?: number;
+  tags?: string[];
+  certifications?: string[];
   status: ListingStatus;
+  viewCount?: number;
   supplierId: string;
   categoryId: string;
   images: ListingImage[];
   category?: Category;
-  supplier?: Pick<Company, 'id' | 'nameAr' | 'nameEn' | 'logoUrl' | 'city'>;
+  supplier?: Pick<Company, 'id' | 'nameAr' | 'nameEn' | 'logoUrl' | 'city' | 'verificationStatus' | 'plan'> & {
+    slug?: string;
+    phone?: string;
+    website?: string;
+    descriptionEn?: string;
+    descriptionAr?: string;
+    _count?: { ratingsReceived: number; listings: number };
+  };
+  _count?: { quotes: number };
+  createdAt: string;
+}
+
+export interface RfqImage {
+  id: string;
+  url: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  sortOrder: number;
+  rfqId: string;
   createdAt: string;
 }
 
@@ -89,6 +114,7 @@ export interface RFQ {
   categoryId: string;
   category?: Category;
   buyer?: Pick<Company, 'id' | 'nameAr' | 'nameEn'>;
+  images?: RfqImage[];
   _count?: { quotes: number };
   createdAt: string;
 }

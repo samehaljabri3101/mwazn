@@ -49,6 +49,7 @@ export class RFQsService {
           orderBy: { createdAt: 'desc' },
         },
         attachments: true,
+        images: { orderBy: { sortOrder: 'asc' } },
         _count: { select: { quotes: true } },
       },
     });
