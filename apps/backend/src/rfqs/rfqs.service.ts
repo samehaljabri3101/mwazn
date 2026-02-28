@@ -2,15 +2,22 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { RFQStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class RFQsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string }) {
     const where: any = {};
@@ -107,5 +114,62 @@ export class RFQsService {
   async getMyRFQs(userId: string, query: PaginationDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     return this.findAll(Object.assign(query, { buyerId: user?.companyId }));
+  }
+
+  async inviteSupplier(rfqId: string, supplierId: string, buyerUserId: string) {
+    const rfq = await this.prisma.rFQ.findUnique({
+      where: { id: rfqId },
+      include: { buyer: true },
+    });
+    if (!rfq) throw new NotFoundException('RFQ not found');
+
+    const buyerUser = await this.prisma.user.findUnique({ where: { id: buyerUserId } });
+    if (buyerUser?.companyId !== rfq.buyerId && buyerUser?.role !== Role.PLATFORM_ADMIN) {
+      throw new ForbiddenException('Only the RFQ buyer can invite suppliers');
+    }
+
+    const supplier = await this.prisma.company.findUnique({
+      where: { id: supplierId },
+      include: { users: { select: { id: true, email: true }, take: 5 } },
+    });
+    if (!supplier) throw new NotFoundException('Supplier not found');
+
+    // Upsert to avoid duplicates (@@unique[rfqId, supplierId])
+    const existing = await this.prisma.rFQInvite.findUnique({
+      where: { rfqId_supplierId: { rfqId, supplierId } },
+    });
+    if (existing) throw new BadRequestException('Supplier already invited');
+
+    const invite = await this.prisma.rFQInvite.create({
+      data: { rfqId, supplierId, invitedBy: buyerUserId },
+    });
+
+    // Notify all supplier users
+    for (const supplierUser of supplier.users) {
+      await this.email.sendRFQInvite(supplierUser.email, rfq.title, rfqId);
+      await this.notifications.create(
+        supplierUser.id,
+        'INVITE',
+        'دعوة لتقديم عرض سعر',
+        'RFQ Invitation',
+        `تمت دعوتك لتقديم عرض سعر على "${rfq.title}"`,
+        `You've been invited to submit a quote for "${rfq.title}"`,
+        `/dashboard/supplier/rfqs`,
+      );
+    }
+
+    return invite;
+  }
+
+  async getInvites(rfqId: string) {
+    return this.prisma.rFQInvite.findMany({
+      where: { rfqId },
+      include: {
+        supplier: {
+          select: { id: true, nameAr: true, nameEn: true, city: true, plan: true, verificationStatus: true, logoUrl: true },
+        },
+      },
+      orderBy: { sentAt: 'desc' },
+    });
   }
 }

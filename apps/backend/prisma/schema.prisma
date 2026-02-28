@@ -77,6 +77,7 @@ model User {
   refreshTokens RefreshToken[]
   sentMessages  Message[]
   auditLogs     AuditLog[]
+  notifications Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -114,6 +115,7 @@ model Company {
   ratingsReceived    Rating[]       @relation("RatedCompany")
   conversations      Conversation[] @relation("CompanyConversations")
   categories         Category[]     @relation("CompanyCategories")
+  receivedInvites    RFQInvite[]    @relation("InvitedSupplier")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -229,6 +231,7 @@ model RFQ {
   quotes      Quote[]
   attachments FileUpload[]
   images      RfqImage[]
+  invites     RFQInvite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -300,7 +303,7 @@ model Deal {
   supplier   Company @relation("SupplierDeals", fields: [supplierId], references: [id])
   supplierId String
 
-  rating Rating?
+  ratings Rating[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -316,7 +319,7 @@ model Rating {
   comment String? @db.Text
 
   deal   Deal   @relation(fields: [dealId], references: [id])
-  dealId String @unique
+  dealId String
 
   rater   Company @relation("RaterCompany", fields: [raterId], references: [id])
   raterId String
@@ -326,6 +329,7 @@ model Rating {
 
   createdAt DateTime @default(now())
 
+  @@unique([dealId, raterId])
   @@index([ratedId])
   @@index([raterId])
 }
@@ -378,6 +382,34 @@ model FileUpload {
   messageId String?
 
   createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String   // QUOTE_RECEIVED|QUOTE_ACCEPTED|DEAL_STATUS|MESSAGE|VERIFICATION|INVITE
+  titleAr   String
+  titleEn   String
+  bodyAr    String
+  bodyEn    String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model RFQInvite {
+  id         String   @id @default(cuid())
+  rfqId      String
+  rfq        RFQ      @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  supplierId String
+  supplier   Company  @relation("InvitedSupplier", fields: [supplierId], references: [id])
+  invitedBy  String
+  sentAt     DateTime @default(now())
+
+  @@unique([rfqId, supplierId])
 }
 
 model AuditLog {

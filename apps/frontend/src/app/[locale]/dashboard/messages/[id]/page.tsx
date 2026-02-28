@@ -24,9 +24,14 @@ export default function ConversationPage() {
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
+  const [typingIndicator, setTypingIndicator] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const typingRef = useRef<NodeJS.Timeout | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const socketRef = useRef<any>(null);
+  const socketConnected = useRef(false);
 
   const fetchMessages = useCallback(async (silent = false) => {
     try {
@@ -48,16 +53,87 @@ export default function ConversationPage() {
     } catch { /* silent */ }
   }, [id]);
 
+  // Set up Socket.io connection with polling fallback
   useEffect(() => {
     fetchConversation();
     fetchMessages();
 
-    // Poll every 5 seconds
-    pollingRef.current = setInterval(() => fetchMessages(true), 5000);
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') ?? 'http://localhost:3001');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
+    let socket: ReturnType<typeof import('socket.io-client').io> | null = null;
+
+    import('socket.io-client').then(({ io }) => {
+      socket = io(`${apiUrl}/chat`, {
+        auth: { token },
+        transports: ['websocket'],
+        reconnectionAttempts: 3,
+      });
+
+      socket.on('connect', () => {
+        socketConnected.current = true;
+        socket!.emit('join', { conversationId: id });
+        // Clear polling when socket connected
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+          pollingRef.current = null;
+        }
+      });
+
+      socket.on('message', (msg: Message) => {
+        setMessages((prev) => {
+          // Avoid duplicates
+          if (prev.some((m) => m.id === msg.id)) return prev;
+          return [...prev, msg];
+        });
+      });
+
+      socket.on('typing', ({ userId: typingUserId }: { userId: string }) => {
+        if (typingUserId !== user?.id) {
+          setTypingIndicator(true);
+          if (typingRef.current) clearTimeout(typingRef.current);
+          typingRef.current = setTimeout(() => setTypingIndicator(false), 3000);
+        }
+      });
+
+      socket.on('connect_error', () => {
+        socketConnected.current = false;
+        // Fall back to polling if socket fails
+        if (!pollingRef.current) {
+          pollingRef.current = setInterval(() => fetchMessages(true), 5000);
+        }
+      });
+
+      socket.on('disconnect', () => {
+        socketConnected.current = false;
+        // Resume polling on disconnect
+        if (!pollingRef.current) {
+          pollingRef.current = setInterval(() => fetchMessages(true), 5000);
+        }
+      });
+
+      socketRef.current = socket;
+    }).catch(() => {
+      // socket.io-client not available, use polling
+      if (!pollingRef.current) {
+        pollingRef.current = setInterval(() => fetchMessages(true), 5000);
+      }
+    });
+
+    // Start polling as initial fallback until socket connects
+    const fallbackTimeout = setTimeout(() => {
+      if (!socketConnected.current && !pollingRef.current) {
+        pollingRef.current = setInterval(() => fetchMessages(true), 5000);
+      }
+    }, 3000);
+
     return () => {
+      clearTimeout(fallbackTimeout);
       if (pollingRef.current) clearInterval(pollingRef.current);
+      if (typingRef.current) clearTimeout(typingRef.current);
+      if (socketRef.current) socketRef.current.disconnect();
     };
-  }, [fetchConversation, fetchMessages]);
+  }, [fetchConversation, fetchMessages, id, user?.id]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -66,13 +142,34 @@ export default function ConversationPage() {
 
   const sendMessage = async () => {
     if (!body.trim()) return;
+    const msgBody = body.trim();
     setSending(true);
-    try {
-      await api.post(`/conversations/${id}/messages`, { body: body.trim() });
+
+    // Optimistic UI update
+    const tempMsg: Message = {
+      id: `temp-${Date.now()}`,
+      body: msgBody,
+      conversationId: id,
+      senderId: user?.id ?? '',
+      isRead: false,
+      createdAt: new Date().toISOString(),
+      sender: { id: user?.id ?? '', fullName: user?.fullName ?? '', companyId: company?.id ?? '' },
+    };
+
+    if (socketConnected.current && socketRef.current) {
+      setMessages((prev) => [...prev, tempMsg]);
       setBody('');
-      await fetchMessages(true);
-    } catch { /* silent */ }
-    setSending(false);
+      socketRef.current.emit('message', { conversationId: id, body: msgBody });
+      setSending(false);
+    } else {
+      setBody('');
+      try {
+        await api.post(`/conversations/${id}/messages`, { body: msgBody });
+        await fetchMessages(true);
+      } catch { /* silent */ }
+      setSending(false);
+    }
+
     inputRef.current?.focus();
   };
 
@@ -80,6 +177,8 @@ export default function ConversationPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
+    } else if (socketConnected.current && socketRef.current) {
+      socketRef.current.emit('typing', { conversationId: id, userId: user?.id });
     }
   };
 
@@ -146,6 +245,20 @@ export default function ConversationPage() {
               );
             })
           )}
+
+          {/* Typing indicator */}
+          {typingIndicator && (
+            <div className="flex justify-start">
+              <div className="rounded-2xl rounded-bl-sm bg-white border border-slate-100 px-4 py-2.5 shadow-card">
+                <div className="flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
 

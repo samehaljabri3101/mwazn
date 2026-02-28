@@ -3,7 +3,8 @@ import {
   UseGuards, UseInterceptors, UploadedFiles,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes, ApiProperty } from '@nestjs/swagger';
+import { IsString } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { RFQStatus } from '@prisma/client';
 import { RFQsService } from './rfqs.service';
@@ -12,6 +13,10 @@ import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
+
+class InviteSupplierDto {
+  @ApiProperty() @IsString() supplierId: string;
+}
 
 @ApiTags('RFQs')
 @Controller('rfqs')
@@ -105,5 +110,27 @@ export class RFQsController {
     @CurrentUser('id') userId: string,
   ) {
     return this.rfqImagesService.deleteImage(rfqId, imageId, userId);
+  }
+
+  // ─── Invite Endpoints ─────────────────────────────────────────────────────
+
+  @Post(':id/invites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Invite a verified supplier to submit a quote on this RFQ' })
+  inviteSupplier(
+    @Param('id') rfqId: string,
+    @Body() dto: InviteSupplierDto,
+    @CurrentUser('id') userId: string,
+  ) {
+    return this.rfqsService.inviteSupplier(rfqId, dto.supplierId, userId);
+  }
+
+  @Get(':id/invites')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'List invited suppliers for an RFQ' })
+  getInvites(@Param('id') rfqId: string) {
+    return this.rfqsService.getInvites(rfqId);
   }
 }

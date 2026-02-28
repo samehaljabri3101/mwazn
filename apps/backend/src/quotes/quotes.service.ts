@@ -7,16 +7,18 @@ import {
 import { QuoteStatus, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { CreateQuoteDto, UpdateQuoteDto } from './dto/quote.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 
-const FREE_QUOTA = 3;
+const FREE_QUOTA = 10;
 
 @Injectable()
 export class QuotesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findByRFQ(rfqId: string, userId: string) {
@@ -64,7 +66,7 @@ export class QuotesService {
 
     const rfq = await this.prisma.rFQ.findUnique({
       where: { id: dto.rfqId },
-      include: { buyer: { include: { users: { select: { email: true }, take: 1 } } } },
+      include: { buyer: { include: { users: { select: { id: true, email: true }, take: 5 } } } },
     });
     if (!rfq || rfq.status !== 'OPEN') throw new BadRequestException('RFQ is not open');
 
@@ -73,7 +75,7 @@ export class QuotesService {
       const now = new Date();
       const resetAt = user.company.quotaResetAt;
 
-      let needsReset = !resetAt || resetAt < new Date(now.getFullYear(), now.getMonth(), 1);
+      const needsReset = !resetAt || resetAt < new Date(now.getFullYear(), now.getMonth(), 1);
       if (needsReset) {
         await this.prisma.company.update({
           where: { id: user.companyId },
@@ -115,9 +117,19 @@ export class QuotesService {
       });
     }
 
-    // Notify buyer
-    const buyerEmail = rfq.buyer.users[0]?.email;
-    if (buyerEmail) await this.email.sendQuoteReceived(buyerEmail, rfq.title);
+    // Notify buyer (email + in-app)
+    for (const buyerUser of rfq.buyer.users) {
+      await this.email.sendQuoteReceived(buyerUser.email, rfq.title);
+      await this.notifications.create(
+        buyerUser.id,
+        'QUOTE_RECEIVED',
+        'عرض سعر جديد',
+        'New Quote Received',
+        `قدّم مورد عرض سعر على طلبك "${rfq.title}"`,
+        `A supplier submitted a quote for your RFQ "${rfq.title}"`,
+        `/dashboard/buyer/rfqs/${rfq.id}`,
+      );
+    }
 
     return quote;
   }
@@ -142,7 +154,10 @@ export class QuotesService {
   private async changeStatus(quoteId: string, userId: string, status: QuoteStatus) {
     const quote = await this.prisma.quote.findUnique({
       where: { id: quoteId },
-      include: { rfq: true, supplier: { include: { users: { select: { email: true }, take: 1 } } } },
+      include: {
+        rfq: true,
+        supplier: { include: { users: { select: { id: true, email: true }, take: 5 } } },
+      },
     });
     if (!quote) throw new NotFoundException('Quote not found');
 
@@ -167,8 +182,19 @@ export class QuotesService {
         },
       });
 
-      const supplierEmail = quote.supplier.users[0]?.email;
-      if (supplierEmail) await this.email.sendQuoteAccepted(supplierEmail, quote.rfq.title);
+      // Notify supplier users (email + in-app)
+      for (const supplierUser of quote.supplier.users) {
+        await this.email.sendQuoteAccepted(supplierUser.email, quote.rfq.title);
+        await this.notifications.create(
+          supplierUser.id,
+          'QUOTE_ACCEPTED',
+          'تم قبول عرضك!',
+          'Quote Accepted!',
+          `تم قبول عرض سعرك على "${quote.rfq.title}". تم إنشاء صفقة جديدة.`,
+          `Your quote for "${quote.rfq.title}" was accepted. A deal has been created.`,
+          `/dashboard/supplier/deals`,
+        );
+      }
     }
 
     return updated;

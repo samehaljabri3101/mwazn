@@ -398,6 +398,12 @@ const MSG_BODIES = [
   'Please send the invoice to our accounts team.',
 ];
 
+// ── Seed credentials from environment (fallback to dev defaults) ───────────────
+const SEED_ADMIN_EMAIL    = process.env.SEED_ADMIN_EMAIL    || 'admin@mwazn.sa';
+const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@1234';
+const SEED_SUP_PASSWORD   = process.env.SEED_SUP_PASSWORD   || 'Supplier@1234';
+const SEED_BUY_PASSWORD   = process.env.SEED_BUY_PASSWORD   || 'Buyer@1234';
+
 // ── Main Seed ─────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🌱 Starting Mwazn seed...');
@@ -440,8 +446,8 @@ async function main() {
       city: 'Riyadh',
       users: {
         create: {
-          email: 'admin@mwazn.sa',
-          passwordHash: hash('Admin@1234'),
+          email: SEED_ADMIN_EMAIL,
+          passwordHash: hash(SEED_ADMIN_PASSWORD),
           fullName: 'Platform Admin',
           role: Role.PLATFORM_ADMIN,
         },
@@ -449,7 +455,7 @@ async function main() {
     },
     include: { users: true },
   });
-  console.log('  ✓ Admin: admin@mwazn.sa / Admin@1234');
+  console.log(`  ✓ Admin: ${SEED_ADMIN_EMAIL}`);
 
   // ── 3. Supplier Companies ─────────────────────────────────────────────────
   console.log('  Creating supplier companies...');
@@ -475,7 +481,7 @@ async function main() {
         users: {
           create: {
             email,
-            passwordHash: hash('Supplier@1234'),
+            passwordHash: hash(SEED_SUP_PASSWORD),
             fullName: `مدير ${s.nameAr}`.substring(0, 50),
             role: Role.SUPPLIER_ADMIN,
           },
@@ -507,7 +513,7 @@ async function main() {
         users: {
           create: {
             email,
-            passwordHash: hash('Buyer@1234'),
+            passwordHash: hash(SEED_BUY_PASSWORD),
             fullName: `مدير ${b.nameAr}`.substring(0, 50),
             role: Role.BUYER_ADMIN,
           },
@@ -755,12 +761,12 @@ async function main() {
   // ── Summary ───────────────────────────────────────────────────────────────
   console.log('\n✅ Seed complete!');
   console.log('─'.repeat(55));
-  console.log('Demo Credentials:');
-  console.log('  Admin     → admin@mwazn.sa           / Admin@1234');
-  console.log('  Buyer     → admin@buyer1.sa           / Buyer@1234');
-  console.log('  Supplier (PRO, Verified) → admin@supplier1.sa / Supplier@1234');
-  console.log('  Supplier (FREE)          → admin@supplier3.sa / Supplier@1234');
-  console.log('  Supplier (Unverified)    → admin@supplier24.sa / Supplier@1234');
+  console.log('Demo Credentials (passwords set via SEED_* env vars):');
+  console.log(`  Admin     → ${SEED_ADMIN_EMAIL}`);
+  console.log('  Buyer     → admin@buyer1.sa');
+  console.log('  Supplier (PRO, Verified) → admin@supplier1.sa');
+  console.log('  Supplier (FREE)          → admin@supplier3.sa');
+  console.log('  Supplier (Unverified)    → admin@supplier24.sa');
   console.log('─'.repeat(55));
   console.log('Showroom URLs (after docker restart):');
   console.log('  http://localhost:3000/en/suppliers/demo-1   Gulf Industrial');

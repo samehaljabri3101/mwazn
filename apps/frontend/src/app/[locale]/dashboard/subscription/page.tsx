@@ -1,10 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/Button';
+import api from '@/lib/api';
 import { CheckCircle2, Zap, Star, MessageSquare, FileText, Infinity } from 'lucide-react';
+
+function Toast({ msg }: { msg: string }) {
+  return (
+    <div className="fixed bottom-6 right-6 z-50 rounded-xl bg-slate-800 text-white px-4 py-3 text-sm shadow-lift max-w-sm">
+      {msg}
+    </div>
+  );
+}
 
 export default function SubscriptionPage() {
   const locale = useLocale();
@@ -13,10 +23,32 @@ export default function SubscriptionPage() {
 
   const isPro = company?.plan === 'PRO';
   const quotaUsed = company?.quotesUsedThisMonth ?? 0;
+  const [upgrading, setUpgrading] = useState(false);
+  const [toast, setToast] = useState('');
+
+  const handleUpgrade = async () => {
+    setUpgrading(true);
+    try {
+      const res = await api.post('/payments/checkout', { plan: 'PRO' });
+      const { checkoutUrl, isMock } = res.data.data || {};
+      if (isMock) {
+        setToast(ar
+          ? 'بوابة الدفع قيد الإعداد — تواصل معنا عبر pro@mwazn.sa'
+          : 'Payment gateway coming soon — contact us at pro@mwazn.sa');
+        setTimeout(() => setToast(''), 5000);
+      } else if (checkoutUrl) {
+        window.location.href = checkoutUrl;
+      }
+    } catch {
+      setToast(ar ? 'حدث خطأ، يرجى المحاولة لاحقاً' : 'Something went wrong, please try again');
+      setTimeout(() => setToast(''), 4000);
+    }
+    setUpgrading(false);
+  };
 
   const freeFeatures = ar
-    ? ['3 عروض أسعار في الشهر', 'قائمة منتجات غير محدودة', 'مراسلة مع المشترين', 'لوحة تحكم أساسية']
-    : ['3 quotes per month', 'Unlimited product listings', 'Buyer messaging', 'Basic dashboard'];
+    ? ['10 عروض أسعار في الشهر', 'قائمة منتجات غير محدودة', 'مراسلة مع المشترين', 'لوحة تحكم أساسية']
+    : ['10 quotes per month', 'Unlimited product listings', 'Buyer messaging', 'Basic dashboard'];
 
   const proFeatures = ar
     ? ['عروض أسعار غير محدودة', 'أولوية في نتائج البحث', 'شارة PRO المميزة', 'تحليلات متقدمة', 'دعم مخصص', 'كل مميزات الخطة المجانية']
@@ -24,6 +56,7 @@ export default function SubscriptionPage() {
 
   return (
     <DashboardLayout>
+      {toast && <Toast msg={toast} />}
       <div className="max-w-3xl space-y-8">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">{ar ? 'الاشتراك' : 'Subscription'}</h1>
@@ -45,12 +78,12 @@ export default function SubscriptionPage() {
             {!isPro && (
               <div className="text-end">
                 <p className="text-sm font-semibold text-brand-700">
-                  {ar ? `${quotaUsed}/3 عروض مستخدمة` : `${quotaUsed}/3 quotes used`}
+                  {ar ? `${quotaUsed}/10 عروض مستخدمة` : `${quotaUsed}/10 quotes used`}
                 </p>
                 <div className="mt-1.5 h-2 w-32 rounded-full bg-slate-100">
                   <div
                     className="h-full rounded-full bg-brand-700 transition-all"
-                    style={{ width: `${Math.min((quotaUsed / 3) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((quotaUsed / 10) * 100, 100)}%` }}
                   />
                 </div>
               </div>
@@ -131,11 +164,14 @@ export default function SubscriptionPage() {
               ))}
             </ul>
             {!isPro ? (
-              <a href="mailto:pro@mwazn.sa">
-                <Button className="w-full" icon={<Zap className="h-4 w-4" />}>
-                  {ar ? 'الترقية لـ PRO' : 'Upgrade to PRO'}
-                </Button>
-              </a>
+              <Button
+                className="w-full"
+                icon={<Zap className="h-4 w-4" />}
+                onClick={handleUpgrade}
+                loading={upgrading}
+              >
+                {ar ? 'الترقية لـ PRO' : 'Upgrade to PRO'}
+              </Button>
             ) : (
               <Button className="w-full" disabled icon={<Star className="h-4 w-4" />}>
                 {ar ? 'أنت على PRO 🎉' : 'You\'re on PRO 🎉'}

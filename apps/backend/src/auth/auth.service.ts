@@ -3,6 +3,7 @@ import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
+  NotFoundException,
   Logger,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -10,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import { CompanyType, Role, VerificationStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { MaroofService } from '../maroof/maroof.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterSupplierDto } from './dto/register-supplier.dto';
 import { RegisterBuyerDto } from './dto/register-buyer.dto';
@@ -24,6 +26,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly maroof: MaroofService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -32,6 +35,11 @@ export class AuthService {
 
     const existingCR = await this.prisma.company.findUnique({ where: { crNumber: dto.crNumber } });
     if (existingCR) throw new ConflictException('CR number already registered');
+
+    if (dto.companyType === CompanyType.SUPPLIER) {
+      const crCheck = await this.maroof.validateCR(dto.crNumber);
+      if (!crCheck.valid) throw new BadRequestException('Invalid CR number format or not found in Maroof');
+    }
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const role = dto.companyType === CompanyType.BUYER ? Role.BUYER_ADMIN : Role.SUPPLIER_ADMIN;
@@ -148,6 +156,9 @@ export class AuthService {
     const existingCR = await this.prisma.company.findUnique({ where: { crNumber: dto.crNumber } });
     if (existingCR) throw new ConflictException('CR number already registered');
 
+    const crCheck = await this.maroof.validateCR(dto.crNumber);
+    if (!crCheck.valid) throw new BadRequestException('Invalid CR number format or not found in Maroof');
+
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
     const company = await this.prisma.company.create({
@@ -233,6 +244,30 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email, user.role, company.id);
     this.logger.log(`New FREELANCER registered: ${dto.email}`);
     return { ...tokens, user: this.sanitizeUser(user), company: this.sanitizeCompany(company) };
+  }
+
+  async updateProfile(userId: string, dto: { fullName?: string; avatarUrl?: string }) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const updated = await this.prisma.user.update({
+      where: { id: userId },
+      data: { ...dto },
+      include: { company: true },
+    });
+    return { user: this.sanitizeUser(updated), company: this.sanitizeCompany(updated.company) };
+  }
+
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new BadRequestException('Current password is incorrect');
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+    return { message: 'Password changed successfully' };
   }
 
   // ── Private ──────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useLocale, useTranslations } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
+import { NotificationBell } from '@/components/ui/NotificationPanel';
 import { Globe, Menu, X, ChevronDown, User, LayoutDashboard, LogOut, FileText } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -89,6 +90,8 @@ export function Navbar({ transparent = false }: NavbarProps) {
             </button>
 
             {user ? (
+              <>
+              <NotificationBell />
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -143,6 +146,7 @@ export function Navbar({ transparent = false }: NavbarProps) {
                   </div>
                 )}
               </div>
+              </>
             ) : (
               <>
                 <Link href={`/${locale}/auth/login`}>

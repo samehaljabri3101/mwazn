@@ -4,14 +4,63 @@ import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Deal } from '@/types';
-import { Briefcase, DollarSign, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { Briefcase, DollarSign, MessageSquare, CheckCircle2, Star } from 'lucide-react';
 import { format } from 'date-fns';
+
+function RatingModal({ dealId, onClose, onDone }: { dealId: string; onClose: () => void; onDone: () => void }) {
+  const locale = useLocale();
+  const ar = locale === 'ar';
+  const [score, setScore] = useState(5);
+  const [comment, setComment] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    setLoading(true);
+    try {
+      await api.post('/ratings', { dealId, score, comment });
+      onDone();
+    } catch { /* silent */ }
+    setLoading(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-bold text-slate-800 mb-1">{ar ? 'قيّم المشتري' : 'Rate the Buyer'}</h3>
+        <p className="text-sm text-slate-500 mb-6">{ar ? 'شاركنا تجربتك مع هذا المشتري' : 'Share your experience with this buyer'}</p>
+        <div className="flex justify-center gap-2 mb-6">
+          {[1, 2, 3, 4, 5].map((s) => (
+            <button
+              key={s}
+              onClick={() => setScore(s)}
+              className={`text-3xl transition-transform ${s <= score ? 'text-gold-500' : 'text-slate-200'} hover:scale-110`}
+            >★</button>
+          ))}
+        </div>
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          rows={3}
+          placeholder={ar ? 'اكتب تعليقك هنا...' : 'Write your comment here...'}
+          className="input-base resize-none mb-4"
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+          <Button loading={loading} icon={<Star className="h-4 w-4" />} onClick={submit}>
+            {ar ? 'إرسال التقييم' : 'Submit Rating'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const STATUS_META: Record<string, {
   color: 'green' | 'blue' | 'amber' | 'gray' | 'red';
@@ -29,10 +78,12 @@ export default function SupplierDealsPage() {
   const locale = useLocale();
   const router = useRouter();
   const ar = locale === 'ar';
+  const { company } = useAuth();
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [ratingDeal, setRatingDeal] = useState<string | null>(null);
 
   const fetchDeals = async () => {
     setLoading(true);
@@ -63,6 +114,13 @@ export default function SupplierDealsPage() {
 
   return (
     <DashboardLayout>
+      {ratingDeal && (
+        <RatingModal
+          dealId={ratingDeal}
+          onClose={() => setRatingDeal(null)}
+          onDone={() => { setRatingDeal(null); fetchDeals(); }}
+        />
+      )}
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">{ar ? 'صفقاتي' : 'My Deals'}</h1>
@@ -83,6 +141,8 @@ export default function SupplierDealsPage() {
           <div className="space-y-4">
             {deals.map((deal) => {
               const meta = STATUS_META[deal.status];
+              const hasRated = deal.ratings?.some((r) => r.raterId === company?.id);
+              const canRate = deal.status === 'COMPLETED' && !hasRated;
               return (
                 <div key={deal.id} className="card">
                   <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -120,6 +180,17 @@ export default function SupplierDealsPage() {
                           icon={<CheckCircle2 className="h-3.5 w-3.5" />}
                         >
                           {ar ? meta.nextAr : meta.nextEn}
+                        </Button>
+                      )}
+
+                      {canRate && (
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          icon={<Star className="h-3.5 w-3.5" />}
+                          onClick={() => setRatingDeal(deal.id)}
+                        >
+                          {ar ? 'قيّم المشتري' : 'Rate Buyer'}
                         </Button>
                       )}
 

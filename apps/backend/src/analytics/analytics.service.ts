@@ -154,6 +154,54 @@ export class AnalyticsService {
   }
 }
 
+  async exportSupplierCsv(companyId: string): Promise<string> {
+    const [quotes, deals, listings] = await Promise.all([
+      this.prisma.quote.findMany({
+        where: { supplierId: companyId },
+        include: { rfq: { select: { title: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.deal.findMany({
+        where: { supplierId: companyId },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.listing.findMany({
+        where: { supplierId: companyId },
+        select: { titleEn: true, titleAr: true, status: true, viewCount: true, createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const rows: string[] = [
+      'Section,Metric,Value',
+      ...quotes.map((q) => `Quotes,"${q.rfq?.title || q.rfqId}","${q.status} — ${q.price} ${q.currency}"`),
+      ...deals.map((d) => `Deals,"Deal ${d.id.slice(-6)}","${d.status} — ${d.totalAmount} ${d.currency}"`),
+      ...listings.map((l) => `Listings,"${l.titleEn}","${l.status} — ${l.viewCount} views"`),
+    ];
+    return rows.join('\n');
+  }
+
+  async exportBuyerCsv(companyId: string): Promise<string> {
+    const [rfqs, deals] = await Promise.all([
+      this.prisma.rFQ.findMany({
+        where: { buyerId: companyId },
+        include: { category: { select: { nameEn: true } }, _count: { select: { quotes: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.deal.findMany({
+        where: { buyerId: companyId },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    const rows: string[] = [
+      'Section,Title,Details',
+      ...rfqs.map((r) => `RFQs,"${r.title}","${r.status} — ${r._count.quotes} quotes — ${r.category?.nameEn || ''}"`),
+      ...deals.map((d) => `Deals,"Deal ${d.id.slice(-6)}","${d.status} — ${d.totalAmount} ${d.currency}"`),
+    ];
+    return rows.join('\n');
+  }
+
 function buildMonthlyBuckets(items: Array<{ createdAt: Date }>) {
   const now = new Date();
   const months: { label: string; month: string; count: number }[] = [];

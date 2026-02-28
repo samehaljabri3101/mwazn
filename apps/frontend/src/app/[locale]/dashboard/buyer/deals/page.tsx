@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Deal } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { Briefcase, DollarSign, Building2, Star, CheckCircle2, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -79,6 +80,7 @@ export default function BuyerDealsPage() {
   const locale = useLocale();
   const router = useRouter();
   const ar = locale === 'ar';
+  const { company } = useAuth();
 
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -143,7 +145,8 @@ export default function BuyerDealsPage() {
             {deals.map((deal) => {
               const meta = STATUS_META[deal.status];
               const nextStatus = NEXT_STATUS[deal.status];
-              const canRate = deal.status === 'COMPLETED' && !deal.rating;
+              const hasRated = deal.ratings?.some((r) => r.raterId === company?.id) ?? !!deal.rating;
+              const canRate = deal.status === 'COMPLETED' && !hasRated;
 
               return (
                 <div key={deal.id} className="card">

@@ -8,8 +8,7 @@ yarn-error.log*
 pnpm-debug.log*
 .pnpm-store/
 
-# Lock files (keep only one if needed)
-package-lock.json
+# Lock files — commit package-lock.json so `npm ci` works in CI/Docker
 yarn.lock
 pnpm-lock.yaml
 
@@ -44,7 +43,6 @@ prisma/generated/
 # ─────────────────────────────────────────────────────────────
 # Docker
 # ─────────────────────────────────────────────────────────────
-.dockerignore
 docker-compose.override.yml
 .docker/
 

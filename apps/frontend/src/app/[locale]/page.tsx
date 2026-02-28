@@ -1,6 +1,24 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Navbar } from '@/components/layout/Navbar';
+
+export const metadata: Metadata = {
+  title: 'Mwazn | موازن — Saudi B2B Procurement Marketplace',
+  description: "Saudi Arabia's premier B2B marketplace — connect with verified suppliers, post RFQs, and close deals faster. منصة المشتريات B2B السعودية الرائدة.",
+  openGraph: {
+    title: 'Mwazn | موازن — Saudi B2B Procurement Marketplace',
+    description: "Connect with verified Saudi suppliers and post procurement requests on Mwazn.",
+    type: 'website',
+    locale: 'en_US',
+    alternateLocale: 'ar_SA',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Mwazn | موازن — Saudi B2B Marketplace',
+    description: "Saudi Arabia's premier B2B procurement platform.",
+  },
+};
 import { StarRating } from '@/components/ui/StarRating';
 import { Badge } from '@/components/ui/Badge';
 import {

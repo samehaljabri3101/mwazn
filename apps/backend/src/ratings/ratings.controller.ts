@@ -21,13 +21,19 @@ export class RatingsController {
   constructor(private readonly ratingsService: RatingsService) {}
 
   @Get('supplier/:supplierId')
-  @ApiOperation({ summary: 'Get all ratings for a supplier' })
+  @ApiOperation({ summary: 'Get all ratings for a supplier (received)' })
   findBySupplier(@Param('supplierId') supplierId: string, @Query() query: PaginationDto) {
     return this.ratingsService.findBySupplier(supplierId, query);
   }
 
+  @Get('buyer/:buyerId')
+  @ApiOperation({ summary: 'Get all ratings for a buyer (received from suppliers)' })
+  findForBuyer(@Param('buyerId') buyerId: string, @Query() query: PaginationDto) {
+    return this.ratingsService.findForBuyer(buyerId, query);
+  }
+
   @Post()
-  @ApiOperation({ summary: 'Rate a supplier after a completed deal (buyer only)' })
+  @ApiOperation({ summary: 'Rate a deal counterpart — buyer rates supplier, supplier rates buyer' })
   create(@Body() dto: CreateRatingDto, @CurrentUser('id') userId: string) {
     return this.ratingsService.create(dto.dealId, dto.score, dto.comment, userId);
   }

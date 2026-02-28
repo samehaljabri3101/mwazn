@@ -14,8 +14,9 @@ import type { RFQ, Quote, RfqImage } from '@/types';
 import {
   ChevronLeft, Calendar, Tag, DollarSign, Package,
   CheckCircle2, XCircle, Clock, Star, MessageSquare,
-  AlertTriangle, ImageIcon,
+  AlertTriangle, ImageIcon, UserPlus,
 } from 'lucide-react';
+import { InviteSupplierModal } from '@/components/rfq/InviteSupplierModal';
 import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<string, 'green' | 'blue' | 'amber' | 'red' | 'gray'> = {
@@ -38,6 +39,7 @@ export default function RFQDetailPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [activeImg, setActiveImg] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -149,14 +151,24 @@ export default function RFQDetailPage() {
             </p>
           </div>
           {rfq.status === 'OPEN' && (
-            <Button
-              variant="danger"
-              size="sm"
-              onClick={() => setConfirmCancel(true)}
-              loading={actionLoading === 'cancel'}
-            >
-              {ar ? 'إلغاء الطلب' : 'Cancel RFQ'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<UserPlus className="h-4 w-4" />}
+                onClick={() => setShowInviteModal(true)}
+              >
+                {ar ? 'دعوة موردين' : 'Invite Suppliers'}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => setConfirmCancel(true)}
+                loading={actionLoading === 'cancel'}
+              >
+                {ar ? 'إلغاء الطلب' : 'Cancel RFQ'}
+              </Button>
+            </div>
           )}
         </div>
 
@@ -393,6 +405,10 @@ export default function RFQDetailPage() {
           )}
         </div>
       </div>
+
+      {showInviteModal && (
+        <InviteSupplierModal rfqId={id} onClose={() => setShowInviteModal(false)} />
+      )}
     </DashboardLayout>
   );
 }

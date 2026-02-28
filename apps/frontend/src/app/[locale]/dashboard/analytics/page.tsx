@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   TrendingUp, Package, Star, DollarSign, FileText, CheckCircle2,
-  XCircle, Trophy, BarChart2, Eye, Zap,
+  XCircle, Trophy, BarChart2, Eye, Zap, Download,
 } from 'lucide-react';
 
 // Simple bar chart using Tailwind CSS — no external libs
@@ -63,13 +63,15 @@ function StatCard({ icon, label, value, sub, color = 'brand' }: {
 
 export default function AnalyticsPage() {
   const locale = useLocale();
-  const { user } = useAuth();
+  const { user, company } = useAuth();
   const ar = locale === 'ar';
   const isSupplier = user?.role === 'SUPPLIER_ADMIN';
   const isBuyer = user?.role === 'BUYER_ADMIN';
+  const isPro = company?.plan === 'PRO';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     const endpoint = isSupplier ? '/analytics/supplier' : '/analytics/buyer';
@@ -77,6 +79,22 @@ export default function AnalyticsPage() {
       setData(res.data.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [isSupplier]);
+
+  const handleExport = async () => {
+    if (!isPro) return;
+    setExporting(true);
+    try {
+      const endpoint = isSupplier ? '/analytics/supplier/export' : '/analytics/buyer/export';
+      const res = await api.get(endpoint, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mwazn-analytics-${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* silent */ }
+    setExporting(false);
+  };
 
   return (
     <DashboardLayout>
@@ -90,6 +108,29 @@ export default function AnalyticsPage() {
               {ar ? 'مؤشرات الأداء لنشاطك التجاري' : 'Business performance insights'}
             </p>
           </div>
+          {isPro ? (
+            <button
+              onClick={handleExport}
+              disabled={exporting}
+              className="btn-primary inline-flex items-center gap-2 text-sm"
+            >
+              <Download className="h-4 w-4" />
+              {exporting ? '...' : (ar ? 'تصدير CSV' : 'Export CSV')}
+            </button>
+          ) : (
+            <div className="relative group">
+              <button
+                disabled
+                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-400 cursor-not-allowed"
+              >
+                <Download className="h-4 w-4" />
+                {ar ? 'تصدير CSV' : 'Export CSV'}
+              </button>
+              <div className="absolute end-0 top-full mt-1 hidden group-hover:block bg-slate-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10">
+                {ar ? 'الترقية لـ PRO لتصدير البيانات' : 'Upgrade to PRO to export data'}
+              </div>
+            </div>
+          )}
         </div>
 
         {loading ? (

@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
@@ -16,6 +17,13 @@ async function bootstrap() {
   app.useStaticAssets(path.join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   app.setGlobalPrefix('api');
+
+  // Health check endpoint — excluded from global prefix for Docker/load-balancer probes
+  const httpAdapter = app.getHttpAdapter().getInstance() as import('express').Express;
+  httpAdapter.get('/health', (_req, res) => {
+    res.status(200).json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
+  });
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',

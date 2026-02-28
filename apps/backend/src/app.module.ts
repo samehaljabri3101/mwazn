@@ -20,6 +20,10 @@ import { EmailModule } from './email/email.module';
 import { AuditModule } from './audit/audit.module';
 import { SearchModule } from './search/search.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { PaymentsModule } from './payments/payments.module';
+import { InvoiceModule } from './invoice/invoice.module';
+import { MaroofModule } from './maroof/maroof.module';
 
 @Module({
   imports: [
@@ -28,6 +32,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
     PrismaModule,
     EmailModule,
     AuditModule,
+    MaroofModule,
+    NotificationsModule,
     AuthModule,
     UsersModule,
     CompaniesModule,
@@ -42,6 +48,8 @@ import { AnalyticsModule } from './analytics/analytics.module';
     UploadModule,
     SearchModule,
     AnalyticsModule,
+    PaymentsModule,
+    InvoiceModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

@@ -147,6 +147,7 @@ export interface Deal {
   buyer?: Pick<Company, 'id' | 'nameAr' | 'nameEn'>;
   supplier?: Pick<Company, 'id' | 'nameAr' | 'nameEn'>;
   rating?: Rating | null;
+  ratings?: Rating[];
   createdAt: string;
 }
 

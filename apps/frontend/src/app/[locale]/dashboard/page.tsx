@@ -9,8 +9,103 @@ import api from '@/lib/api';
 import {
   FileText, Briefcase, Package, ScrollText,
   MessageSquare, TrendingUp, Clock, CheckCircle2,
-  ChevronRight, Zap, ShieldCheck,
+  ChevronRight, Zap, ShieldCheck, X,
 } from 'lucide-react';
+
+function OnboardingChecklist({
+  isBuyer,
+  isSupplier,
+  stats,
+  ar,
+  base,
+}: {
+  isBuyer: boolean;
+  isSupplier: boolean;
+  stats: StatsData;
+  ar: boolean;
+  base: string;
+}) {
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('mwazn_onboarding_done') === '1';
+    }
+    return false;
+  });
+
+  if (dismissed) return null;
+
+  const buyerSteps = [
+    { labelEn: 'Create account', labelAr: 'إنشاء حساب', done: true, href: '' },
+    { labelEn: 'Complete profile', labelAr: 'إكمال الملف الشخصي', done: false, href: `${base}/profile` },
+    { labelEn: 'Post first RFQ', labelAr: 'نشر أول طلب', done: (stats.totalRfqs ?? 0) > 0, href: `${base}/buyer/rfqs/new` },
+    { labelEn: 'Accept a quote', labelAr: 'قبول عرض سعر', done: (stats.totalDeals ?? 0) > 0, href: `${base}/buyer/rfqs` },
+  ];
+
+  const supplierSteps = [
+    { labelEn: 'Create account', labelAr: 'إنشاء حساب', done: true, href: '' },
+    { labelEn: 'Complete profile', labelAr: 'إكمال الملف الشخصي', done: false, href: `${base}/profile` },
+    { labelEn: 'Add a listing', labelAr: 'إضافة منتج', done: (stats.totalListings ?? 0) > 0, href: `${base}/supplier/listings/new` },
+    { labelEn: 'Submit first quote', labelAr: 'تقديم أول عرض', done: (stats.totalQuotes ?? 0) > 0, href: `${base}/supplier/rfqs` },
+  ];
+
+  const steps = isBuyer ? buyerSteps : supplierSteps;
+  const completed = steps.filter((s) => s.done).length;
+
+  if (completed === steps.length) {
+    localStorage.setItem('mwazn_onboarding_done', '1');
+    return null;
+  }
+
+  return (
+    <div className="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h3 className="font-semibold text-brand-800 text-sm">
+            {ar ? 'دليل البدء' : 'Getting Started'} — {completed}/{steps.length} {ar ? 'مكتمل' : 'complete'}
+          </h3>
+          <div className="mt-1.5 h-1.5 w-48 rounded-full bg-brand-100">
+            <div
+              className="h-full rounded-full bg-brand-700 transition-all"
+              style={{ width: `${(completed / steps.length) * 100}%` }}
+            />
+          </div>
+        </div>
+        <button
+          onClick={() => { localStorage.setItem('mwazn_onboarding_done', '1'); setDismissed(true); }}
+          className="text-brand-400 hover:text-brand-600"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {steps.map((step, i) => (
+          step.href ? (
+            <Link
+              key={i}
+              href={step.href}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs transition-all ${
+                step.done
+                  ? 'text-green-700 bg-green-50'
+                  : 'text-brand-700 bg-white border border-brand-100 hover:border-brand-300'
+              }`}
+            >
+              <CheckCircle2 className={`h-4 w-4 shrink-0 ${step.done ? 'text-green-500' : 'text-slate-200'}`} />
+              {ar ? step.labelAr : step.labelEn}
+            </Link>
+          ) : (
+            <div
+              key={i}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs bg-green-50 text-green-700"
+            >
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
+              {ar ? step.labelAr : step.labelEn}
+            </div>
+          )
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface StatsData {
   totalRfqs?: number;
@@ -112,7 +207,7 @@ export default function DashboardPage() {
   }, [isBuyer, isSupplier, isAdmin]);
 
   const companyName = ar ? company?.nameAr : company?.nameEn;
-  const quota = company?.plan === 'FREE' ? 3 : null;
+  const quota = company?.plan === 'FREE' ? 10 : null;
   const quotaUsed = company?.quotesUsedThisMonth ?? 0;
 
   return (
@@ -151,6 +246,17 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Onboarding checklist */}
+        {(isBuyer || isSupplier) && (
+          <OnboardingChecklist
+            isBuyer={isBuyer}
+            isSupplier={isSupplier}
+            stats={stats}
+            ar={ar}
+            base={base}
+          />
+        )}
 
         {/* Supplier verification warning */}
         {isSupplier && company?.verificationStatus === 'PENDING' && (

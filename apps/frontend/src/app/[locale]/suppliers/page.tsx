@@ -1,6 +1,22 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Navbar } from '@/components/layout/Navbar';
+
+export const metadata: Metadata = {
+  title: 'Verified Suppliers | موردون موثقون — Mwazn',
+  description: 'Browse verified Saudi B2B suppliers on Mwazn. Find trusted suppliers across all categories — industrial, construction, food, technology and more.',
+  openGraph: {
+    title: 'Verified Saudi B2B Suppliers — Mwazn | موازن',
+    description: 'Browse verified Saudi suppliers across all industries.',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Verified Suppliers — Mwazn | موازن',
+    description: 'Browse verified Saudi B2B suppliers.',
+  },
+};
 import { MapPin, Star, Package, Search } from 'lucide-react';
 
 // Realistic Saudi supplier data for SSR demo

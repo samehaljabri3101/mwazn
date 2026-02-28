@@ -1,0 +1,40 @@
+{
+  "name": "Mwazn | موازن",
+  "short_name": "Mwazn",
+  "description": "Saudi B2B Procurement Marketplace — منصة المشتريات B2B السعودية",
+  "theme_color": "#1e40af",
+  "background_color": "#f8fafc",
+  "display": "standalone",
+  "start_url": "/en",
+  "scope": "/",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["business", "finance", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/en/dashboard",
+      "description": "Go to dashboard"
+    },
+    {
+      "name": "Browse RFQs",
+      "url": "/en/rfqs",
+      "description": "Browse open requests"
+    }
+  ]
+}

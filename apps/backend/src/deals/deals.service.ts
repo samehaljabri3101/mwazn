@@ -7,6 +7,7 @@ import {
 import { DealStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 
 const TRANSITIONS: Record<DealStatus, DealStatus[]> = {
@@ -22,6 +23,7 @@ export class DealsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(userId: string, query: PaginationDto & { status?: DealStatus }) {
@@ -45,7 +47,7 @@ export class DealsService {
           quote: { include: { rfq: true } },
           buyer: { select: { id: true, nameAr: true, nameEn: true } },
           supplier: { select: { id: true, nameAr: true, nameEn: true } },
-          rating: true,
+          ratings: true,
         },
       }),
       this.prisma.deal.count({ where }),
@@ -61,7 +63,7 @@ export class DealsService {
         quote: { include: { rfq: true, attachments: true } },
         buyer: { select: { id: true, nameAr: true, nameEn: true, city: true } },
         supplier: { select: { id: true, nameAr: true, nameEn: true, city: true } },
-        rating: true,
+        ratings: true,
       },
     });
     if (!deal) throw new NotFoundException('Deal not found');
@@ -82,8 +84,8 @@ export class DealsService {
     const deal = await this.prisma.deal.findUnique({
       where: { id },
       include: {
-        buyer: { include: { users: { select: { email: true }, take: 1 } } },
-        supplier: { include: { users: { select: { email: true }, take: 1 } } },
+        buyer: { include: { users: { select: { id: true, email: true }, take: 5 } } },
+        supplier: { include: { users: { select: { id: true, email: true }, take: 5 } } },
       },
     });
     if (!deal) throw new NotFoundException('Deal not found');
@@ -107,11 +109,31 @@ export class DealsService {
       data: { status, notes: notes ?? deal.notes },
     });
 
+    const statusMapEn: Record<string, string> = {
+      IN_PROGRESS: 'In Progress', DELIVERED: 'Delivered', COMPLETED: 'Completed', CANCELLED: 'Cancelled',
+    };
+    const statusMapAr: Record<string, string> = {
+      IN_PROGRESS: 'قيد التنفيذ', DELIVERED: 'تم التسليم', COMPLETED: 'مكتملة', CANCELLED: 'ملغاة',
+    };
+
     // Notify both parties
-    const buyerEmail = deal.buyer.users[0]?.email;
-    const supplierEmail = deal.supplier.users[0]?.email;
-    if (buyerEmail) await this.email.sendDealStatusChanged(buyerEmail, id, status);
-    if (supplierEmail) await this.email.sendDealStatusChanged(supplierEmail, id, status);
+    const allUsers = [
+      ...deal.buyer.users.map((u) => ({ ...u, party: 'buyer' as const })),
+      ...deal.supplier.users.map((u) => ({ ...u, party: 'supplier' as const })),
+    ];
+
+    for (const u of allUsers) {
+      await this.email.sendDealStatusChanged(u.email, id, status);
+      await this.notifications.create(
+        u.id,
+        'DEAL_STATUS',
+        `تحديث حالة الصفقة: ${statusMapAr[status] || status}`,
+        `Deal Status: ${statusMapEn[status] || status}`,
+        `تم تحديث الصفقة إلى "${statusMapAr[status] || status}"`,
+        `Your deal has been updated to "${statusMapEn[status] || status}"`,
+        `/dashboard/${u.party === 'buyer' ? 'buyer' : 'supplier'}/deals`,
+      );
+    }
 
     return updated;
   }
