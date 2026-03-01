@@ -30,19 +30,7 @@ export default function LoginPage() {
     try {
       await login(email, password);
       const redirect = searchParams?.get('redirect');
-      if (redirect) {
-        router.push(redirect);
-        return;
-      }
-      const storedCompany = localStorage.getItem('mwazn_company');
-      const parsedCompany = storedCompany ? JSON.parse(storedCompany) : null;
-      if (parsedCompany?.type === 'BUYER') {
-        router.push(`/${locale}/dashboard/buyer`);
-      } else if (parsedCompany?.type === 'SUPPLIER') {
-        router.push(`/${locale}/dashboard/supplier`);
-      } else {
-        router.push(`/${locale}/dashboard`);
-      }
+      router.push(redirect || `/${locale}/dashboard`);
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
