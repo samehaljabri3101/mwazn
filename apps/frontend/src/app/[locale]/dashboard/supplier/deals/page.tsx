@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/lib/api';
@@ -11,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Deal } from '@/types';
-import { Briefcase, DollarSign, MessageSquare, CheckCircle2, Star } from 'lucide-react';
+import { Briefcase, DollarSign, MessageSquare, CheckCircle2, Star, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 
 function RatingModal({ dealId, onClose, onDone }: { dealId: string; onClose: () => void; onDone: () => void }) {
@@ -172,6 +173,12 @@ export default function SupplierDealsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={meta.color}>{ar ? meta.ar : meta.en}</Badge>
 
+                      <Link href={`/${locale}/dashboard/supplier/deals/${deal.id}`}>
+                        <Button size="sm" variant="secondary" icon={<ExternalLink className="h-3.5 w-3.5" />}>
+                          {ar ? 'عرض التفاصيل' : 'View Details'}
+                        </Button>
+                      </Link>
+
                       {meta.nextStatus && (
                         <Button
                           size="sm"
@@ -202,6 +209,35 @@ export default function SupplierDealsPage() {
                       >
                         {ar ? 'تواصل' : 'Chat'}
                       </Button>
+                    </div>
+                  </div>
+
+                  {/* Progress stepper */}
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center">
+                      {['AWARDED', 'IN_PROGRESS', 'DELIVERED', 'COMPLETED'].map((s, i) => {
+                        const sm = STATUS_META[s];
+                        const statusOrder = ['AWARDED', 'IN_PROGRESS', 'DELIVERED', 'COMPLETED'];
+                        const currentIdx = statusOrder.indexOf(deal.status);
+                        const done = i <= currentIdx;
+                        return (
+                          <div key={s} className="flex items-center flex-1">
+                            <div className="flex flex-col items-center gap-1">
+                              <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                                done ? 'bg-brand-700 text-white' : 'bg-slate-100 text-slate-400'
+                              }`}>
+                                {done ? '✓' : i + 1}
+                              </div>
+                              <span className={`text-[10px] hidden sm:block ${done ? 'text-brand-700 font-medium' : 'text-slate-400'}`}>
+                                {ar ? sm.ar : sm.en}
+                              </span>
+                            </div>
+                            {i < 3 && (
+                              <div className={`flex-1 h-0.5 mx-1 ${i < currentIdx ? 'bg-brand-700' : 'bg-slate-100'}`} />
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

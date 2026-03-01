@@ -13,7 +13,7 @@ import type { Listing } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Package, Plus, Tag, DollarSign, Archive, Eye, EyeOff,
-  Camera, X, ExternalLink, Clock,
+  Camera, X, ExternalLink, Clock, Pencil,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, 'green' | 'amber' | 'gray'> = {
@@ -214,6 +214,11 @@ export default function SupplierListingsPage() {
                       className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-slate-500 hover:bg-slate-50 transition-all"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                    <Link href={`/${locale}/dashboard/supplier/listings/${listing.id}/edit`}>
+                      <Button size="sm" variant="ghost" icon={<Pencil className="h-3.5 w-3.5" />}>
+                        {ar ? 'تعديل' : 'Edit'}
+                      </Button>
                     </Link>
                     <Button
                       size="sm"

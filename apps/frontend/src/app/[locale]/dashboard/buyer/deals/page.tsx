@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import api from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
@@ -11,7 +12,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Deal } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
-import { Briefcase, DollarSign, Building2, Star, CheckCircle2, MessageSquare } from 'lucide-react';
+import { Briefcase, DollarSign, Star, CheckCircle2, MessageSquare, Download, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STATUS_META: Record<string, { color: 'green' | 'blue' | 'amber' | 'gray' | 'red'; en: string; ar: string; next?: string; nextAr?: string }> = {
@@ -86,6 +87,7 @@ export default function BuyerDealsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [ratingDeal, setRatingDeal] = useState<string | null>(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState<string | null>(null);
 
   const fetchDeals = async () => {
     setLoading(true);
@@ -105,6 +107,20 @@ export default function BuyerDealsPage() {
       await fetchDeals();
     } catch { /* silent */ }
     setActionLoading(null);
+  };
+
+  const downloadInvoice = async (dealId: string) => {
+    setDownloadingInvoice(dealId);
+    try {
+      const res = await api.get(`/deals/${dealId}/invoice`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice-${dealId}.xml`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* silent */ }
+    setDownloadingInvoice(null);
   };
 
   const startConversation = async (supplierId: string) => {
@@ -179,6 +195,12 @@ export default function BuyerDealsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={meta.color}>{ar ? meta.ar : meta.en}</Badge>
 
+                      <Link href={`/${locale}/dashboard/buyer/deals/${deal.id}`}>
+                        <Button size="sm" variant="secondary" icon={<ExternalLink className="h-3.5 w-3.5" />}>
+                          {ar ? 'عرض التفاصيل' : 'View Details'}
+                        </Button>
+                      </Link>
+
                       {nextStatus && (
                         <Button
                           size="sm"
@@ -198,6 +220,18 @@ export default function BuyerDealsPage() {
                           onClick={() => setRatingDeal(deal.id)}
                         >
                           {ar ? 'قيّم المورد' : 'Rate Supplier'}
+                        </Button>
+                      )}
+
+                      {deal.status === 'COMPLETED' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          loading={downloadingInvoice === deal.id}
+                          icon={<Download className="h-3.5 w-3.5" />}
+                          onClick={() => downloadInvoice(deal.id)}
+                        >
+                          {ar ? 'فاتورة' : 'Invoice'}
                         </Button>
                       )}
 

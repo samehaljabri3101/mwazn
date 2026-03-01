@@ -14,7 +14,8 @@ import type { RFQ, Quote, RfqImage } from '@/types';
 import {
   ChevronLeft, Calendar, Tag, DollarSign, Package,
   CheckCircle2, XCircle, Clock, Star, MessageSquare,
-  AlertTriangle, ImageIcon, UserPlus,
+  AlertTriangle, ImageIcon, UserPlus, ChevronDown, ChevronUp,
+  ShieldCheck, Truck, CreditCard, Wrench,
 } from 'lucide-react';
 import { InviteSupplierModal } from '@/components/rfq/InviteSupplierModal';
 import { format } from 'date-fns';
@@ -40,6 +41,8 @@ export default function RFQDetailPage() {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [activeImg, setActiveImg] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [dealByQuoteId, setDealByQuoteId] = useState<Record<string, string>>({});
+  const [expandedBoq, setExpandedBoq] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -50,7 +53,22 @@ export default function RFQDetailPage() {
       const rfqData = rfqRes.data.data;
       setRfq(rfqData);
       setRfqImages(rfqData?.images ?? []);
-      setQuotes(quotesRes.data.data?.items || quotesRes.data.data || []);
+      const fetchedQuotes: Quote[] = quotesRes.data.data?.items || quotesRes.data.data || [];
+      setQuotes(fetchedQuotes);
+      // Fetch deal for accepted quotes to enable direct link
+      const accepted = fetchedQuotes.filter((q) => q.status === 'ACCEPTED');
+      if (accepted.length > 0) {
+        try {
+          const dealsRes = await api.get('/deals', { params: { limit: 50 } });
+          const deals: any[] = dealsRes.data.data?.items || dealsRes.data.data || [];
+          const map: Record<string, string> = {};
+          accepted.forEach((q) => {
+            const match = deals.find((d: any) => d.quoteId === q.id);
+            if (match) map[q.id] = match.id;
+          });
+          setDealByQuoteId(map);
+        } catch { /* silent */ }
+      }
     } catch { /* silent */ }
     setLoading(false);
   };
@@ -333,21 +351,36 @@ export default function RFQDetailPage() {
                           <p className="text-xl font-bold text-brand-700">
                             {quote.price.toLocaleString()} <span className="text-sm font-normal text-slate-400">SAR</span>
                           </p>
-                          {quote.deliveryDays && (
-                            <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {ar ? `${quote.deliveryDays} يوم توصيل` : `${quote.deliveryDays} days delivery`}
-                            </p>
-                          )}
+                          <div className="flex flex-wrap items-center gap-3 mt-1">
+                            {quote.deliveryDays && (
+                              <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <Truck className="h-3 w-3" />
+                                {ar ? `${quote.deliveryDays} يوم` : `${quote.deliveryDays}d delivery`}
+                              </span>
+                            )}
+                            {quote.vatPercent !== undefined && (
+                              <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <ShieldCheck className="h-3 w-3" />
+                                {ar ? `ضريبة ${quote.vatPercent}%` : `VAT ${quote.vatPercent}%`}
+                              </span>
+                            )}
+                            {quote.paymentTerms && (
+                              <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <CreditCard className="h-3 w-3" />
+                                {quote.paymentTerms}
+                              </span>
+                            )}
+                            {quote.warrantyMonths !== undefined && (
+                              <span className="text-xs text-slate-400 flex items-center gap-1">
+                                <Wrench className="h-3 w-3" />
+                                {ar ? `ضمان ${quote.warrantyMonths} شهر` : `${quote.warrantyMonths}mo warranty`}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
-                        {/* Notes */}
-                        {quote.notes && (
-                          <p className="text-xs text-slate-500 max-w-xs hidden sm:block">{quote.notes}</p>
-                        )}
-
                         {/* Status + actions */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <Badge variant={QUOTE_STATUS_COLORS[quote.status]}>
                             {quote.status === 'PENDING' ? (ar ? 'معلق' : 'Pending')
                               : quote.status === 'ACCEPTED' ? (ar ? 'مقبول' : 'Accepted')
@@ -386,7 +419,9 @@ export default function RFQDetailPage() {
                           )}
 
                           {quote.status === 'ACCEPTED' && (
-                            <Link href={`/${locale}/dashboard/buyer/deals`}>
+                            <Link href={dealByQuoteId[quote.id]
+                              ? `/${locale}/dashboard/buyer/deals/${dealByQuoteId[quote.id]}`
+                              : `/${locale}/dashboard/buyer/deals`}>
                               <Button size="sm" variant="secondary">
                                 {ar ? 'عرض الصفقة' : 'View Deal'}
                               </Button>
@@ -395,8 +430,67 @@ export default function RFQDetailPage() {
                         </div>
                       </div>
 
-                      {quote.notes && (
-                        <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 sm:hidden">{quote.notes}</p>
+                      {/* Enterprise fields: after-sales + technical proposal */}
+                      {(quote.afterSalesSupport || quote.technicalProposal || quote.notes) && (
+                        <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+                          {quote.afterSalesSupport && (
+                            <p className="text-xs text-slate-500">
+                              <span className="font-medium text-slate-600">{ar ? 'خدمة ما بعد البيع: ' : 'After-sales: '}</span>
+                              {quote.afterSalesSupport}
+                            </p>
+                          )}
+                          {quote.technicalProposal && (
+                            <p className="text-xs text-slate-500 line-clamp-2">
+                              <span className="font-medium text-slate-600">{ar ? 'المقترح التقني: ' : 'Technical: '}</span>
+                              {quote.technicalProposal}
+                            </p>
+                          )}
+                          {quote.notes && (
+                            <p className="text-xs text-slate-500">
+                              <span className="font-medium text-slate-600">{ar ? 'ملاحظات: ' : 'Notes: '}</span>
+                              {quote.notes}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* BOQ collapsible */}
+                      {quote.lineItems && quote.lineItems.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-100">
+                          <button
+                            onClick={() => setExpandedBoq(expandedBoq === quote.id ? null : quote.id)}
+                            className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 hover:text-brand-700 transition-colors"
+                          >
+                            {ar ? `جدول الكميات (${quote.lineItems.length} بند)` : `BOQ (${quote.lineItems.length} items)`}
+                            {expandedBoq === quote.id ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                          </button>
+                          {expandedBoq === quote.id && (
+                            <div className="mt-2 overflow-x-auto">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="border-b border-slate-100 text-slate-500">
+                                    <th className="pb-1.5 text-left font-medium">{ar ? 'البند' : 'Description'}</th>
+                                    <th className="pb-1.5 text-right font-medium">{ar ? 'ك' : 'Qty'}</th>
+                                    <th className="pb-1.5 text-right font-medium">{ar ? 'وحدة' : 'Unit'}</th>
+                                    <th className="pb-1.5 text-right font-medium">{ar ? 'سعر' : 'Price'}</th>
+                                    <th className="pb-1.5 text-right font-medium">{ar ? 'إجمالي' : 'Total'}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {quote.lineItems.map((item, i) => (
+                                    <tr key={i} className="border-b border-slate-50">
+                                      <td className="py-1 text-slate-700">{item.description}</td>
+                                      <td className="py-1 text-right text-slate-500">{item.qty}</td>
+                                      <td className="py-1 text-right text-slate-400">{item.unit}</td>
+                                      <td className="py-1 text-right text-slate-500">{item.unitPrice.toLocaleString()}</td>
+                                      <td className="py-1 text-right font-medium text-slate-700">{(item.qty * item.unitPrice).toLocaleString()}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
