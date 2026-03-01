@@ -5,7 +5,21 @@ import { useLocale } from 'next-intl';
 import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import api from '@/lib/api';
-import { User, Lock, Building2, CheckCircle2, Clock, Zap } from 'lucide-react';
+import { User, Lock, Building2, CheckCircle2, Clock, Zap, Plus, Trash2 } from 'lucide-react';
+
+const SAUDI_REGIONS = [
+  'Riyadh', 'Mecca', 'Medina', 'Eastern Province', 'Asir', 'Tabuk',
+  'Hail', 'Northern Borders', 'Jizan', 'Najran', 'Al Bahah', 'Al Jouf', 'Qassim',
+];
+
+const PAYMENT_TERMS_OPTIONS = [
+  { en: 'Cash on Delivery', ar: 'نقداً عند التسليم' },
+  { en: 'Net 30', ar: 'صافي 30 يوم' },
+  { en: 'Net 60', ar: 'صافي 60 يوم' },
+  { en: 'Net 90', ar: 'صافي 90 يوم' },
+  { en: '50% Advance', ar: '50% مقدماً' },
+  { en: 'Letter of Credit', ar: 'خطاب اعتماد' },
+];
 
 function Toast({ message, type }: { message: string; type: 'success' | 'error' }) {
   return (
@@ -21,14 +35,31 @@ export default function ProfilePage() {
   const locale = useLocale();
   const ar = locale === 'ar';
   const { user, company, refresh } = useAuth();
+  const isSupplier = company?.type === 'SUPPLIER';
 
+  // Personal info
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [savingProfile, setSavingProfile] = useState(false);
 
+  // Password
   const [currentPw, setCurrentPw] = useState('');
   const [newPw, setNewPw] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [savingPw, setSavingPw] = useState(false);
+
+  // Company profile (supplier extras)
+  const [coverImageUrl, setCoverImageUrl] = useState(company?.coverImageUrl || '');
+  const [productionCapacity, setProductionCapacity] = useState(company?.productionCapacity || '');
+  const [isoUrl, setIsoUrl] = useState(company?.isoUrl || '');
+  const [chamberCertUrl, setChamberCertUrl] = useState(company?.chamberCertUrl || '');
+  const [taxCertUrl, setTaxCertUrl] = useState(company?.taxCertUrl || '');
+  const [keyClients, setKeyClients] = useState<string[]>(company?.keyClients || []);
+  const [newKeyClient, setNewKeyClient] = useState('');
+  const [regionsServed, setRegionsServed] = useState<string[]>(company?.regionsServed || []);
+  const [paymentTermsAccepted, setPaymentTermsAccepted] = useState<string[]>(
+    company?.paymentTermsAccepted || [],
+  );
+  const [savingCompany, setSavingCompany] = useState(false);
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -69,6 +100,49 @@ export default function ProfilePage() {
       showToast(err.response?.data?.message || (ar ? 'فشل تغيير كلمة المرور' : 'Failed to change password'), 'error');
     }
     setSavingPw(false);
+  };
+
+  const handleSaveCompany = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!company) return;
+    setSavingCompany(true);
+    try {
+      await api.patch(`/companies/${company.id}`, {
+        coverImageUrl: coverImageUrl || undefined,
+        productionCapacity: productionCapacity || undefined,
+        isoUrl: isoUrl || undefined,
+        chamberCertUrl: chamberCertUrl || undefined,
+        taxCertUrl: taxCertUrl || undefined,
+        keyClients,
+        regionsServed,
+        paymentTermsAccepted,
+      });
+      await refresh?.();
+      showToast(ar ? 'تم حفظ ملف الشركة' : 'Company profile saved', 'success');
+    } catch {
+      showToast(ar ? 'فشل حفظ ملف الشركة' : 'Failed to save company profile', 'error');
+    }
+    setSavingCompany(false);
+  };
+
+  const addKeyClient = () => {
+    const v = newKeyClient.trim();
+    if (v && !keyClients.includes(v)) {
+      setKeyClients([...keyClients, v]);
+    }
+    setNewKeyClient('');
+  };
+
+  const toggleRegion = (region: string) => {
+    setRegionsServed((prev) =>
+      prev.includes(region) ? prev.filter((r) => r !== region) : [...prev, region],
+    );
+  };
+
+  const togglePaymentTerm = (term: string) => {
+    setPaymentTermsAccepted((prev) =>
+      prev.includes(term) ? prev.filter((t) => t !== term) : [...prev, term],
+    );
   };
 
   const initials = (user?.fullName || 'U').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
@@ -190,7 +264,7 @@ export default function ProfilePage() {
           </form>
         </div>
 
-        {/* Company Info (readonly) */}
+        {/* Company Info (readonly summary) */}
         {company && (
           <div className="card space-y-4">
             <div className="flex items-center gap-2">
@@ -210,6 +284,12 @@ export default function ProfilePage() {
                 <p className="text-xs text-slate-500 mb-1">{ar ? 'رقم السجل التجاري' : 'CR Number'}</p>
                 <p className="text-sm font-medium text-slate-800">{company.crNumber}</p>
               </div>
+              {company.vatNumber && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">{ar ? 'الرقم الضريبي' : 'VAT Number'}</p>
+                  <p className="text-sm font-medium text-slate-800">{company.vatNumber}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs text-slate-500 mb-1">{ar ? 'المدينة' : 'City'}</p>
                 <p className="text-sm font-medium text-slate-800">{company.city || '—'}</p>
@@ -246,7 +326,220 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
+              {company.legalForm && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">{ar ? 'الشكل القانوني' : 'Legal Form'}</p>
+                  <p className="text-sm font-medium text-slate-800">{company.legalForm}</p>
+                </div>
+              )}
+              {company.establishmentYear && (
+                <div>
+                  <p className="text-xs text-slate-500 mb-1">{ar ? 'سنة التأسيس' : 'Est. Year'}</p>
+                  <p className="text-sm font-medium text-slate-800">{company.establishmentYear}</p>
+                </div>
+              )}
+              {company.sectors && company.sectors.length > 0 && (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-slate-500 mb-1">{ar ? 'القطاعات' : 'Sectors'}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {company.sectors.map((s) => (
+                      <span key={s} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs text-slate-600">{s}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
+          </div>
+        )}
+
+        {/* Supplier Profile Extras */}
+        {isSupplier && company && (
+          <div className="card space-y-6">
+            <div>
+              <h2 className="font-semibold text-slate-800">{ar ? 'ملف المورّد' : 'Supplier Profile'}</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {ar ? 'معلومات تظهر في صفحة الشركة العامة' : 'Shown on your public company page'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveCompany} className="space-y-6">
+              {/* Cover Image */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {ar ? 'رابط صورة الغلاف' : 'Cover Image URL'}
+                </label>
+                <input
+                  type="url"
+                  value={coverImageUrl}
+                  onChange={(e) => setCoverImageUrl(e.target.value)}
+                  className="input-base w-full"
+                  placeholder="https://..."
+                />
+                {coverImageUrl && (
+                  <img
+                    src={coverImageUrl}
+                    alt="cover preview"
+                    className="mt-2 h-24 w-full object-cover rounded-lg border border-slate-100"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                )}
+              </div>
+
+              {/* Production Capacity */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  {ar ? 'الطاقة الإنتاجية' : 'Production Capacity'}
+                </label>
+                <input
+                  value={productionCapacity}
+                  onChange={(e) => setProductionCapacity(e.target.value)}
+                  className="input-base w-full"
+                  placeholder={ar ? 'مثال: 500 وحدة شهرياً' : 'e.g. 500 units/month'}
+                />
+              </div>
+
+              {/* Key Clients */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {ar ? 'العملاء الرئيسيون' : 'Key Clients'}
+                </label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {keyClients.map((client, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700">
+                      {client}
+                      <button
+                        type="button"
+                        onClick={() => setKeyClients(keyClients.filter((_, i) => i !== idx))}
+                        className="text-brand-400 hover:text-brand-700"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    value={newKeyClient}
+                    onChange={(e) => setNewKeyClient(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addKeyClient(); } }}
+                    className="input-base flex-1"
+                    placeholder={ar ? 'اسم العميل ثم Enter' : 'Client name then Enter'}
+                  />
+                  <button
+                    type="button"
+                    onClick={addKeyClient}
+                    className="btn-secondary inline-flex items-center gap-1 text-sm px-3"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {ar ? 'إضافة' : 'Add'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Regions Served */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {ar ? 'المناطق التي تخدمها' : 'Regions Served'}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {SAUDI_REGIONS.map((region) => (
+                    <button
+                      key={region}
+                      type="button"
+                      onClick={() => toggleRegion(region)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        regionsServed.includes(region)
+                          ? 'border-brand-700 bg-brand-700 text-white'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-brand-300'
+                      }`}
+                    >
+                      {region}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Payment Terms */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  {ar ? 'شروط الدفع المقبولة' : 'Accepted Payment Terms'}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {PAYMENT_TERMS_OPTIONS.map((opt) => {
+                    const label = ar ? opt.ar : opt.en;
+                    const val = opt.en;
+                    return (
+                      <button
+                        key={val}
+                        type="button"
+                        onClick={() => togglePaymentTerm(val)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          paymentTermsAccepted.includes(val)
+                            ? 'border-brand-700 bg-brand-700 text-white'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-brand-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Compliance Documents */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-slate-700">
+                  {ar ? 'روابط وثائق الامتثال' : 'Compliance Document URLs'}
+                </label>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    {ar ? 'شهادة الأيزو (ISO)' : 'ISO Certificate'}
+                  </label>
+                  <input
+                    type="url"
+                    value={isoUrl}
+                    onChange={(e) => setIsoUrl(e.target.value)}
+                    className="input-base w-full"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    {ar ? 'شهادة الغرفة التجارية' : 'Chamber of Commerce Certificate'}
+                  </label>
+                  <input
+                    type="url"
+                    value={chamberCertUrl}
+                    onChange={(e) => setChamberCertUrl(e.target.value)}
+                    className="input-base w-full"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-1">
+                    {ar ? 'شهادة التسجيل الضريبي' : 'Tax Registration Certificate'}
+                  </label>
+                  <input
+                    type="url"
+                    value={taxCertUrl}
+                    onChange={(e) => setTaxCertUrl(e.target.value)}
+                    className="input-base w-full"
+                    placeholder="https://..."
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={savingCompany}
+                className="btn-primary inline-flex items-center gap-2 text-sm"
+              >
+                <Building2 className="h-4 w-4" />
+                {savingCompany
+                  ? (ar ? 'جاري الحفظ...' : 'Saving...')
+                  : (ar ? 'حفظ ملف المورّد' : 'Save Supplier Profile')}
+              </button>
+            </form>
           </div>
         )}
       </div>

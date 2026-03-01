@@ -66,7 +66,10 @@ export class CompaniesService {
 
     return this.prisma.company.update({
       where: { id },
-      data: { verificationStatus: dto.status },
+      data: {
+        verificationStatus: dto.status,
+        ...(dto.adminNotes !== undefined && { adminNotes: dto.adminNotes }),
+      },
     });
   }
 

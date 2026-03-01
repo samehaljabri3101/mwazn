@@ -6,8 +6,13 @@ export class VerifyCompanyDto {
   @IsEnum(['VERIFIED', 'REJECTED'])
   status: 'VERIFIED' | 'REJECTED';
 
-  @ApiPropertyOptional({ description: 'Reason for rejection' })
+  @ApiPropertyOptional({ description: 'Reason for rejection or admin review note' })
   @IsOptional()
   @IsString()
   reason?: string;
+
+  @ApiPropertyOptional({ description: 'Internal admin notes (stored on company)' })
+  @IsOptional()
+  @IsString()
+  adminNotes?: string;
 }

@@ -188,6 +188,14 @@ interface SupplierSpec {
   primaryCategory?: string;
   phone?: string;
   website?: string;
+  legalForm?: string;
+  establishmentYear?: number;
+  companySizeRange?: string;
+  sectors?: string[];
+  keyClients?: string[];
+  regionsServed?: string[];
+  paymentTermsAccepted?: string[];
+  productionCapacity?: string;
 }
 
 const SUPPLIERS: SupplierSpec[] = [
@@ -202,6 +210,14 @@ const SUPPLIERS: SupplierSpec[] = [
     primaryCategory: 'industrial-equipment',
     phone: '+966512345001',
     website: 'https://gulf-industrial.sa',
+    legalForm: 'LLC',
+    establishmentYear: 2008,
+    companySizeRange: '51-200',
+    sectors: ['Industrial Equipment', 'Manufacturing', 'Heavy Machinery'],
+    keyClients: ['Saudi Aramco', 'SABIC', 'Maaden'],
+    regionsServed: ['Riyadh', 'Eastern Province', 'Mecca'],
+    paymentTermsAccepted: ['Net 30', 'Net 60', 'Letter of Credit'],
+    productionCapacity: '500 units/month',
   },
   {
     slug: 'demo-2',
@@ -213,6 +229,14 @@ const SUPPLIERS: SupplierSpec[] = [
     primaryCategory: 'building-materials',
     phone: '+966512345002',
     website: 'https://alomran-const.sa',
+    legalForm: 'ESTABLISHMENT',
+    establishmentYear: 2012,
+    companySizeRange: '11-50',
+    sectors: ['Building Materials', 'Construction & Contracting'],
+    keyClients: ['Dar Al-Arkan', 'Emaar Saudi'],
+    regionsServed: ['Mecca', 'Medina', 'Jizan'],
+    paymentTermsAccepted: ['Cash on Delivery', 'Net 30', '50% Advance'],
+    productionCapacity: '1000 tons/month',
   },
   {
     slug: 'demo-3',
@@ -223,6 +247,12 @@ const SUPPLIERS: SupplierSpec[] = [
     status: VerificationStatus.VERIFIED,
     primaryCategory: 'furniture-decor',
     phone: '+966512345003',
+    legalForm: 'LLC',
+    establishmentYear: 2015,
+    companySizeRange: '11-50',
+    sectors: ['Furniture & Decor', 'Office Equipment'],
+    regionsServed: ['Riyadh', 'Qassim'],
+    paymentTermsAccepted: ['Cash on Delivery', 'Net 30'],
   },
   {
     slug: 'demo-4',
@@ -234,6 +264,14 @@ const SUPPLIERS: SupplierSpec[] = [
     primaryCategory: 'technology-electronics',
     phone: '+966512345004',
     website: 'https://futuretech-sa.com',
+    legalForm: 'LLC',
+    establishmentYear: 2018,
+    companySizeRange: '51-200',
+    sectors: ['Technology & Electronics', 'IT Services'],
+    keyClients: ['STC', 'Mobily', 'Ministry of Education'],
+    regionsServed: ['Eastern Province', 'Riyadh', 'Mecca', 'Medina'],
+    paymentTermsAccepted: ['Net 30', 'Net 60'],
+    productionCapacity: '200 units/month',
   },
   {
     slug: 'demo-5',
@@ -245,6 +283,14 @@ const SUPPLIERS: SupplierSpec[] = [
     primaryCategory: 'food-beverages',
     phone: '+966512345005',
     website: 'https://alaseel-food.sa',
+    legalForm: 'LLC',
+    establishmentYear: 2010,
+    companySizeRange: '201-500',
+    sectors: ['Food & Beverages', 'Agriculture & Food'],
+    keyClients: ['Panda Retail', 'Carrefour KSA', 'Al-Sadhan'],
+    regionsServed: ['Riyadh', 'Mecca', 'Medina', 'Jizan', 'Asir'],
+    paymentTermsAccepted: ['Cash on Delivery', 'Net 30', 'Net 60'],
+    productionCapacity: '50 tons/day',
   },
   {
     slug: 'demo-6',
@@ -256,6 +302,14 @@ const SUPPLIERS: SupplierSpec[] = [
     primaryCategory: 'chemicals-raw-materials',
     phone: '+966512345006',
     website: 'https://alnahda-chem.sa',
+    legalForm: 'CORPORATION',
+    establishmentYear: 2005,
+    companySizeRange: '201-500',
+    sectors: ['Chemicals & Raw Materials', 'Energy & Petroleum'],
+    keyClients: ['Saudi Aramco', 'SABIC', 'National Industrialization Co.'],
+    regionsServed: ['Eastern Province', 'Riyadh', 'Jubail'],
+    paymentTermsAccepted: ['Letter of Credit', 'Net 60', 'Net 90'],
+    productionCapacity: '500 tons/month',
   },
   {
     slug: 'demo-7',
@@ -266,6 +320,12 @@ const SUPPLIERS: SupplierSpec[] = [
     status: VerificationStatus.VERIFIED,
     primaryCategory: 'electrical-equipment',
     phone: '+966512345007',
+    legalForm: 'ESTABLISHMENT',
+    establishmentYear: 2016,
+    companySizeRange: '1-10',
+    sectors: ['Electrical Equipment'],
+    regionsServed: ['Riyadh', 'Qassim', 'Hail'],
+    paymentTermsAccepted: ['Cash on Delivery', '50% Advance'],
   },
   {
     slug: 'demo-8',
@@ -277,23 +337,31 @@ const SUPPLIERS: SupplierSpec[] = [
     primaryCategory: 'medical-devices',
     phone: '+966512345008',
     website: 'https://alsalama-medical.sa',
+    legalForm: 'LLC',
+    establishmentYear: 2013,
+    companySizeRange: '51-200',
+    sectors: ['Medical Devices', 'Safety & Security'],
+    keyClients: ['King Faisal Hospital', 'Ministry of Health', 'Dr. Sulaiman Al-Habib'],
+    regionsServed: ['Eastern Province', 'Riyadh', 'Mecca', 'Medina', 'Khobar'],
+    paymentTermsAccepted: ['Net 30', 'Net 60', 'Letter of Credit'],
+    productionCapacity: '100 units/month',
   },
   // ── Additional suppliers ──────────────────────────────────────────────────
-  { nameAr: 'شركة الطاقة والنفط', nameEn: 'EnergyOil Solutions', city: 'Dhahran', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'دار الأزياء السعودية', nameEn: 'Saudi Fashion House', city: 'Jeddah', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة الأمن والسلامة المتكاملة', nameEn: 'Integrated Safety Systems', city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'مزارع الخير الزراعية', nameEn: 'Al-Khair Farms', city: 'Al-Ahsa', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'حلول تقنية المعلومات', nameEn: 'IT Solutions Arabia', city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة الكهرباء والأنظمة', nameEn: 'Elec & Systems Co.', city: 'Dammam', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة تكييف الخليج', nameEn: 'Gulf HVAC Solutions', city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'مؤسسة السيارات الحديثة', nameEn: 'Modern Auto Est.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة الطباعة والنشر', nameEn: 'Print & Publish Arabia', city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'معدات المطاعم المتميزة', nameEn: 'Premier Restaurant Equip.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة الأدوات الصناعية', nameEn: 'Industrial Tools Co.', city: 'Jubail', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة النظافة والبيئة', nameEn: 'Clean & Green Arabia', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'مقاولات الوطن', nameEn: 'Al-Watan Contractors', city: 'Mecca', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
-  { nameAr: 'معامل ومختبرات متطورة', nameEn: 'Advanced Labs Est.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED },
-  { nameAr: 'شركة التغليف الذكي', nameEn: 'Smart Pack Arabia', city: 'Dammam', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED },
+  { nameAr: 'شركة الطاقة والنفط', nameEn: 'EnergyOil Solutions', city: 'Dhahran', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Energy & Petroleum'] },
+  { nameAr: 'دار الأزياء السعودية', nameEn: 'Saudi Fashion House', city: 'Jeddah', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Clothing & Textiles'] },
+  { nameAr: 'شركة الأمن والسلامة المتكاملة', nameEn: 'Integrated Safety Systems', city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Safety & Security'] },
+  { nameAr: 'مزارع الخير الزراعية', nameEn: 'Al-Khair Farms', city: 'Al-Ahsa', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Agriculture & Food'] },
+  { nameAr: 'حلول تقنية المعلومات', nameEn: 'IT Solutions Arabia', city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['IT Services', 'Technology & Electronics'] },
+  { nameAr: 'شركة الكهرباء والأنظمة', nameEn: 'Elec & Systems Co.', city: 'Dammam', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Electrical Equipment'] },
+  { nameAr: 'شركة تكييف الخليج', nameEn: 'Gulf HVAC Solutions', city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['HVAC Equipment'] },
+  { nameAr: 'مؤسسة السيارات الحديثة', nameEn: 'Modern Auto Est.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Vehicles & Automotive'] },
+  { nameAr: 'شركة الطباعة والنشر', nameEn: 'Print & Publish Arabia', city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Paper & Printing'] },
+  { nameAr: 'معدات المطاعم المتميزة', nameEn: 'Premier Restaurant Equip.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Restaurant Equipment'] },
+  { nameAr: 'شركة الأدوات الصناعية', nameEn: 'Industrial Tools Co.', city: 'Jubail', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Tools & Hardware', 'Industrial Equipment'] },
+  { nameAr: 'شركة النظافة والبيئة', nameEn: 'Clean & Green Arabia', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Cleaning Supplies'] },
+  { nameAr: 'مقاولات الوطن', nameEn: 'Al-Watan Contractors', city: 'Mecca', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Construction & Contracting', 'Building Materials'] },
+  { nameAr: 'معامل ومختبرات متطورة', nameEn: 'Advanced Labs Est.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Laboratory Equipment'] },
+  { nameAr: 'شركة التغليف الذكي', nameEn: 'Smart Pack Arabia', city: 'Dammam', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Packaging & Wrapping'] },
   // Pending (unverified demo)
   { nameAr: 'شركة المورّد الجديد', nameEn: 'New Supplier Co.', city: 'Medina', plan: SubscriptionPlan.FREE, status: VerificationStatus.PENDING },
 ];
@@ -318,6 +386,9 @@ const BUYERS = [
 ];
 
 const SAUDI_CITIES = ['Riyadh', 'Jeddah', 'Dammam', 'Mecca', 'Medina', 'Khobar', 'Jubail', 'Abha'];
+
+const RFQ_PROJECT_TYPES = ['PRODUCT', 'SERVICE', 'MANUFACTURING', 'CONSULTANCY'];
+const RFQ_CERTIFICATIONS = ['ISO 9001', 'SASO', 'IECEE', 'SABER', 'CE', 'GS', 'UL'];
 
 const RFQ_TITLES = [
   'طلب توريد مواد بناء لمشروع سكني',
@@ -351,6 +422,10 @@ const RFQ_TITLES = [
   'طلب توريد مولدات كهربائية',
   'Food Processing Equipment Supply',
 ];
+
+const STOCK_STATUSES = ['IN_STOCK', 'IN_STOCK', 'IN_STOCK', 'LIMITED', 'OUT_OF_STOCK']; // weighted toward IN_STOCK
+
+const QUOTE_PAYMENT_TERMS = ['Net 30', 'Net 60', 'Cash on Delivery', '50% Advance', 'Letter of Credit'];
 
 const QUOTE_NOTES = [
   'يشمل العرض التوصيل والتركيب',
@@ -411,6 +486,8 @@ async function main() {
   // Clean up in FK-safe order
   await prisma.auditLog.deleteMany();
   await prisma.fileUpload.deleteMany();
+  await prisma.notification.deleteMany();
+  await prisma.rFQInvite.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.rating.deleteMany();
@@ -464,6 +541,8 @@ async function main() {
     const s = SUPPLIERS[i];
     const cr = String(1000000010 + i).padStart(10, '0');
     const email = `admin@supplier${i + 1}.sa`;
+    const vatNum = `3${String(1000000010 + i).padStart(9, '0')}00003`;
+    const crExpiry = new Date(Date.now() + randInt(365, 1095) * 24 * 60 * 60 * 1000);
     const company = await prisma.company.create({
       data: {
         nameAr: s.nameAr,
@@ -478,6 +557,16 @@ async function main() {
         website: s.website ?? null,
         descriptionAr: `نحن ${s.nameAr} — نقدم منتجات وخدمات عالية الجودة في المملكة العربية السعودية منذ سنوات. نلتزم بأعلى معايير الجودة والخدمة لعملائنا.`,
         descriptionEn: `${s.nameEn} — delivering premium products and services across Saudi Arabia. We are committed to the highest quality and service standards.`,
+        vatNumber: vatNum,
+        crExpiryDate: crExpiry,
+        legalForm: s.legalForm ?? rand(['LLC', 'ESTABLISHMENT', 'CORPORATION']),
+        establishmentYear: s.establishmentYear ?? randInt(2005, 2020),
+        companySizeRange: s.companySizeRange ?? rand(['1-10', '11-50', '51-200']),
+        sectors: s.sectors ?? [],
+        keyClients: s.keyClients ?? [],
+        regionsServed: s.regionsServed ?? [s.city],
+        paymentTermsAccepted: s.paymentTermsAccepted ?? ['Cash on Delivery', 'Net 30'],
+        productionCapacity: s.productionCapacity ?? null,
         users: {
           create: {
             email,
@@ -563,19 +652,36 @@ async function main() {
         unit = rand(['piece', 'box', 'ton', 'meter', 'set', 'unit']);
       }
 
+      const sku = `SKU-${cat.slug.slice(0, 3).toUpperCase()}-${String(imgSeed).padStart(4, '0')}`;
+      const vatPct = rand([0, 15, 15, 15]); // 75% chance of 15% VAT
+      const requestQuoteOnly = price > 50000 && Math.random() < 0.3; // large items sometimes quote-only
+      // Generate simple specs
+      const specs = [
+        { key: 'Brand', value: rand(['Saudi Made', 'Imported', 'Gulf Product']) },
+        { key: 'Warranty', value: `${randInt(1, 3)} year${randInt(1, 3) > 1 ? 's' : ''}` },
+        { key: 'Origin', value: rand(['Saudi Arabia', 'UAE', 'China', 'Germany', 'USA']) },
+      ];
+
       await prisma.listing.create({
         data: {
           titleAr,
           titleEn,
           descriptionAr: `${titleAr} عالي الجودة من ${company.nameAr}. مطابق للمعايير السعودية، مثالي للشركات والمؤسسات.`,
           descriptionEn: `Premium ${titleEn} from ${company.nameEn}. Saudi-standard compliant, ideal for B2B procurement.`,
-          price,
+          price: requestQuoteOnly ? undefined : price,
+          priceTo: requestQuoteOnly ? undefined : (Math.random() < 0.3 ? price * 1.2 : undefined),
           currency: 'SAR',
           unit,
           minOrderQty: randInt(1, 50),
+          leadTimeDays: randInt(3, 30),
           supplierId: company.id,
           categoryId: cat.id,
           status: 'ACTIVE',
+          sku,
+          vatPercent: vatPct,
+          stockAvailability: rand(STOCK_STATUSES),
+          requestQuoteOnly,
+          specsJson: specs,
           images: {
             create: {
               // Stable picsum seed — same image each seed run for same product
@@ -600,6 +706,15 @@ async function main() {
     const buyer = rand(buyerCompanies);
     const cat = rand(categories);
     const isOpen = i < 20;
+    const budgetBase = randPrice(10000, 500000);
+    const budgetMin = Math.round(budgetBase * 0.7);
+    const budgetMax = Math.round(budgetBase * 1.3);
+    const budgetUndisclosed = Math.random() < 0.15; // 15% undisclosed
+    const hasNda = Math.random() < 0.3;
+    const hasSiteVisit = Math.random() < 0.2;
+    const rfqCerts = Math.random() < 0.5
+      ? [rand(RFQ_CERTIFICATIONS), rand(RFQ_CERTIFICATIONS)].filter((v, idx, arr) => arr.indexOf(v) === idx)
+      : [];
     const rfq = await prisma.rFQ.create({
       data: {
         title: RFQ_TITLES[i % RFQ_TITLES.length],
@@ -608,9 +723,21 @@ async function main() {
         buyerId: buyer.id,
         quantity: randInt(10, 500),
         unit: rand(['unit', 'ton', 'piece', 'box', 'meter']),
-        budget: randPrice(10000, 500000),
+        budget: budgetBase,
+        budgetMin,
+        budgetMax,
+        budgetUndisclosed,
         currency: 'SAR',
+        vatIncluded: Math.random() < 0.5,
         deadline: new Date(Date.now() + randInt(7, 60) * 24 * 60 * 60 * 1000),
+        expectedStartDate: new Date(Date.now() + randInt(30, 90) * 24 * 60 * 60 * 1000),
+        projectType: rand(RFQ_PROJECT_TYPES),
+        ndaRequired: hasNda,
+        siteVisitRequired: hasSiteVisit,
+        locationRequirement: hasSiteVisit ? rand(SAUDI_CITIES) : null,
+        requiredCertifications: rfqCerts,
+        visibility: Math.random() < 0.8 ? 'PUBLIC' : 'INVITE_ONLY',
+        allowPartialBids: Math.random() < 0.7,
         status: isOpen
           ? RFQStatus.OPEN
           : rand([RFQStatus.AWARDED, RFQStatus.CLOSED, RFQStatus.CANCELLED]),
@@ -656,6 +783,11 @@ async function main() {
           notes: rand(QUOTE_NOTES),
           status,
           validUntil: new Date(Date.now() + randInt(14, 30) * 24 * 60 * 60 * 1000),
+          vatPercent: 15,
+          paymentTerms: rand(QUOTE_PAYMENT_TERMS),
+          warrantyMonths: rand([0, 12, 24, 36]),
+          afterSalesSupport: Math.random() < 0.5 ? 'Technical support provided for 12 months post-delivery' : null,
+          technicalProposal: Math.random() < 0.4 ? 'We propose a phased delivery approach ensuring quality at each stage.' : null,
         },
       });
       quotes.push(quote);
@@ -701,11 +833,12 @@ async function main() {
   }
   console.log(`  ✓ ${deals.length} deals`);
 
-  // ── 9. Ratings ───────────────────────────────────────────────────────────
+  // ── 9. Ratings (two-way: buyer rates supplier + supplier rates buyer) ─────
   console.log('  Creating ratings...');
   const completedDeals = deals.filter((d) => d.status === DealStatus.COMPLETED);
   let ratingCount = 0;
   for (const deal of completedDeals.slice(0, 30)) {
+    // Buyer rates supplier (always)
     await prisma.rating.create({
       data: {
         dealId: deal.id,
@@ -716,6 +849,19 @@ async function main() {
       },
     });
     ratingCount++;
+    // Supplier rates buyer (70% of the time)
+    if (Math.random() < 0.7) {
+      await prisma.rating.create({
+        data: {
+          dealId: deal.id,
+          raterId: deal.supplierId,
+          ratedId: deal.buyerId,
+          score: randInt(3, 5),
+          comment: rand(RATING_COMMENTS),
+        },
+      });
+      ratingCount++;
+    }
   }
   console.log(`  ✓ ${ratingCount} ratings`);
 

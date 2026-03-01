@@ -6,6 +6,11 @@ export type ListingStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
 export type RFQStatus = 'OPEN' | 'CLOSED' | 'AWARDED' | 'CANCELLED';
 export type QuoteStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
 export type DealStatus = 'AWARDED' | 'IN_PROGRESS' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+export type StockAvailability = 'IN_STOCK' | 'OUT_OF_STOCK' | 'LIMITED';
+export type MessageType = 'GENERAL' | 'CLARIFICATION' | 'NEGOTIATION' | 'TECHNICAL' | 'COMMERCIAL';
+export type MessagePriority = 'NORMAL' | 'URGENT';
+export type RFQVisibility = 'PUBLIC' | 'INVITE_ONLY';
+export type RFQProjectType = 'PRODUCT' | 'SERVICE' | 'MANUFACTURING' | 'CONSULTANCY';
 
 export interface User {
   id: string;
@@ -26,14 +31,34 @@ export interface Company {
   type: CompanyType;
   verificationStatus: VerificationStatus;
   plan: SubscriptionPlan;
+  planExpiresAt?: string;
   city?: string;
   phone?: string;
   website?: string;
   logoUrl?: string;
+  coverImageUrl?: string;
   descriptionAr?: string;
   descriptionEn?: string;
   quotesUsedThisMonth: number;
   isActive: boolean;
+  // Legal & compliance
+  vatNumber?: string;
+  crExpiryDate?: string;
+  legalForm?: string;
+  establishmentYear?: number;
+  companySizeRange?: string;
+  sectors?: string[];
+  contactJobTitle?: string;
+  // Supplier extras
+  keyClients?: string[];
+  regionsServed?: string[];
+  paymentTermsAccepted?: string[];
+  productionCapacity?: string;
+  isoUrl?: string;
+  chamberCertUrl?: string;
+  taxCertUrl?: string;
+  // Admin
+  adminNotes?: string;
   createdAt: string;
 }
 
@@ -56,6 +81,8 @@ export interface ListingImage {
   isPrimary: boolean;
 }
 
+export interface SpecEntry { key: string; value: string; }
+
 export interface Listing {
   id: string;
   slug?: string;
@@ -63,6 +90,7 @@ export interface Listing {
   titleEn: string;
   descriptionAr?: string;
   descriptionEn?: string;
+  sku?: string;
   price?: number;
   priceTo?: number;
   currency: string;
@@ -71,6 +99,10 @@ export interface Listing {
   leadTimeDays?: number;
   tags?: string[];
   certifications?: string[];
+  specsJson?: SpecEntry[];
+  requestQuoteOnly?: boolean;
+  vatPercent?: number;
+  stockAvailability?: StockAvailability;
   status: ListingStatus;
   viewCount?: number;
   supplierId: string;
@@ -104,11 +136,23 @@ export interface RFQ {
   id: string;
   title: string;
   description: string;
+  projectType?: RFQProjectType;
   quantity?: number;
   unit?: string;
   budget?: number;
+  budgetMin?: number;
+  budgetMax?: number;
+  budgetUndisclosed?: boolean;
   currency: string;
+  vatIncluded?: boolean;
   deadline?: string;
+  expectedStartDate?: string;
+  locationRequirement?: string;
+  siteVisitRequired?: boolean;
+  ndaRequired?: boolean;
+  requiredCertifications?: string[];
+  visibility?: RFQVisibility;
+  allowPartialBids?: boolean;
   status: RFQStatus;
   buyerId: string;
   categoryId: string;
@@ -119,6 +163,13 @@ export interface RFQ {
   createdAt: string;
 }
 
+export interface QuoteLineItem {
+  description: string;
+  qty: number;
+  unit: string;
+  unitPrice: number;
+}
+
 export interface Quote {
   id: string;
   price: number;
@@ -127,6 +178,12 @@ export interface Quote {
   notes?: string;
   status: QuoteStatus;
   validUntil?: string;
+  vatPercent?: number;
+  paymentTerms?: string;
+  warrantyMonths?: number;
+  afterSalesSupport?: string;
+  technicalProposal?: string;
+  lineItems?: QuoteLineItem[];
   rfqId: string;
   supplierId: string;
   supplier?: Pick<Company, 'id' | 'nameAr' | 'nameEn' | 'logoUrl' | 'city' | 'plan'>;
@@ -165,6 +222,8 @@ export interface Message {
   id: string;
   body: string;
   isRead: boolean;
+  messageType?: MessageType;
+  priority?: MessagePriority;
   conversationId: string;
   senderId: string;
   sender?: Pick<User, 'id' | 'fullName' | 'avatarUrl'> & { companyId: string };
@@ -174,6 +233,7 @@ export interface Message {
 export interface Conversation {
   id: string;
   subject?: string;
+  rfqId?: string;
   participants: Pick<Company, 'id' | 'nameAr' | 'nameEn' | 'logoUrl'>[];
   messages?: Message[];
   updatedAt: string;

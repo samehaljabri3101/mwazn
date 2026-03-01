@@ -64,7 +64,11 @@ export function InviteSupplierModal({ rfqId, onClose }: Props) {
     setInviting(supplierId);
     try {
       await api.post(`/rfqs/${rfqId}/invites`, { supplierId });
-      setInvited((prev) => new Set([...prev, supplierId]));
+      setInvited((prev) => {
+  const next = new Set(prev);
+  next.add(supplierId);
+  return next;
+});
     } catch { /* silent */ }
     setInviting(null);
   };

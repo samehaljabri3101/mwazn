@@ -23,6 +23,8 @@ export default function ConversationPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [body, setBody] = useState('');
+  const [messageType, setMessageType] = useState<'GENERAL' | 'CLARIFICATION' | 'NEGOTIATION' | 'TECHNICAL' | 'COMMERCIAL'>('GENERAL');
+  const [priority, setPriority] = useState<'NORMAL' | 'URGENT'>('NORMAL');
   const [sending, setSending] = useState(false);
   const [typingIndicator, setTypingIndicator] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -149,6 +151,8 @@ export default function ConversationPage() {
     const tempMsg: Message = {
       id: `temp-${Date.now()}`,
       body: msgBody,
+      messageType,
+      priority,
       conversationId: id,
       senderId: user?.id ?? '',
       isRead: false,
@@ -159,12 +163,12 @@ export default function ConversationPage() {
     if (socketConnected.current && socketRef.current) {
       setMessages((prev) => [...prev, tempMsg]);
       setBody('');
-      socketRef.current.emit('message', { conversationId: id, body: msgBody });
+      socketRef.current.emit('message', { conversationId: id, body: msgBody, messageType, priority });
       setSending(false);
     } else {
       setBody('');
       try {
-        await api.post(`/conversations/${id}/messages`, { body: msgBody });
+        await api.post(`/conversations/${id}/messages`, { body: msgBody, messageType, priority });
         await fetchMessages(true);
       } catch { /* silent */ }
       setSending(false);
@@ -263,7 +267,33 @@ export default function ConversationPage() {
         </div>
 
         {/* Input */}
-        <div className="border-t border-slate-100 pt-4">
+        <div className="border-t border-slate-100 pt-4 space-y-2">
+          {/* Message type + priority controls */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={messageType}
+              onChange={(e) => setMessageType(e.target.value as typeof messageType)}
+              className="input-base py-1 text-xs h-8 w-auto"
+            >
+              <option value="GENERAL">{ar ? 'عام' : 'General'}</option>
+              <option value="CLARIFICATION">{ar ? 'استفسار' : 'Clarification'}</option>
+              <option value="NEGOTIATION">{ar ? 'تفاوض' : 'Negotiation'}</option>
+              <option value="TECHNICAL">{ar ? 'تقني' : 'Technical'}</option>
+              <option value="COMMERCIAL">{ar ? 'تجاري' : 'Commercial'}</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => setPriority((p) => (p === 'NORMAL' ? 'URGENT' : 'NORMAL'))}
+              className={`rounded-lg border px-3 py-1 text-xs font-medium h-8 transition-colors ${
+                priority === 'URGENT'
+                  ? 'border-red-500 bg-red-50 text-red-700'
+                  : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+              }`}
+            >
+              {priority === 'URGENT' ? (ar ? 'عاجل' : 'Urgent') : (ar ? 'عادي' : 'Normal')}
+            </button>
+          </div>
+
           <div className="flex items-end gap-3">
             <textarea
               ref={inputRef}
@@ -285,7 +315,7 @@ export default function ConversationPage() {
               {ar ? 'إرسال' : 'Send'}
             </Button>
           </div>
-          <p className="text-[10px] text-slate-400 mt-1.5 ms-1">
+          <p className="text-[10px] text-slate-400 ms-1">
             {ar ? 'Shift+Enter لسطر جديد' : 'Shift+Enter for new line'}
           </p>
         </div>
