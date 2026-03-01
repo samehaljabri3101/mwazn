@@ -1,21 +1,36 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCategoryDto, UpdateCategoryDto } from './dto/create-category.dto';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
+  ) {}
 
   async findAll(includeInactive = false) {
-    return this.prisma.category.findMany({
+    const cacheKey = `categories:all:${includeInactive}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.prisma.category.findMany({
       where: includeInactive ? {} : { isActive: true },
       include: { children: { where: { isActive: true } }, _count: { select: { listings: true, rfqs: true } } },
       orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
     });
+    await this.cache.set(cacheKey, result, 300_000); // 5 min
+    return result;
   }
 
   async findRoots() {
-    return this.prisma.category.findMany({
+    const cacheKey = 'categories:roots';
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const result = await this.prisma.category.findMany({
       where: { parentId: null, isActive: true },
       include: {
         children: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } },
@@ -23,6 +38,8 @@ export class CategoriesService {
       },
       orderBy: [{ sortOrder: 'asc' }, { nameEn: 'asc' }],
     });
+    await this.cache.set(cacheKey, result, 300_000); // 5 min
+    return result;
   }
 
   async findOne(id: string) {
@@ -34,10 +51,20 @@ export class CategoriesService {
     return cat;
   }
 
+  private async invalidateCategoryCache() {
+    await Promise.all([
+      this.cache.del('categories:roots'),
+      this.cache.del('categories:all:false'),
+      this.cache.del('categories:all:true'),
+    ]);
+  }
+
   async create(dto: CreateCategoryDto) {
     const existing = await this.prisma.category.findUnique({ where: { slug: dto.slug } });
     if (existing) throw new ConflictException('Slug already in use');
-    return this.prisma.category.create({ data: dto });
+    const result = await this.prisma.category.create({ data: dto });
+    await this.invalidateCategoryCache();
+    return result;
   }
 
   async update(id: string, dto: UpdateCategoryDto) {
@@ -47,12 +74,16 @@ export class CategoriesService {
       const existing = await this.prisma.category.findUnique({ where: { slug: dto.slug } });
       if (existing) throw new ConflictException('Slug already in use');
     }
-    return this.prisma.category.update({ where: { id }, data: dto });
+    const result = await this.prisma.category.update({ where: { id }, data: dto });
+    await this.invalidateCategoryCache();
+    return result;
   }
 
   async remove(id: string) {
     const cat = await this.prisma.category.findUnique({ where: { id } });
     if (!cat) throw new NotFoundException('Category not found');
-    return this.prisma.category.update({ where: { id }, data: { isActive: false } });
+    const result = await this.prisma.category.update({ where: { id }, data: { isActive: false } });
+    await this.invalidateCategoryCache();
+    return result;
   }
 }

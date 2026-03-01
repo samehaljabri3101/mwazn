@@ -60,6 +60,21 @@ enum DealStatus {
   CANCELLED
 }
 
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum DocumentType {
+  CR
+  VAT
+  LICENSE
+  ISO
+  OTHER
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -130,6 +145,15 @@ model Company {
   // ── Admin ──────────────────────────────────────────────────────────────────
   adminNotes          String?            @db.Text
 
+  // ── Verification ───────────────────────────────────────────────────────────
+  verificationNotes   String?            @db.Text
+  verifiedAt          DateTime?
+  verifiedBy          String?
+
+  // ── Scoring ────────────────────────────────────────────────────────────────
+  supplierScore       Float?
+  scoreUpdatedAt      DateTime?
+
   users              User[]
   listings           Listing[]
   rfqs               RFQ[]
@@ -141,6 +165,8 @@ model Company {
   conversations      Conversation[] @relation("CompanyConversations")
   categories         Category[]     @relation("CompanyCategories")
   receivedInvites    RFQInvite[]    @relation("InvitedSupplier")
+  invoices           Invoice[]
+  verificationDocs   CompanyVerificationDocument[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -481,5 +507,59 @@ model AuditLog {
 
   @@index([userId])
   @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ─── Billing ──────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id        String        @id @default(cuid())
+  companyId String
+  company   Company       @relation(fields: [companyId], references: [id])
+  plan      String        @default("PRO")
+  amount    Decimal       @db.Decimal(12, 2)
+  currency  String        @default("SAR")
+  status    InvoiceStatus @default(PENDING)
+  provider  String        @default("manual") // stripe|moyasar|manual
+  reference String?
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+
+  @@index([companyId])
+  @@index([status])
+}
+
+// ─── Supplier Verification Documents ─────────────────────────────────────────
+
+model CompanyVerificationDocument {
+  id         String      @id @default(cuid())
+  companyId  String
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type       DocumentType
+  fileUrl    String
+  uploadedAt DateTime    @default(now())
+  reviewedAt DateTime?
+  reviewerId String?
+  decision   String?     // APPROVED|REJECTED
+  notes      String?     @db.Text
+
+  @@index([companyId])
+  @@index([decision])
+}
+
+// ─── Analytics Events ─────────────────────────────────────────────────────────
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  event     String   // PAGE_VIEW|RFQ_CREATED|QUOTE_SUBMITTED|QUOTE_ACCEPTED|DEAL_COMPLETED|RATING_POSTED|LISTING_VIEWED
+  companyId String?
+  userId    String?
+  entityId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([event])
+  @@index([companyId])
   @@index([createdAt])
 }

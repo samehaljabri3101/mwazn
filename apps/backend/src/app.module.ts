@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { CacheModule } from '@nestjs/cache-manager';
+import { ScheduleModule } from '@nestjs/schedule';
 import { APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
@@ -24,16 +26,47 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
 import { InvoiceModule } from './invoice/invoice.module';
 import { MaroofModule } from './maroof/maroof.module';
+import { BillingModule } from './billing/billing.module';
+import { VerificationModule } from './verification/verification.module';
+import { ScoringModule } from './scoring/scoring.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    ScheduleModule.forRoot(),
+
+    // Rate limiting: 100 req/60s default, tighter limits set per-endpoint with @Throttle()
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 100 },
+      { name: 'auth', ttl: 60_000, limit: 10 },
+      { name: 'write', ttl: 60_000, limit: 30 },
+    ]),
+
+    // Redis cache — falls back to in-memory if REDIS_URL not set
+    CacheModule.registerAsync({
+      isGlobal: true,
+      inject: [ConfigService],
+      useFactory: async (config: ConfigService) => {
+        const redisUrl = config.get<string>('REDIS_URL');
+        if (redisUrl) {
+          const { redisInsStore } = await import('cache-manager-ioredis-yet');
+          const Redis = (await import('ioredis')).default;
+          const client = new Redis(redisUrl);
+          return { store: redisInsStore(client), ttl: 60_000 };
+        }
+        // In-memory fallback (for local dev without Redis)
+        return { ttl: 60_000, max: 200 };
+      },
+    }),
+
     PrismaModule,
     EmailModule,
     AuditModule,
     MaroofModule,
     NotificationsModule,
+    BillingModule,
+    VerificationModule,
+    ScoringModule,
     AuthModule,
     UsersModule,
     CompaniesModule,

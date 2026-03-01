@@ -1,8 +1,8 @@
 /**
- * Mwazn — Production Seed Script
- * Rich Saudi AR/EN dummy data, investor-demo-ready
- * Suppliers demo-1..demo-8 match the frontend hardcoded supplier list exactly.
- * Images use picsum.photos with stable seeds — no local files needed.
+ * Mwazn — Massive Production Seed (v2)
+ * 200 companies · 800+ listings · 250 RFQs · 400+ quotes
+ * 130+ deals · 2000+ messages · 300+ ratings
+ * Images use picsum.photos — no local files needed.
  */
 
 import {
@@ -19,18 +19,17 @@ import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const hash = (pw: string) => bcrypt.hashSync(pw, 10);
 const rand = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 const randPrice = (min: number, max: number) =>
   Math.round((Math.random() * (max - min) + min) * 100) / 100;
-/** Deterministic picsum image — same seed → same image every run */
-const productImg = (s: number) =>
-  `https://picsum.photos/seed/mwazn-${s}/800/600`;
+const productImg = (s: number) => `https://picsum.photos/seed/mwazn-${s}/800/600`;
+const logoImg = (s: number) => `https://picsum.photos/seed/logo-${s}/200/200`;
 
-// ── Categories ───────────────────────────────────────────────────────────────
+// ── Categories ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { nameAr: 'مواد البناء', nameEn: 'Building Materials', slug: 'building-materials' },
   { nameAr: 'الأثاث والديكور', nameEn: 'Furniture & Decor', slug: 'furniture-decor' },
@@ -59,7 +58,7 @@ const CATEGORIES = [
   { nameAr: 'خدمات الاستشارات', nameEn: 'Consulting Services', slug: 'consulting-services' },
 ];
 
-// ── Realistic product catalog by category ────────────────────────────────────
+// ── Product Catalog by Category ────────────────────────────────────────────────
 type ProductSpec = { ar: string; en: string; minP: number; maxP: number; unit: string };
 
 const PRODUCTS: Record<string, ProductSpec[]> = {
@@ -157,7 +156,7 @@ const PRODUCTS: Record<string, ProductSpec[]> = {
     { ar: 'مولد طوارئ كهربائي 100 كيلوواط', en: '100 kW Emergency Power Generator', minP: 14000, maxP: 90000, unit: 'unit' },
     { ar: 'كاشف دخان وحريق معتمد', en: 'Certified Smoke & Fire Detector', minP: 90, maxP: 400, unit: 'unit' },
     { ar: 'مكثف كهربائي صناعي', en: 'Industrial Power Factor Capacitor', minP: 350, maxP: 2500, unit: 'unit' },
-    { ar: 'وحدة تحكم PLCصناعي', en: 'Industrial PLC Control Unit', minP: 1800, maxP: 12000, unit: 'unit' },
+    { ar: 'وحدة تحكم PLC صناعي', en: 'Industrial PLC Control Unit', minP: 1800, maxP: 12000, unit: 'unit' },
     { ar: 'نظام أرضي كهربائي آمن', en: 'Safe Electrical Earthing System', minP: 800, maxP: 5000, unit: 'set' },
     { ar: 'خلية شمسية سكنية 400 واط', en: '400W Solar Panel Module', minP: 700, maxP: 1800, unit: 'unit' },
   ],
@@ -177,7 +176,53 @@ const PRODUCTS: Record<string, ProductSpec[]> = {
   ],
 };
 
-// ── Supplier Companies — demo-1..demo-8 MUST MATCH frontend/suppliers/page.tsx ──
+// ── Supplier Name Templates for Auto-Generation ────────────────────────────────
+const SUP_AR_PREFIX = ['شركة', 'مؤسسة', 'مجموعة', 'شركة'];
+const SUP_AR_MIDFIX_BY_CAT: Record<string, string[]> = {
+  'building-materials': ['العمران', 'الإنشاء', 'البنيان', 'الأساس', 'المواد'],
+  'furniture-decor': ['الأثاث', 'الديكور', 'المفروشات', 'الراحة', 'التصميم'],
+  'industrial-equipment': ['الصناعة', 'المعدات', 'التقنية الصناعية', 'الميكانيك', 'التشغيل'],
+  'technology-electronics': ['التقنية', 'الإلكترونيات', 'الذكاء', 'المعلوماتية', 'الابتكار'],
+  'food-beverages': ['الأغذية', 'المواد الغذائية', 'الإنتاج الغذائي', 'التموين', 'الطعام'],
+  'chemicals-raw-materials': ['الكيماويات', 'المواد الكيماوية', 'التحويل الكيماوي', 'المواد الخام', 'البتروكيماويات'],
+  'electrical-equipment': ['الكهرباء', 'الطاقة', 'الأنظمة الكهربائية', 'الطاقة الكهربائية', 'القدرة'],
+  'medical-devices': ['الطب', 'الأجهزة الطبية', 'الرعاية الصحية', 'الصحة', 'المستلزمات الطبية'],
+  'hvac-equipment': ['التبريد والتكييف', 'الأنظمة الحرارية', 'المناخ', 'التهوية', 'التكييف'],
+  'logistics-transport': ['الخدمات اللوجستية', 'النقل', 'الشحن', 'التوزيع', 'المواصلات'],
+  'safety-security': ['السلامة', 'الأمن', 'الحماية', 'السلامة والأمان', 'الأنظمة الأمنية'],
+  'agriculture-food': ['الزراعة', 'المزارع', 'الإنتاج الزراعي', 'الأغذية الزراعية', 'المحاصيل'],
+  'it-services': ['خدمات تقنية المعلومات', 'الحلول الرقمية', 'البرمجيات', 'الأنظمة', 'الشبكات'],
+  'clothing-textiles': ['الملابس', 'النسيج', 'الأقمشة', 'الأزياء', 'الملبوسات'],
+  'vehicles-automotive': ['السيارات', 'المركبات', 'قطع الغيار', 'النقل', 'الميكانيك'],
+  'paper-printing': ['الورق', 'الطباعة', 'المطبوعات', 'التغليف الورقي', 'الورق والطباعة'],
+  'restaurant-equipment': ['معدات المطاعم', 'التموين والطهي', 'الطهي', 'المطابخ', 'الأجهزة الفندقية'],
+  'tools-hardware': ['الأدوات', 'العدد الصناعية', 'الأدوات اليدوية', 'الحديد والأدوات', 'المعدات اليدوية'],
+  'cleaning-supplies': ['التنظيف', 'مستلزمات النظافة', 'البيئة والنظافة', 'الصرف الصحي', 'النظافة'],
+  'construction-contracting': ['المقاولات', 'الإنشاء والتعمير', 'البناء', 'المشاريع الإنشائية', 'التطوير'],
+  'laboratory-equipment': ['المختبرات', 'معدات الأبحاث', 'التحليل المختبري', 'الأجهزة العلمية', 'المعامل'],
+  'packaging-wrapping': ['التغليف', 'التعبئة والتغليف', 'صناعة الأكياس', 'الحاويات', 'التغليف الصناعي'],
+  'office-equipment': ['المعدات المكتبية', 'اللوازم المكتبية', 'الأجهزة المكتبية', 'تجهيزات المكاتب', 'الأثاث المكتبي'],
+  'energy-petroleum': ['الطاقة', 'البترول', 'الطاقة والبترول', 'الموارد الطبيعية', 'التنقيب'],
+  'consulting-services': ['الاستشارات', 'الحلول الاستشارية', 'الخبرات الإدارية', 'الخدمات الاستشارية', 'الإدارة'],
+};
+const SUP_AR_SUFFIX = [
+  'السعودية', 'الخليجية', 'العربية', 'للمملكة', 'للتجارة والتوريد',
+  'للتوريد والتشغيل', 'المتخصصة', 'المتميزة', 'المتكاملة', 'للخدمات',
+];
+
+const SAUDI_CITIES = ['Riyadh', 'Jeddah', 'Dammam', 'Mecca', 'Medina', 'Khobar', 'Jubail', 'Abha', 'Tabuk', 'Qassim', 'Hail', 'Al-Ahsa'];
+const LEGAL_FORMS = ['LLC', 'LLC', 'ESTABLISHMENT', 'LLC', 'CORPORATION', 'JOINT_STOCK'];
+const SIZE_RANGES = ['1-10', '11-50', '11-50', '51-200', '51-200', '201-500', '500+'];
+const PAYMENT_TERMS_OPTIONS = [
+  ['Cash on Delivery', 'Net 30'],
+  ['Net 30', 'Net 60'],
+  ['Cash on Delivery', 'Net 30', '50% Advance'],
+  ['Letter of Credit', 'Net 60', 'Net 90'],
+  ['Net 30', '50% Advance', 'Letter of Credit'],
+  ['Cash on Delivery'],
+];
+
+// ── 8 Named Demo Suppliers (frontend-visible slugs) ──────────────────────────
 interface SupplierSpec {
   slug?: string;
   nameAr: string;
@@ -198,21 +243,12 @@ interface SupplierSpec {
   productionCapacity?: string;
 }
 
-const SUPPLIERS: SupplierSpec[] = [
-  // ── These 8 match the hardcoded DEMO_SUPPLIERS in apps/frontend/src/app/[locale]/suppliers/page.tsx ──
+const DEMO_SUPPLIERS: SupplierSpec[] = [
   {
-    slug: 'demo-1',
-    nameAr: 'شركة الخليج للمعدات الصناعية',
-    nameEn: 'Gulf Industrial Equipment Co.',
-    city: 'Riyadh',
-    plan: SubscriptionPlan.PRO,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'industrial-equipment',
-    phone: '+966512345001',
-    website: 'https://gulf-industrial.sa',
-    legalForm: 'LLC',
-    establishmentYear: 2008,
-    companySizeRange: '51-200',
+    slug: 'demo-1', nameAr: 'شركة الخليج للمعدات الصناعية', nameEn: 'Gulf Industrial Equipment Co.',
+    city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'industrial-equipment', phone: '+966512345001', website: 'https://gulf-industrial.sa',
+    legalForm: 'LLC', establishmentYear: 2008, companySizeRange: '51-200',
     sectors: ['Industrial Equipment', 'Manufacturing', 'Heavy Machinery'],
     keyClients: ['Saudi Aramco', 'SABIC', 'Maaden'],
     regionsServed: ['Riyadh', 'Eastern Province', 'Mecca'],
@@ -220,18 +256,10 @@ const SUPPLIERS: SupplierSpec[] = [
     productionCapacity: '500 units/month',
   },
   {
-    slug: 'demo-2',
-    nameAr: 'مؤسسة العمران للمواد الإنشائية',
-    nameEn: 'Al-Omran Construction Materials',
-    city: 'Jeddah',
-    plan: SubscriptionPlan.PRO,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'building-materials',
-    phone: '+966512345002',
-    website: 'https://alomran-const.sa',
-    legalForm: 'ESTABLISHMENT',
-    establishmentYear: 2012,
-    companySizeRange: '11-50',
+    slug: 'demo-2', nameAr: 'مؤسسة العمران للمواد الإنشائية', nameEn: 'Al-Omran Construction Materials',
+    city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'building-materials', phone: '+966512345002', website: 'https://alomran-const.sa',
+    legalForm: 'ESTABLISHMENT', establishmentYear: 2012, companySizeRange: '11-50',
     sectors: ['Building Materials', 'Construction & Contracting'],
     keyClients: ['Dar Al-Arkan', 'Emaar Saudi'],
     regionsServed: ['Mecca', 'Medina', 'Jizan'],
@@ -239,34 +267,19 @@ const SUPPLIERS: SupplierSpec[] = [
     productionCapacity: '1000 tons/month',
   },
   {
-    slug: 'demo-3',
-    nameAr: 'الشركة الوطنية للأثاث المكتبي',
-    nameEn: 'National Office Furniture Company',
-    city: 'Riyadh',
-    plan: SubscriptionPlan.FREE,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'furniture-decor',
-    phone: '+966512345003',
-    legalForm: 'LLC',
-    establishmentYear: 2015,
-    companySizeRange: '11-50',
+    slug: 'demo-3', nameAr: 'الشركة الوطنية للأثاث المكتبي', nameEn: 'National Office Furniture Company',
+    city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'furniture-decor', phone: '+966512345003',
+    legalForm: 'LLC', establishmentYear: 2015, companySizeRange: '11-50',
     sectors: ['Furniture & Decor', 'Office Equipment'],
     regionsServed: ['Riyadh', 'Qassim'],
     paymentTermsAccepted: ['Cash on Delivery', 'Net 30'],
   },
   {
-    slug: 'demo-4',
-    nameAr: 'تقنية المستقبل للحلول الرقمية',
-    nameEn: 'Future Tech Digital Solutions',
-    city: 'Dammam',
-    plan: SubscriptionPlan.PRO,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'technology-electronics',
-    phone: '+966512345004',
-    website: 'https://futuretech-sa.com',
-    legalForm: 'LLC',
-    establishmentYear: 2018,
-    companySizeRange: '51-200',
+    slug: 'demo-4', nameAr: 'تقنية المستقبل للحلول الرقمية', nameEn: 'Future Tech Digital Solutions',
+    city: 'Dammam', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'technology-electronics', phone: '+966512345004', website: 'https://futuretech-sa.com',
+    legalForm: 'LLC', establishmentYear: 2018, companySizeRange: '51-200',
     sectors: ['Technology & Electronics', 'IT Services'],
     keyClients: ['STC', 'Mobily', 'Ministry of Education'],
     regionsServed: ['Eastern Province', 'Riyadh', 'Mecca', 'Medina'],
@@ -274,18 +287,10 @@ const SUPPLIERS: SupplierSpec[] = [
     productionCapacity: '200 units/month',
   },
   {
-    slug: 'demo-5',
-    nameAr: 'شركة الأصيل للأغذية والمشروبات',
-    nameEn: 'Al-Aseel Food & Beverages',
-    city: 'Riyadh',
-    plan: SubscriptionPlan.PRO,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'food-beverages',
-    phone: '+966512345005',
-    website: 'https://alaseel-food.sa',
-    legalForm: 'LLC',
-    establishmentYear: 2010,
-    companySizeRange: '201-500',
+    slug: 'demo-5', nameAr: 'شركة الأصيل للأغذية والمشروبات', nameEn: 'Al-Aseel Food & Beverages',
+    city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'food-beverages', phone: '+966512345005', website: 'https://alaseel-food.sa',
+    legalForm: 'LLC', establishmentYear: 2010, companySizeRange: '201-500',
     sectors: ['Food & Beverages', 'Agriculture & Food'],
     keyClients: ['Panda Retail', 'Carrefour KSA', 'Al-Sadhan'],
     regionsServed: ['Riyadh', 'Mecca', 'Medina', 'Jizan', 'Asir'],
@@ -293,18 +298,10 @@ const SUPPLIERS: SupplierSpec[] = [
     productionCapacity: '50 tons/day',
   },
   {
-    slug: 'demo-6',
-    nameAr: 'مجموعة النهضة للكيماويات',
-    nameEn: 'Al-Nahda Chemical Group',
-    city: 'Jubail',
-    plan: SubscriptionPlan.PRO,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'chemicals-raw-materials',
-    phone: '+966512345006',
-    website: 'https://alnahda-chem.sa',
-    legalForm: 'CORPORATION',
-    establishmentYear: 2005,
-    companySizeRange: '201-500',
+    slug: 'demo-6', nameAr: 'مجموعة النهضة للكيماويات', nameEn: 'Al-Nahda Chemical Group',
+    city: 'Jubail', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'chemicals-raw-materials', phone: '+966512345006', website: 'https://alnahda-chem.sa',
+    legalForm: 'CORPORATION', establishmentYear: 2005, companySizeRange: '201-500',
     sectors: ['Chemicals & Raw Materials', 'Energy & Petroleum'],
     keyClients: ['Saudi Aramco', 'SABIC', 'National Industrialization Co.'],
     regionsServed: ['Eastern Province', 'Riyadh', 'Jubail'],
@@ -312,62 +309,34 @@ const SUPPLIERS: SupplierSpec[] = [
     productionCapacity: '500 tons/month',
   },
   {
-    slug: 'demo-7',
-    nameAr: 'الفهد للمعدات الكهربائية',
-    nameEn: 'Al-Fahd Electrical Equipment',
-    city: 'Riyadh',
-    plan: SubscriptionPlan.FREE,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'electrical-equipment',
-    phone: '+966512345007',
-    legalForm: 'ESTABLISHMENT',
-    establishmentYear: 2016,
-    companySizeRange: '1-10',
+    slug: 'demo-7', nameAr: 'الفهد للمعدات الكهربائية', nameEn: 'Al-Fahd Electrical Equipment',
+    city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'electrical-equipment', phone: '+966512345007',
+    legalForm: 'ESTABLISHMENT', establishmentYear: 2016, companySizeRange: '1-10',
     sectors: ['Electrical Equipment'],
     regionsServed: ['Riyadh', 'Qassim', 'Hail'],
     paymentTermsAccepted: ['Cash on Delivery', '50% Advance'],
   },
   {
-    slug: 'demo-8',
-    nameAr: 'شركة السلامة للطب والرعاية',
-    nameEn: 'Al-Salama Medical & Care',
-    city: 'Khobar',
-    plan: SubscriptionPlan.PRO,
-    status: VerificationStatus.VERIFIED,
-    primaryCategory: 'medical-devices',
-    phone: '+966512345008',
-    website: 'https://alsalama-medical.sa',
-    legalForm: 'LLC',
-    establishmentYear: 2013,
-    companySizeRange: '51-200',
+    slug: 'demo-8', nameAr: 'شركة السلامة للطب والرعاية', nameEn: 'Al-Salama Medical & Care',
+    city: 'Khobar', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED,
+    primaryCategory: 'medical-devices', phone: '+966512345008', website: 'https://alsalama-medical.sa',
+    legalForm: 'LLC', establishmentYear: 2013, companySizeRange: '51-200',
     sectors: ['Medical Devices', 'Safety & Security'],
     keyClients: ['King Faisal Hospital', 'Ministry of Health', 'Dr. Sulaiman Al-Habib'],
     regionsServed: ['Eastern Province', 'Riyadh', 'Mecca', 'Medina', 'Khobar'],
     paymentTermsAccepted: ['Net 30', 'Net 60', 'Letter of Credit'],
     productionCapacity: '100 units/month',
   },
-  // ── Additional suppliers ──────────────────────────────────────────────────
-  { nameAr: 'شركة الطاقة والنفط', nameEn: 'EnergyOil Solutions', city: 'Dhahran', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Energy & Petroleum'] },
-  { nameAr: 'دار الأزياء السعودية', nameEn: 'Saudi Fashion House', city: 'Jeddah', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Clothing & Textiles'] },
-  { nameAr: 'شركة الأمن والسلامة المتكاملة', nameEn: 'Integrated Safety Systems', city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Safety & Security'] },
-  { nameAr: 'مزارع الخير الزراعية', nameEn: 'Al-Khair Farms', city: 'Al-Ahsa', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Agriculture & Food'] },
-  { nameAr: 'حلول تقنية المعلومات', nameEn: 'IT Solutions Arabia', city: 'Riyadh', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['IT Services', 'Technology & Electronics'] },
-  { nameAr: 'شركة الكهرباء والأنظمة', nameEn: 'Elec & Systems Co.', city: 'Dammam', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Electrical Equipment'] },
-  { nameAr: 'شركة تكييف الخليج', nameEn: 'Gulf HVAC Solutions', city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['HVAC Equipment'] },
-  { nameAr: 'مؤسسة السيارات الحديثة', nameEn: 'Modern Auto Est.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Vehicles & Automotive'] },
-  { nameAr: 'شركة الطباعة والنشر', nameEn: 'Print & Publish Arabia', city: 'Jeddah', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Paper & Printing'] },
-  { nameAr: 'معدات المطاعم المتميزة', nameEn: 'Premier Restaurant Equip.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Restaurant Equipment'] },
-  { nameAr: 'شركة الأدوات الصناعية', nameEn: 'Industrial Tools Co.', city: 'Jubail', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Tools & Hardware', 'Industrial Equipment'] },
-  { nameAr: 'شركة النظافة والبيئة', nameEn: 'Clean & Green Arabia', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Cleaning Supplies'] },
-  { nameAr: 'مقاولات الوطن', nameEn: 'Al-Watan Contractors', city: 'Mecca', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Construction & Contracting', 'Building Materials'] },
-  { nameAr: 'معامل ومختبرات متطورة', nameEn: 'Advanced Labs Est.', city: 'Riyadh', plan: SubscriptionPlan.FREE, status: VerificationStatus.VERIFIED, sectors: ['Laboratory Equipment'] },
-  { nameAr: 'شركة التغليف الذكي', nameEn: 'Smart Pack Arabia', city: 'Dammam', plan: SubscriptionPlan.PRO, status: VerificationStatus.VERIFIED, sectors: ['Packaging & Wrapping'] },
   // Pending (unverified demo)
-  { nameAr: 'شركة المورّد الجديد', nameEn: 'New Supplier Co.', city: 'Medina', plan: SubscriptionPlan.FREE, status: VerificationStatus.PENDING },
+  {
+    nameAr: 'شركة المورّد الجديد', nameEn: 'New Supplier Co.',
+    city: 'Medina', plan: SubscriptionPlan.FREE, status: VerificationStatus.PENDING,
+  },
 ];
 
-// ── Buyer Companies ───────────────────────────────────────────────────────────
-const BUYERS = [
+// ── 80 Named Buyer Companies ───────────────────────────────────────────────────
+const BUYER_NAMES: Array<{ nameAr: string; nameEn: string }> = [
   { nameAr: 'شركة الاتحاد للتطوير', nameEn: 'Union Development Co.' },
   { nameAr: 'مجموعة الرياض التجارية', nameEn: 'Riyadh Commercial Group' },
   { nameAr: 'شركة أرامكو للخدمات', nameEn: 'Aramco Services Co.' },
@@ -383,49 +352,127 @@ const BUYERS = [
   { nameAr: 'شركة المصافي العربية', nameEn: 'Arabian Refining Co.' },
   { nameAr: 'جامعة الملك عبدالعزيز', nameEn: 'King Abdulaziz University' },
   { nameAr: 'شركة التأمين الأهلية', nameEn: 'Ahlia Insurance Co.' },
+  { nameAr: 'شركة دار الأركان للتطوير', nameEn: 'Dar Al-Arkan Development' },
+  { nameAr: 'مجموعة MBC الإعلامية', nameEn: 'MBC Media Group' },
+  { nameAr: 'شركة سابك للبتروكيماويات', nameEn: 'SABIC Petrochemical Co.' },
+  { nameAr: 'مجموعة فلكون للطيران', nameEn: 'Falcon Aviation Group' },
+  { nameAr: 'شركة المياه الوطنية', nameEn: 'National Water Co.' },
+  { nameAr: 'هيئة الاستثمار السعودية', nameEn: 'Saudi Investment Authority' },
+  { nameAr: 'شركة بنزة للتجزئة', nameEn: 'Banza Retail Co.' },
+  { nameAr: 'مجموعة الراجحي المالية', nameEn: 'Al-Rajhi Financial Group' },
+  { nameAr: 'شركة اليمامة للصناعات', nameEn: 'Al-Yamamah Industries' },
+  { nameAr: 'شركة النور للخدمات', nameEn: 'Al-Nour Services Co.' },
+  { nameAr: 'مجموعة طيران السعودية', nameEn: 'Saudi Airlines Group' },
+  { nameAr: 'شركة القدية للترفيه', nameEn: 'Qiddiya Entertainment' },
+  { nameAr: 'مشاريع NEOM الضخمة', nameEn: 'NEOM Development Projects' },
+  { nameAr: 'شركة الفارس للاستثمار', nameEn: 'Al-Faris Investment Co.' },
+  { nameAr: 'شركة الحرس الوطني للتموين', nameEn: 'National Guard Supply Co.' },
+  { nameAr: 'شركة مدينة الملك عبدالله', nameEn: 'KAEC Development Co.' },
+  { nameAr: 'مجموعة البنك الأهلي', nameEn: 'Al-Ahli Bank Group' },
+  { nameAr: 'شركة الكيان للإسكان', nameEn: 'Kayan Housing Co.' },
+  { nameAr: 'شركة الصفوة للفنادق', nameEn: 'Al-Safwa Hotels' },
+  { nameAr: 'مجموعة جدوى للاستثمار', nameEn: 'Jadwa Investment Group' },
+  { nameAr: 'شركة التقنيات الطبية', nameEn: 'Medical Technologies Co.' },
+  { nameAr: 'شركة الدرع للأمن', nameEn: 'Al-Daraa Security Co.' },
+  { nameAr: 'مجموعة اليسر للتمويل', nameEn: 'Al-Yusr Finance Group' },
+  { nameAr: 'شركة الشرق للإنتاج', nameEn: 'Al-Sharq Production Co.' },
+  { nameAr: 'شركة النهضة للتعليم', nameEn: 'Al-Nahda Education Co.' },
+  { nameAr: 'شركة الوفاء للبناء', nameEn: 'Al-Wafa Construction' },
+  { nameAr: 'مجموعة السوق للتجزئة', nameEn: 'Al-Souk Retail Group' },
+  { nameAr: 'شركة ذروة للمقاولات', nameEn: 'Thurwa Contracting Co.' },
+  { nameAr: 'شركة الأمانة للتوريد', nameEn: 'Al-Amana Supply Co.' },
+  { nameAr: 'مجموعة الريم للاستثمار', nameEn: 'Al-Reem Investment Group' },
+  { nameAr: 'شركة الخير للزراعة', nameEn: 'Al-Khair Agriculture Co.' },
+  { nameAr: 'مجموعة التقدم للصناعة', nameEn: 'Al-Takadum Industrial Group' },
+  { nameAr: 'شركة الحكمة للاستشارات', nameEn: 'Al-Hikma Consulting' },
+  { nameAr: 'مجموعة الفجر للتجارة', nameEn: 'Al-Fajr Trading Group' },
+  { nameAr: 'شركة البركة للغذاء', nameEn: 'Al-Baraka Food Co.' },
+  { nameAr: 'شركة التوفيق للإنشاء', nameEn: 'Al-Tawfiq Construction' },
+  { nameAr: 'مجموعة العز للحديد', nameEn: 'Al-Ezz Steel Group' },
+  { nameAr: 'شركة الحضارة للتطوير', nameEn: 'Al-Hadara Development' },
+  { nameAr: 'شركة الوسيم للتجارة', nameEn: 'Al-Waseem Trading' },
+  { nameAr: 'مجموعة الأفق للاستثمار', nameEn: 'Al-Ofok Investment Group' },
+  { nameAr: 'شركة الثقة للخدمات', nameEn: 'Al-Thiqa Services' },
+  { nameAr: 'شركة الرائد للمواد', nameEn: 'Al-Raed Materials Co.' },
+  { nameAr: 'مجموعة الأصالة للتجارة', nameEn: 'Al-Asalah Trading Group' },
+  { nameAr: 'شركة المدينة للتطوير', nameEn: 'Al-Madinah Development' },
+  { nameAr: 'شركة الإشراق للطاقة', nameEn: 'Al-Ishraq Energy Co.' },
+  { nameAr: 'مجموعة الغد للصناعة', nameEn: 'Al-Ghad Industrial Group' },
+  { nameAr: 'شركة الحصن للأمن', nameEn: 'Al-Hisn Security Co.' },
+  { nameAr: 'شركة البيان للمقاولات', nameEn: 'Al-Bayan Contracting' },
+  { nameAr: 'مجموعة الإمارات السعودية', nameEn: 'Saudi-Emirates Group' },
+  { nameAr: 'شركة الواحة للاستثمار', nameEn: 'Al-Waha Investment' },
+  { nameAr: 'شركة الأجيال للتعليم', nameEn: 'Al-Ajyal Education' },
+  { nameAr: 'مجموعة الهلال للتجارة', nameEn: 'Al-Hilal Trading Group' },
+  { nameAr: 'شركة المروة للفنادق', nameEn: 'Al-Marwa Hotels' },
+  { nameAr: 'شركة القمة للإنشاء', nameEn: 'Al-Qimma Construction' },
+  { nameAr: 'مجموعة الدوحة للمقاولات', nameEn: 'Al-Doha Contracting Group' },
+  { nameAr: 'شركة الرواق للتصميم', nameEn: 'Al-Rawwaq Design Co.' },
+  { nameAr: 'مجموعة الزهور للتجارة', nameEn: 'Al-Zuhoor Trading Group' },
+  { nameAr: 'شركة السحاب للخدمات', nameEn: 'Al-Sahab Services Co.' },
+  { nameAr: 'شركة التوج للاستثمار', nameEn: 'Al-Taj Investment Co.' },
+  { nameAr: 'مجموعة الموج للمقاولات', nameEn: 'Al-Mawj Contracting Group' },
+  { nameAr: 'شركة الزهراء للرعاية', nameEn: 'Al-Zahra Care Co.' },
+  { nameAr: 'شركة العقيق للتطوير', nameEn: 'Al-Aqeeq Development' },
+  { nameAr: 'مجموعة الإنجاز للبناء', nameEn: 'Al-Injaz Construction Group' },
 ];
 
-const SAUDI_CITIES = ['Riyadh', 'Jeddah', 'Dammam', 'Mecca', 'Medina', 'Khobar', 'Jubail', 'Abha'];
+const CATEGORY_SLUGS = CATEGORIES.map((c) => c.slug);
 
 const RFQ_PROJECT_TYPES = ['PRODUCT', 'SERVICE', 'MANUFACTURING', 'CONSULTANCY'];
-const RFQ_CERTIFICATIONS = ['ISO 9001', 'SASO', 'IECEE', 'SABER', 'CE', 'GS', 'UL'];
+const RFQ_CERTIFICATIONS = ['ISO 9001', 'SASO', 'IECEE', 'SABER', 'CE', 'GS', 'UL', 'SFDA'];
 
-const RFQ_TITLES = [
+const RFQ_TITLES_AR = [
   'طلب توريد مواد بناء لمشروع سكني',
-  'Request for Office Furniture Supply',
-  'توريد معدات صناعية للمصنع',
-  'Laptops and Computing Equipment RFQ',
+  'توريد معدات صناعية للمصنع الجديد',
   'طلب توريد مواد غذائية لفندق',
-  'Logistics Services for Monthly Deliveries',
   'توريد مواد كيماوية للمختبر',
-  'Medical Devices for Clinic Setup',
   'طلب خدمات تكنولوجيا المعلومات',
-  'HVAC System Installation and Supply',
   'توريد ملابس عمل للموظفين',
-  'Security System Installation',
   'طلب توريد منتجات تنظيف',
-  'Restaurant Kitchen Equipment',
   'توريد أثاث مكتبي للشركة',
-  'Building Materials for Warehouse',
   'طلب توريد معدات كهربائية',
-  'Vehicle Fleet Procurement',
   'توريد مواد تغليف للمنتجات',
-  'Office Supplies and Stationery',
   'طلب خدمات الاستشارات المالية',
-  'Laboratory Equipment Supply',
   'توريد معدات السلامة للمنشأة',
-  'Agricultural Products Supply',
   'طلب توريد خوادم ومعدات شبكات',
-  'Cleaning Services Contract',
   'توريد أجهزة طبية متطورة',
-  'Construction Materials for Bridge Project',
   'طلب توريد مولدات كهربائية',
+  'توريد رافعات شوكية للمستودعات',
+  'طلب توريد أنظمة مراقبة',
+  'توريد لوازم مطبخ تجاري',
+  'طلب توريد مضخات صناعية',
+  'توريد أدوات وعدد يدوية',
+];
+const RFQ_TITLES_EN = [
+  'Request for Office Furniture Supply',
+  'Laptops and Computing Equipment RFQ',
+  'Logistics Services for Monthly Deliveries',
+  'Medical Devices for Clinic Setup',
+  'HVAC System Installation and Supply',
+  'Security System Installation',
+  'Restaurant Kitchen Equipment',
+  'Building Materials for Warehouse',
+  'Vehicle Fleet Procurement',
+  'Office Supplies and Stationery',
+  'Laboratory Equipment Supply',
+  'Agricultural Products Supply',
+  'Cleaning Services Contract',
+  'Construction Materials for Bridge Project',
   'Food Processing Equipment Supply',
+  'Solar Panels and Energy Solutions',
+  'Industrial Safety Equipment',
+  'Packaging Materials for Factory',
+  'IT Infrastructure Setup',
+  'Heavy Machinery Procurement',
 ];
 
-const STOCK_STATUSES = ['IN_STOCK', 'IN_STOCK', 'IN_STOCK', 'LIMITED', 'OUT_OF_STOCK']; // weighted toward IN_STOCK
-
+const STOCK_STATUSES = ['IN_STOCK', 'IN_STOCK', 'IN_STOCK', 'LIMITED', 'OUT_OF_STOCK'];
 const QUOTE_PAYMENT_TERMS = ['Net 30', 'Net 60', 'Cash on Delivery', '50% Advance', 'Letter of Credit'];
+const DEAL_STATUSES_WEIGHTED: DealStatus[] = [
+  DealStatus.AWARDED, DealStatus.IN_PROGRESS, DealStatus.DELIVERED,
+  DealStatus.COMPLETED, DealStatus.COMPLETED, DealStatus.COMPLETED,
+];
 
 const QUOTE_NOTES = [
   'يشمل العرض التوصيل والتركيب',
@@ -445,6 +492,8 @@ const DEAL_NOTES = [
   'Payment terms: 50% upfront, 50% on delivery',
   'الفاتورة الضريبية ستُرسل عبر البريد',
   'Regular progress updates will be shared',
+  'الدفع عند التسليم مع فاتورة ضريبية',
+  'Delivery scheduled within agreed timeframe',
 ];
 
 const RATING_COMMENTS = [
@@ -458,6 +507,10 @@ const RATING_COMMENTS = [
   'Delivered on time and within budget',
   'جيد بشكل عام لكن التواصل كان بطيئاً',
   'Good supplier, minor delays but resolved quickly',
+  'خدمة ما بعد البيع ممتازة',
+  'Outstanding technical support',
+  'سعر تنافسي جداً مع جودة عالية',
+  'Will definitely use again for future orders',
 ];
 
 const MSG_BODIES = [
@@ -471,9 +524,18 @@ const MSG_BODIES = [
   'We are very satisfied with the quality.',
   'نحتاج إلى نسخة إضافية من الفاتورة',
   'Please send the invoice to our accounts team.',
+  'متى يمكن التسليم؟ لدينا موعد نهائي',
+  'Do you have stock available for immediate delivery?',
+  'نطلب تأكيد العرض خلال 24 ساعة',
+  'Please confirm your price validity period.',
+  'هل تغطي الضمان؟ ما هي الشروط؟',
+  'What is your warranty policy for this product?',
+  'نشكركم على سرعة الاستجابة',
+  'Your after-sales support is excellent.',
+  'تم الاتفاق على الشروط، ننتظر العقد',
+  'We look forward to a long-term partnership.',
 ];
 
-// ── Seed credentials from environment (fallback to dev defaults) ───────────────
 const SEED_ADMIN_EMAIL    = process.env.SEED_ADMIN_EMAIL    || 'admin@mwazn.sa';
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@1234';
 const SEED_SUP_PASSWORD   = process.env.SEED_SUP_PASSWORD   || 'Supplier@1234';
@@ -481,13 +543,17 @@ const SEED_BUY_PASSWORD   = process.env.SEED_BUY_PASSWORD   || 'Buyer@1234';
 
 // ── Main Seed ─────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('🌱 Starting Mwazn seed...');
+  console.log('Mwazn v2 massive seed starting...');
 
   // Clean up in FK-safe order
+  await prisma.analyticsEvent.deleteMany().catch(() => {});
+  await prisma.invoice.deleteMany().catch(() => {});
+  await prisma.companyVerificationDocument.deleteMany().catch(() => {});
   await prisma.auditLog.deleteMany();
   await prisma.fileUpload.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.rFQInvite.deleteMany();
+  await prisma.rfqImage.deleteMany();
   await prisma.message.deleteMany();
   await prisma.conversation.deleteMany();
   await prisma.rating.deleteMany();
@@ -508,130 +574,135 @@ async function main() {
       prisma.category.create({ data: { ...cat, sortOrder: i, isActive: true } }),
     ),
   );
-  console.log(`  ✓ ${categories.length} categories`);
+  console.log(`  + ${categories.length} categories`);
+  const catBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
 
   // ── 2. Platform Admin ─────────────────────────────────────────────────────
   console.log('  Creating platform admin...');
   await prisma.company.create({
     data: {
-      nameAr: 'موازن - الإدارة',
-      nameEn: 'Mwazn Platform',
-      crNumber: '0000000001',
-      type: CompanyType.BUYER,
-      verificationStatus: VerificationStatus.VERIFIED,
-      plan: SubscriptionPlan.PRO,
-      city: 'Riyadh',
+      nameAr: 'موازن - الإدارة', nameEn: 'Mwazn Platform',
+      crNumber: '0000000001', type: CompanyType.BUYER,
+      verificationStatus: VerificationStatus.VERIFIED, plan: SubscriptionPlan.PRO, city: 'Riyadh',
       users: {
-        create: {
-          email: SEED_ADMIN_EMAIL,
-          passwordHash: hash(SEED_ADMIN_PASSWORD),
-          fullName: 'Platform Admin',
-          role: Role.PLATFORM_ADMIN,
-        },
+        create: { email: SEED_ADMIN_EMAIL, passwordHash: hash(SEED_ADMIN_PASSWORD), fullName: 'Platform Admin', role: Role.PLATFORM_ADMIN },
       },
     },
-    include: { users: true },
   });
-  console.log(`  ✓ Admin: ${SEED_ADMIN_EMAIL}`);
 
-  // ── 3. Supplier Companies ─────────────────────────────────────────────────
+  // ── 3. Supplier Companies (demo + auto-generated = ~120) ─────────────────
   console.log('  Creating supplier companies...');
   const supplierCompanies: any[] = [];
-  for (let i = 0; i < SUPPLIERS.length; i++) {
-    const s = SUPPLIERS[i];
+
+  // 3a. 9 named demo suppliers
+  for (let i = 0; i < DEMO_SUPPLIERS.length; i++) {
+    const s = DEMO_SUPPLIERS[i];
     const cr = String(1000000010 + i).padStart(10, '0');
     const email = `admin@supplier${i + 1}.sa`;
     const vatNum = `3${String(1000000010 + i).padStart(9, '0')}00003`;
-    const crExpiry = new Date(Date.now() + randInt(365, 1095) * 24 * 60 * 60 * 1000);
     const company = await prisma.company.create({
       data: {
-        nameAr: s.nameAr,
-        nameEn: s.nameEn,
-        crNumber: cr,
-        slug: s.slug ?? null,
-        type: CompanyType.SUPPLIER,
-        verificationStatus: s.status,
-        plan: s.plan,
-        city: s.city,
+        nameAr: s.nameAr, nameEn: s.nameEn, crNumber: cr,
+        slug: s.slug ?? null, type: CompanyType.SUPPLIER,
+        verificationStatus: s.status, plan: s.plan, city: s.city,
         phone: s.phone ?? `+9665${randInt(10000000, 99999999)}`,
         website: s.website ?? null,
-        descriptionAr: `نحن ${s.nameAr} — نقدم منتجات وخدمات عالية الجودة في المملكة العربية السعودية منذ سنوات. نلتزم بأعلى معايير الجودة والخدمة لعملائنا.`,
-        descriptionEn: `${s.nameEn} — delivering premium products and services across Saudi Arabia. We are committed to the highest quality and service standards.`,
-        vatNumber: vatNum,
-        crExpiryDate: crExpiry,
-        legalForm: s.legalForm ?? rand(['LLC', 'ESTABLISHMENT', 'CORPORATION']),
-        establishmentYear: s.establishmentYear ?? randInt(2005, 2020),
-        companySizeRange: s.companySizeRange ?? rand(['1-10', '11-50', '51-200']),
-        sectors: s.sectors ?? [],
-        keyClients: s.keyClients ?? [],
-        regionsServed: s.regionsServed ?? [s.city],
-        paymentTermsAccepted: s.paymentTermsAccepted ?? ['Cash on Delivery', 'Net 30'],
+        logoUrl: s.status === VerificationStatus.VERIFIED ? logoImg(i + 1) : null,
+        descriptionAr: `نحن ${s.nameAr} — نقدم منتجات وخدمات عالية الجودة في المملكة العربية السعودية. نلتزم بأعلى معايير الجودة والخدمة لعملائنا.`,
+        descriptionEn: `${s.nameEn} — delivering premium products and services across Saudi Arabia. Committed to the highest quality standards.`,
+        vatNumber: vatNum, crExpiryDate: new Date(Date.now() + randInt(365, 1095) * 86400_000),
+        legalForm: s.legalForm ?? rand(LEGAL_FORMS), establishmentYear: s.establishmentYear ?? randInt(2005, 2020),
+        companySizeRange: s.companySizeRange ?? rand(SIZE_RANGES), sectors: s.sectors ?? [],
+        keyClients: s.keyClients ?? [], regionsServed: s.regionsServed ?? [s.city],
+        paymentTermsAccepted: s.paymentTermsAccepted ?? rand(PAYMENT_TERMS_OPTIONS),
         productionCapacity: s.productionCapacity ?? null,
         users: {
-          create: {
-            email,
-            passwordHash: hash(SEED_SUP_PASSWORD),
-            fullName: `مدير ${s.nameAr}`.substring(0, 50),
-            role: Role.SUPPLIER_ADMIN,
-          },
+          create: { email, passwordHash: hash(SEED_SUP_PASSWORD), fullName: `مدير ${s.nameAr}`.slice(0, 50), role: Role.SUPPLIER_ADMIN },
         },
       },
       include: { users: true },
     });
     supplierCompanies.push(company);
   }
-  console.log(`  ✓ ${supplierCompanies.length} supplier companies`);
 
-  // ── 4. Buyer Companies ────────────────────────────────────────────────────
+  // 3b. Auto-generate ~111 more suppliers (total ~120)
+  const extraSupplierCount = 111;
+  for (let i = 0; i < extraSupplierCount; i++) {
+    const idx = DEMO_SUPPLIERS.length + i;
+    const catSlug = CATEGORY_SLUGS[i % CATEGORY_SLUGS.length];
+    const midfix = SUP_AR_MIDFIX_BY_CAT[catSlug] ?? ['التجارة'];
+    const nameAr = `${rand(SUP_AR_PREFIX)} ${rand(midfix)} ${rand(SUP_AR_SUFFIX)}`;
+    const nameEn = `${rand(['Al-', 'Saudi ', 'Gulf ', 'Arabian ', 'National '])}${rand(['Trade', 'Supply', 'Industry', 'Solutions', 'Group', 'Co.', 'Est.'])} ${i + 10}`;
+    const cr = String(1000000010 + idx).padStart(10, '0');
+    const email = `admin@supplier${idx + 1}.sa`;
+    const vatNum = `3${String(1000000010 + idx).padStart(9, '0')}00003`;
+    const isPro = Math.random() < 0.4;
+    const city = rand(SAUDI_CITIES);
+    const company = await prisma.company.create({
+      data: {
+        nameAr, nameEn, crNumber: cr, type: CompanyType.SUPPLIER,
+        verificationStatus: VerificationStatus.VERIFIED,
+        plan: isPro ? SubscriptionPlan.PRO : SubscriptionPlan.FREE,
+        city, phone: `+9665${randInt(10000000, 99999999)}`,
+        logoUrl: logoImg(idx + 1),
+        descriptionAr: `${nameAr} — شركة سعودية متخصصة في توريد المنتجات والخدمات بأعلى معايير الجودة.`,
+        descriptionEn: `${nameEn} — Saudi company specialized in premium product supply and services.`,
+        vatNumber: vatNum, crExpiryDate: new Date(Date.now() + randInt(180, 1095) * 86400_000),
+        legalForm: rand(LEGAL_FORMS), establishmentYear: randInt(2003, 2022),
+        companySizeRange: rand(SIZE_RANGES), sectors: [catBySlug[catSlug]?.nameEn ?? catSlug],
+        regionsServed: [city, rand(SAUDI_CITIES)].filter((v, i, a) => a.indexOf(v) === i),
+        paymentTermsAccepted: rand(PAYMENT_TERMS_OPTIONS),
+        users: {
+          create: { email, passwordHash: hash(SEED_SUP_PASSWORD), fullName: nameAr.slice(0, 50), role: Role.SUPPLIER_ADMIN },
+        },
+      },
+      include: { users: true },
+    });
+    supplierCompanies.push(company);
+  }
+  console.log(`  + ${supplierCompanies.length} supplier companies`);
+
+  // ── 4. Buyer Companies (80 total) ─────────────────────────────────────────
   console.log('  Creating buyer companies...');
   const buyerCompanies: any[] = [];
-  for (let i = 0; i < BUYERS.length; i++) {
-    const b = BUYERS[i];
+  for (let i = 0; i < BUYER_NAMES.length; i++) {
+    const b = BUYER_NAMES[i];
     const cr = String(2000000010 + i).padStart(10, '0');
     const email = `admin@buyer${i + 1}.sa`;
     const company = await prisma.company.create({
       data: {
-        nameAr: b.nameAr,
-        nameEn: b.nameEn,
-        crNumber: cr,
-        type: CompanyType.BUYER,
-        verificationStatus: VerificationStatus.VERIFIED,
-        plan: SubscriptionPlan.FREE,
-        city: rand(SAUDI_CITIES),
+        nameAr: b.nameAr, nameEn: b.nameEn, crNumber: cr,
+        type: CompanyType.BUYER, verificationStatus: VerificationStatus.VERIFIED,
+        plan: SubscriptionPlan.FREE, city: rand(SAUDI_CITIES),
         phone: `+9665${randInt(10000000, 99999999)}`,
         users: {
-          create: {
-            email,
-            passwordHash: hash(SEED_BUY_PASSWORD),
-            fullName: `مدير ${b.nameAr}`.substring(0, 50),
-            role: Role.BUYER_ADMIN,
-          },
+          create: { email, passwordHash: hash(SEED_BUY_PASSWORD), fullName: `مدير ${b.nameAr}`.slice(0, 50), role: Role.BUYER_ADMIN },
         },
       },
       include: { users: true },
     });
     buyerCompanies.push(company);
   }
-  console.log(`  ✓ ${buyerCompanies.length} buyer companies`);
+  console.log(`  + ${buyerCompanies.length} buyer companies`);
 
-  // ── 5. Listings (8–12 per verified supplier, with real images) ────────────
+  const verifiedSuppliers = supplierCompanies.filter((s) => s.verificationStatus === VerificationStatus.VERIFIED);
+
+  // ── 5. Listings (~7 per verified supplier = 840+) ─────────────────────────
   console.log('  Creating listings...');
   let listingCount = 0;
-  // Stable picsum seed counter so images differ per product
   let imgSeed = 100;
+  const allListings: any[] = [];
 
-  for (let i = 0; i < supplierCompanies.length; i++) {
-    const company = supplierCompanies[i];
-    if (company.verificationStatus !== VerificationStatus.VERIFIED) continue;
-
-    const spec = SUPPLIERS[i];
-    const count = randInt(8, 12);
+  for (let i = 0; i < verifiedSuppliers.length; i++) {
+    const company = verifiedSuppliers[i];
+    const specIdx = i < DEMO_SUPPLIERS.length ? i : null;
+    const primaryCatSlug = specIdx !== null ? DEMO_SUPPLIERS[specIdx]?.primaryCategory : CATEGORY_SLUGS[i % CATEGORY_SLUGS.length];
+    const count = randInt(6, 9);
 
     for (let j = 0; j < count; j++) {
-      // 70% from primary category, 30% random
       let cat: (typeof categories)[0];
-      if (spec.primaryCategory && j < Math.ceil(count * 0.7)) {
-        cat = categories.find((c) => c.slug === spec.primaryCategory) ?? rand(categories);
+      if (primaryCatSlug && j < Math.ceil(count * 0.6)) {
+        cat = catBySlug[primaryCatSlug] ?? rand(categories);
       } else {
         cat = rand(categories);
       }
@@ -653,112 +724,85 @@ async function main() {
       }
 
       const sku = `SKU-${cat.slug.slice(0, 3).toUpperCase()}-${String(imgSeed).padStart(4, '0')}`;
-      const vatPct = rand([0, 15, 15, 15]); // 75% chance of 15% VAT
-      const requestQuoteOnly = price > 50000 && Math.random() < 0.3; // large items sometimes quote-only
-      // Generate simple specs
+      const vatPct = rand([0, 15, 15, 15]);
+      const requestQuoteOnly = price > 50000 && Math.random() < 0.3;
       const specs = [
-        { key: 'Brand', value: rand(['Saudi Made', 'Imported', 'Gulf Product']) },
+        { key: 'Brand', value: rand(['Saudi Made', 'Imported', 'Gulf Product', 'European Brand']) },
         { key: 'Warranty', value: `${randInt(1, 3)} year${randInt(1, 3) > 1 ? 's' : ''}` },
-        { key: 'Origin', value: rand(['Saudi Arabia', 'UAE', 'China', 'Germany', 'USA']) },
+        { key: 'Origin', value: rand(['Saudi Arabia', 'UAE', 'China', 'Germany', 'USA', 'Korea']) },
       ];
 
-      await prisma.listing.create({
+      const listing = await prisma.listing.create({
         data: {
-          titleAr,
-          titleEn,
+          titleAr, titleEn,
           descriptionAr: `${titleAr} عالي الجودة من ${company.nameAr}. مطابق للمعايير السعودية، مثالي للشركات والمؤسسات.`,
           descriptionEn: `Premium ${titleEn} from ${company.nameEn}. Saudi-standard compliant, ideal for B2B procurement.`,
           price: requestQuoteOnly ? undefined : price,
           priceTo: requestQuoteOnly ? undefined : (Math.random() < 0.3 ? price * 1.2 : undefined),
-          currency: 'SAR',
-          unit,
-          minOrderQty: randInt(1, 50),
-          leadTimeDays: randInt(3, 30),
-          supplierId: company.id,
-          categoryId: cat.id,
-          status: 'ACTIVE',
-          sku,
-          vatPercent: vatPct,
-          stockAvailability: rand(STOCK_STATUSES),
-          requestQuoteOnly,
-          specsJson: specs,
+          currency: 'SAR', unit, minOrderQty: randInt(1, 50), leadTimeDays: randInt(3, 30),
+          supplierId: company.id, categoryId: cat.id, status: 'ACTIVE',
+          sku, vatPercent: vatPct, stockAvailability: rand(STOCK_STATUSES),
+          requestQuoteOnly, specsJson: specs,
           images: {
-            create: {
-              // Stable picsum seed — same image each seed run for same product
-              url: productImg(imgSeed),
-              alt: titleEn,
-              isPrimary: true,
-              sortOrder: 0,
-            },
+            create: { url: productImg(imgSeed), alt: titleEn, isPrimary: true, sortOrder: 0 },
           },
         },
       });
+      allListings.push(listing);
       imgSeed++;
       listingCount++;
     }
   }
-  console.log(`  ✓ ${listingCount} listings`);
+  console.log(`  + ${listingCount} listings`);
 
-  // ── 6. RFQs ───────────────────────────────────────────────────────────────
+  // ── 6. RFQs (250 total) ────────────────────────────────────────────────────
   console.log('  Creating RFQs...');
   const rfqs: any[] = [];
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 250; i++) {
     const buyer = rand(buyerCompanies);
     const cat = rand(categories);
-    const isOpen = i < 20;
+    const isOpen = i < 100; // first 100 OPEN, rest mixed
     const budgetBase = randPrice(10000, 500000);
     const budgetMin = Math.round(budgetBase * 0.7);
     const budgetMax = Math.round(budgetBase * 1.3);
-    const budgetUndisclosed = Math.random() < 0.15; // 15% undisclosed
-    const hasNda = Math.random() < 0.3;
-    const hasSiteVisit = Math.random() < 0.2;
-    const rfqCerts = Math.random() < 0.5
+    const titleList = i % 2 === 0 ? RFQ_TITLES_AR : RFQ_TITLES_EN;
+    const rfqCerts = Math.random() < 0.4
       ? [rand(RFQ_CERTIFICATIONS), rand(RFQ_CERTIFICATIONS)].filter((v, idx, arr) => arr.indexOf(v) === idx)
       : [];
     const rfq = await prisma.rFQ.create({
       data: {
-        title: RFQ_TITLES[i % RFQ_TITLES.length],
-        description: `نطلب تقديم عروض أسعار لـ ${RFQ_TITLES[i % RFQ_TITLES.length]}. يجب أن تتوافق المنتجات مع المعايير السعودية وتكون معتمدة من الجهات المختصة.`,
-        categoryId: cat.id,
-        buyerId: buyer.id,
-        quantity: randInt(10, 500),
-        unit: rand(['unit', 'ton', 'piece', 'box', 'meter']),
-        budget: budgetBase,
-        budgetMin,
-        budgetMax,
-        budgetUndisclosed,
-        currency: 'SAR',
+        title: titleList[i % titleList.length],
+        description: `نطلب تقديم عروض أسعار لـ ${titleList[i % titleList.length]}. يجب أن تتوافق المنتجات مع المعايير السعودية وتكون معتمدة من الجهات المختصة.`,
+        categoryId: cat.id, buyerId: buyer.id,
+        quantity: randInt(10, 1000), unit: rand(['unit', 'ton', 'piece', 'box', 'meter', 'sqm', 'set']),
+        budget: budgetBase, budgetMin, budgetMax,
+        budgetUndisclosed: Math.random() < 0.15, currency: 'SAR',
         vatIncluded: Math.random() < 0.5,
-        deadline: new Date(Date.now() + randInt(7, 60) * 24 * 60 * 60 * 1000),
-        expectedStartDate: new Date(Date.now() + randInt(30, 90) * 24 * 60 * 60 * 1000),
+        deadline: new Date(Date.now() + randInt(7, 60) * 86400_000),
+        expectedStartDate: new Date(Date.now() + randInt(30, 90) * 86400_000),
         projectType: rand(RFQ_PROJECT_TYPES),
-        ndaRequired: hasNda,
-        siteVisitRequired: hasSiteVisit,
-        locationRequirement: hasSiteVisit ? rand(SAUDI_CITIES) : null,
+        ndaRequired: Math.random() < 0.25,
+        siteVisitRequired: Math.random() < 0.2,
+        locationRequirement: Math.random() < 0.2 ? rand(SAUDI_CITIES) : null,
         requiredCertifications: rfqCerts,
-        visibility: Math.random() < 0.8 ? 'PUBLIC' : 'INVITE_ONLY',
+        visibility: Math.random() < 0.85 ? 'PUBLIC' : 'INVITE_ONLY',
         allowPartialBids: Math.random() < 0.7,
         status: isOpen
           ? RFQStatus.OPEN
-          : rand([RFQStatus.AWARDED, RFQStatus.CLOSED, RFQStatus.CANCELLED]),
+          : rand([RFQStatus.AWARDED, RFQStatus.AWARDED, RFQStatus.CLOSED, RFQStatus.CANCELLED]),
       },
     });
     rfqs.push(rfq);
   }
-  console.log(`  ✓ ${rfqs.length} RFQs`);
+  console.log(`  + ${rfqs.length} RFQs`);
 
-  // ── 7. Quotes ─────────────────────────────────────────────────────────────
+  // ── 7. Quotes (400+ total) ────────────────────────────────────────────────
   console.log('  Creating quotes...');
   const quotes: any[] = [];
-  const verifiedSuppliers = supplierCompanies.filter(
-    (s) => s.verificationStatus === VerificationStatus.VERIFIED,
-  );
-  const openRFQs = rfqs.filter(
-    (r) => r.status === RFQStatus.OPEN || r.status === RFQStatus.AWARDED,
-  );
+  const openOrAwarded = rfqs.filter((r) => r.status === RFQStatus.OPEN || r.status === RFQStatus.AWARDED);
   const usedPairs = new Set<string>();
 
-  for (const rfq of openRFQs) {
+  for (const rfq of openOrAwarded) {
     const quoteCount = randInt(2, 5);
     const shuffled = [...verifiedSuppliers].sort(() => Math.random() - 0.5);
     let submitted = 0;
@@ -768,102 +812,95 @@ async function main() {
       if (usedPairs.has(pairKey)) continue;
       usedPairs.add(pairKey);
 
-      const status =
-        rfq.status === RFQStatus.AWARDED
-          ? rand([QuoteStatus.ACCEPTED, QuoteStatus.REJECTED, QuoteStatus.PENDING])
-          : QuoteStatus.PENDING;
+      const status = rfq.status === RFQStatus.AWARDED
+        ? rand([QuoteStatus.ACCEPTED, QuoteStatus.REJECTED, QuoteStatus.PENDING])
+        : QuoteStatus.PENDING;
 
       const quote = await prisma.quote.create({
         data: {
-          rfqId: rfq.id,
-          supplierId: supplier.id,
-          price: randPrice(rfq.budget * 0.5, rfq.budget * 1.2),
-          currency: 'SAR',
-          deliveryDays: randInt(3, 30),
-          notes: rand(QUOTE_NOTES),
-          status,
-          validUntil: new Date(Date.now() + randInt(14, 30) * 24 * 60 * 60 * 1000),
+          rfqId: rfq.id, supplierId: supplier.id,
+          price: randPrice(Number(rfq.budget) * 0.5, Number(rfq.budget) * 1.2),
+          currency: 'SAR', deliveryDays: randInt(3, 30),
+          notes: rand(QUOTE_NOTES), status,
+          validUntil: new Date(Date.now() + randInt(14, 30) * 86400_000),
           vatPercent: 15,
           paymentTerms: rand(QUOTE_PAYMENT_TERMS),
           warrantyMonths: rand([0, 12, 24, 36]),
-          afterSalesSupport: Math.random() < 0.5 ? 'Technical support provided for 12 months post-delivery' : null,
-          technicalProposal: Math.random() < 0.4 ? 'We propose a phased delivery approach ensuring quality at each stage.' : null,
+          afterSalesSupport: Math.random() < 0.5
+            ? 'Technical support provided for 12 months post-delivery' : null,
+          technicalProposal: Math.random() < 0.4
+            ? 'We propose a phased delivery approach ensuring quality at each stage.' : null,
         },
       });
       quotes.push(quote);
       submitted++;
     }
   }
-  console.log(`  ✓ ${quotes.length} quotes`);
+  console.log(`  + ${quotes.length} quotes`);
 
-  // ── 8. Deals ─────────────────────────────────────────────────────────────
+  // ── 8. Deals ──────────────────────────────────────────────────────────────
   console.log('  Creating deals...');
   const deals: any[] = [];
-  const acceptedQuotes = quotes.filter((q) => q.status === QuoteStatus.ACCEPTED);
-  const dealStatuses = [
-    DealStatus.AWARDED, DealStatus.IN_PROGRESS, DealStatus.DELIVERED,
-    DealStatus.COMPLETED, DealStatus.COMPLETED, DealStatus.COMPLETED,
-  ];
-
   const usedQuoteIds = new Set<string>();
-  const addDeal = async (quote: any) => {
-    if (usedQuoteIds.has(quote.id)) return;
-    usedQuoteIds.add(quote.id);
-    const rfq = rfqs.find((r) => r.id === quote.rfqId);
-    if (!rfq) return;
-    const deal = await prisma.deal.create({
+
+  // First create deals from accepted quotes
+  const acceptedQuotes = quotes.filter((q) => q.status === QuoteStatus.ACCEPTED);
+  for (const q of acceptedQuotes) {
+    if (usedQuoteIds.has(q.id)) continue;
+    usedQuoteIds.add(q.id);
+    const rfq = rfqs.find((r) => r.id === q.rfqId);
+    if (!rfq) continue;
+    deals.push(await prisma.deal.create({
       data: {
-        quoteId: quote.id,
-        buyerId: rfq.buyerId,
-        supplierId: quote.supplierId,
-        totalAmount: quote.price,
-        currency: quote.currency,
-        status: rand(dealStatuses),
-        notes: rand(DEAL_NOTES),
+        quoteId: q.id, buyerId: rfq.buyerId, supplierId: q.supplierId,
+        totalAmount: q.price, currency: q.currency,
+        status: rand(DEAL_STATUSES_WEIGHTED), notes: rand(DEAL_NOTES),
       },
-    });
-    deals.push(deal);
-  };
-
-  for (const q of acceptedQuotes.slice(0, 25)) await addDeal(q);
-  // Backfill to reach 25 deals
-  for (const q of quotes) {
-    if (deals.length >= 25) break;
-    await addDeal(q);
+    }));
   }
-  console.log(`  ✓ ${deals.length} deals`);
 
-  // ── 9. Ratings (two-way: buyer rates supplier + supplier rates buyer) ─────
+  // Backfill deals from any quote to reach 150
+  for (const q of quotes) {
+    if (deals.length >= 150) break;
+    if (usedQuoteIds.has(q.id)) continue;
+    usedQuoteIds.add(q.id);
+    const rfq = rfqs.find((r) => r.id === q.rfqId);
+    if (!rfq) continue;
+    deals.push(await prisma.deal.create({
+      data: {
+        quoteId: q.id, buyerId: rfq.buyerId, supplierId: q.supplierId,
+        totalAmount: q.price, currency: q.currency,
+        status: rand(DEAL_STATUSES_WEIGHTED), notes: rand(DEAL_NOTES),
+      },
+    }));
+  }
+  console.log(`  + ${deals.length} deals`);
+
+  // ── 9. Ratings (two-way: buyer ↔ supplier for COMPLETED deals) ────────────
   console.log('  Creating ratings...');
   const completedDeals = deals.filter((d) => d.status === DealStatus.COMPLETED);
   let ratingCount = 0;
-  for (const deal of completedDeals.slice(0, 30)) {
-    // Buyer rates supplier (always)
+  for (const deal of completedDeals) {
+    // Buyer rates supplier
     await prisma.rating.create({
       data: {
-        dealId: deal.id,
-        raterId: deal.buyerId,
-        ratedId: deal.supplierId,
-        score: randInt(3, 5),
-        comment: rand(RATING_COMMENTS),
+        dealId: deal.id, raterId: deal.buyerId, ratedId: deal.supplierId,
+        score: randInt(3, 5), comment: rand(RATING_COMMENTS),
       },
     });
     ratingCount++;
-    // Supplier rates buyer (70% of the time)
-    if (Math.random() < 0.7) {
+    // Supplier rates buyer (80% of the time)
+    if (Math.random() < 0.8) {
       await prisma.rating.create({
         data: {
-          dealId: deal.id,
-          raterId: deal.supplierId,
-          ratedId: deal.buyerId,
-          score: randInt(3, 5),
-          comment: rand(RATING_COMMENTS),
+          dealId: deal.id, raterId: deal.supplierId, ratedId: deal.buyerId,
+          score: randInt(3, 5), comment: rand(RATING_COMMENTS),
         },
       });
       ratingCount++;
     }
   }
-  console.log(`  ✓ ${ratingCount} ratings`);
+  console.log(`  + ${ratingCount} ratings`);
 
   // ── 10. Conversations & Messages ──────────────────────────────────────────
   console.log('  Creating conversations and messages...');
@@ -871,7 +908,46 @@ async function main() {
   let convCount = 0;
   let msgCount = 0;
 
-  for (let i = 0; i < 40; i++) {
+  // Create conversations for all deals (deal-context chat)
+  for (const deal of deals) {
+    const key = `${deal.buyerId}-${deal.supplierId}`;
+    if (convPairs.has(key)) continue;
+    convPairs.add(key);
+
+    const rfq = rfqs.find((r) => r.id === quotes.find((q) => q.id === deal.quoteId)?.rfqId);
+    const subject = rfq ? `مراسلة بشأن: ${rfq.title}` : `مراسلة بشأن صفقة رقم ${convCount + 1}`;
+    const buyer = buyerCompanies.find((b) => b.id === deal.buyerId);
+    const supplier = verifiedSuppliers.find((s) => s.id === deal.supplierId);
+    if (!buyer || !supplier) continue;
+
+    const conv = await prisma.conversation.create({
+      data: {
+        subject,
+        participants: { connect: [{ id: deal.buyerId }, { id: deal.supplierId }] },
+      },
+    });
+    convCount++;
+
+    const buyerUser = buyer.users[0];
+    const supplierUser = supplier.users[0];
+    const numMsgs = randInt(4, 10);
+    for (let m = 0; m < numMsgs; m++) {
+      const sender = m % 2 === 0 ? buyerUser : supplierUser;
+      await prisma.message.create({
+        data: {
+          conversationId: conv.id, senderId: sender.id,
+          body: rand(MSG_BODIES), isRead: m < numMsgs - 1,
+        },
+      });
+      msgCount++;
+    }
+  }
+
+  // Additional general inquiry conversations (target 2000+ total messages)
+  const targetExtraConvs = 350;
+  let attempts = 0;
+  while (convCount < deals.length + targetExtraConvs && attempts < 2000) {
+    attempts++;
     const buyer = rand(buyerCompanies);
     const supplier = rand(verifiedSuppliers);
     const key = `${buyer.id}-${supplier.id}`;
@@ -888,45 +964,69 @@ async function main() {
 
     const buyerUser = buyer.users[0];
     const supplierUser = supplier.users[0];
-    const numMsgs = randInt(2, 6);
+    const numMsgs = randInt(3, 7);
     for (let m = 0; m < numMsgs; m++) {
       const sender = m % 2 === 0 ? buyerUser : supplierUser;
       await prisma.message.create({
         data: {
-          conversationId: conv.id,
-          senderId: sender.id,
-          body: rand(MSG_BODIES),
-          isRead: m < numMsgs - 1,
+          conversationId: conv.id, senderId: sender.id,
+          body: rand(MSG_BODIES), isRead: m < numMsgs - 1,
         },
       });
       msgCount++;
     }
   }
-  console.log(`  ✓ ${convCount} conversations, ${msgCount} messages`);
+  console.log(`  + ${convCount} conversations, ${msgCount} messages`);
+
+  // ── 11. Run initial supplier scoring ──────────────────────────────────────
+  console.log('  Computing initial supplier scores...');
+  for (const sup of verifiedSuppliers) {
+    // Simple inline score (full scoring runs via cron in production)
+    const listingCountForSup = allListings.filter((l) => l.supplierId === sup.id).length;
+    const dealsForSup = deals.filter((d) => d.supplierId === sup.id);
+    const completedForSup = dealsForSup.filter((d) => d.status === DealStatus.COMPLETED).length;
+    const completionRate = dealsForSup.length > 0 ? completedForSup / dealsForSup.length : 0;
+    const ratingsForSup = await prisma.rating.findMany({ where: { ratedId: sup.id } });
+    const avgRating = ratingsForSup.length > 0
+      ? ratingsForSup.reduce((s, r) => s + r.score, 0) / ratingsForSup.length : 0;
+
+    let score = sup.verificationStatus === VerificationStatus.VERIFIED ? 30 : 0;
+    if (sup.plan === SubscriptionPlan.PRO) score += 20;
+    score += Math.min(avgRating * 5, 25);
+    score += Math.min(completionRate * 15, 15);
+    score += Math.min(listingCountForSup, 10);
+
+    await prisma.company.update({
+      where: { id: sup.id },
+      data: { supplierScore: Math.round(score), scoreUpdatedAt: new Date() },
+    });
+  }
+  console.log('  + supplier scores computed');
 
   // ── Summary ───────────────────────────────────────────────────────────────
-  console.log('\n✅ Seed complete!');
-  console.log('─'.repeat(55));
-  console.log('Demo Credentials (passwords set via SEED_* env vars):');
-  console.log(`  Admin     → ${SEED_ADMIN_EMAIL}`);
-  console.log('  Buyer     → admin@buyer1.sa');
-  console.log('  Supplier (PRO, Verified) → admin@supplier1.sa');
-  console.log('  Supplier (FREE)          → admin@supplier3.sa');
-  console.log('  Supplier (Unverified)    → admin@supplier24.sa');
-  console.log('─'.repeat(55));
-  console.log('Showroom URLs (after docker restart):');
-  console.log('  http://localhost:3000/en/suppliers/demo-1   Gulf Industrial');
-  console.log('  http://localhost:3000/en/suppliers/demo-8   Al-Salama Medical');
-  console.log('─'.repeat(55));
-  console.log(`Categories: ${categories.length}`);
-  console.log(`Suppliers:  ${supplierCompanies.length}`);
-  console.log(`Buyers:     ${buyerCompanies.length}`);
-  console.log(`Listings:   ${listingCount}`);
-  console.log(`RFQs:       ${rfqs.length}`);
-  console.log(`Quotes:     ${quotes.length}`);
-  console.log(`Deals:      ${deals.length}`);
-  console.log(`Ratings:    ${ratingCount}`);
-  console.log(`Messages:   ${msgCount}`);
+  console.log('\nSeed complete!');
+  console.log('-'.repeat(60));
+  console.log('Demo Credentials:');
+  console.log(`  Admin     -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);
+  console.log(`  Buyer     -> admin@buyer1.sa  /  ${SEED_BUY_PASSWORD}`);
+  console.log(`  Supplier (PRO+Verified)  -> admin@supplier1.sa  /  ${SEED_SUP_PASSWORD}`);
+  console.log(`  Supplier (FREE+Verified) -> admin@supplier3.sa  /  ${SEED_SUP_PASSWORD}`);
+  console.log(`  Supplier (Unverified)    -> admin@supplier9.sa  /  ${SEED_SUP_PASSWORD}`);
+  console.log('-'.repeat(60));
+  console.log('Showroom URLs:');
+  console.log('  http://localhost:3000/en/suppliers/demo-1  (Gulf Industrial)');
+  console.log('  http://localhost:3000/en/suppliers/demo-8  (Al-Salama Medical)');
+  console.log('-'.repeat(60));
+  console.log(`Categories:    ${categories.length}`);
+  console.log(`Suppliers:     ${supplierCompanies.length} (${verifiedSuppliers.length} verified)`);
+  console.log(`Buyers:        ${buyerCompanies.length}`);
+  console.log(`Listings:      ${listingCount}`);
+  console.log(`RFQs:          ${rfqs.length}`);
+  console.log(`Quotes:        ${quotes.length}`);
+  console.log(`Deals:         ${deals.length} (${completedDeals.length} completed)`);
+  console.log(`Ratings:       ${ratingCount}`);
+  console.log(`Conversations: ${convCount}`);
+  console.log(`Messages:      ${msgCount}`);
 }
 
 main()

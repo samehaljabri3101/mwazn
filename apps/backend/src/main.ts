@@ -7,31 +7,70 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import helmet from 'helmet';
 import * as path from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+    rawBody: true, // needed for Stripe webhook signature verification
+  });
 
-  // Serve uploaded files statically
+  // ── Security headers ──────────────────────────────────────────────────────────
+  app.use(helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false, // configured at CDN level
+  }));
+
+  // ── Static file serving ───────────────────────────────────────────────────────
   app.useStaticAssets(path.join(process.cwd(), 'uploads'), { prefix: '/uploads' });
 
   app.setGlobalPrefix('api');
 
-  // Health check endpoint — excluded from global prefix for Docker/load-balancer probes
-  const httpAdapter = app.getHttpAdapter().getInstance() as import('express').Express;
-  httpAdapter.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
+  // ── Health + readiness probes (outside /api prefix for Docker/LB) ─────────────
+  const http = app.getHttpAdapter().getInstance() as import('express').Express;
+
+  http.get('/health', (_req, res) => {
+    res.json({ status: 'ok', uptime: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
   });
+
+  http.get('/ready', async (_req, res) => {
+    try {
+      // Lightweight DB ping via Prisma
+      const { PrismaService } = await import('./prisma/prisma.service');
+      const prisma = app.get(PrismaService);
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ status: 'ready', db: 'ok', timestamp: new Date().toISOString() });
+    } catch (e: any) {
+      res.status(503).json({ status: 'not ready', db: 'error', error: e.message });
+    }
+  });
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────────
   app.useWebSocketAdapter(new IoAdapter(app));
 
+  // ── CORS — tight config ────────────────────────────────────────────────────────
+  const allowedOrigins = [
+    process.env.FRONTEND_URL ?? 'http://localhost:3000',
+    'http://localhost:3000',
+    'http://localhost:3001',
+  ];
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.some((o) => origin.startsWith(o))) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin '${origin}' not allowed`));
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature', 'x-moyasar-signature'],
   });
 
+  // ── Global pipes, filters, interceptors ───────────────────────────────────────
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -44,34 +83,30 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new LoggingInterceptor(), new TransformInterceptor());
 
+  // ── Swagger / OpenAPI ─────────────────────────────────────────────────────────
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Mwazn API')
     .setDescription('Production-ready B2B Marketplace API — Saudi Arabia')
-    .setVersion('1.0')
+    .setVersion('2.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
-    .addTag('Auth', 'Authentication & registration')
-    .addTag('Companies', 'Company management')
-    .addTag('Categories', 'Product categories')
-    .addTag('Listings', 'Supplier product listings')
-    .addTag('RFQs', 'Request for Quotations')
-    .addTag('Quotes', 'Supplier quotations')
-    .addTag('Deals', 'Deal lifecycle')
-    .addTag('Ratings', 'Supplier ratings & reviews')
-    .addTag('Conversations', 'Internal messaging')
-    .addTag('Admin', 'Platform administration')
-    .addTag('Upload', 'File uploads')
+    .addTag('Auth').addTag('Companies').addTag('Categories')
+    .addTag('Listings').addTag('RFQs').addTag('Quotes')
+    .addTag('Deals').addTag('Ratings').addTag('Conversations')
+    .addTag('Admin').addTag('Upload').addTag('Billing')
+    .addTag('Verification').addTag('Search & Marketplace')
     .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
+  SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig), {
     swaggerOptions: { persistAuthorization: true },
   });
 
-  const port = process.env.PORT || 3001;
+  const port = process.env.PORT ?? 3001;
   await app.listen(port);
 
   logger.log(`Mwazn API  →  http://localhost:${port}/api`);
   logger.log(`Swagger    →  http://localhost:${port}/api/docs`);
+  logger.log(`Health     →  http://localhost:${port}/health`);
+  logger.log(`Ready      →  http://localhost:${port}/ready`);
 }
 
 bootstrap();

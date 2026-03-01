@@ -16,6 +16,20 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+
   backend:
     build:
       context: ./apps/backend
@@ -29,8 +43,11 @@ services:
       - ./apps/backend/.env
     environment:
       DATABASE_URL: postgresql://mwazn:mwazn@db:5432/mwazn
+      REDIS_URL: redis://redis:6379
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'wget -q -O- http://localhost:3001/health || exit 1']
@@ -56,4 +73,5 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   uploads_data:

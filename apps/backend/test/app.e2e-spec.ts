@@ -63,4 +63,61 @@ describe('Mwazn API (e2e)', () => {
       .get('/api/admin/dashboard')
       .expect(401);
   });
+
+  it('GET /api/marketplace/stats — returns marketplace stats', () => {
+    return request(app.getHttpServer())
+      .get('/api/marketplace/stats')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toHaveProperty('totalVendors');
+        expect(res.body.data).toHaveProperty('totalProducts');
+        expect(res.body.data).toHaveProperty('totalRFQs');
+      });
+  });
+
+  it('GET /api/suppliers/search — returns paginated supplier results', () => {
+    return request(app.getHttpServer())
+      .get('/api/suppliers/search')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toHaveProperty('items');
+        expect(res.body.data).toHaveProperty('total');
+        expect(res.body.data).toHaveProperty('pages');
+      });
+  });
+
+  it('GET /api/listings/search — returns paginated listing results', () => {
+    return request(app.getHttpServer())
+      .get('/api/listings/search')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toHaveProperty('items');
+        expect(res.body.data).toHaveProperty('total');
+      });
+  });
+
+  it('GET /api/search?q=industrial — returns search results', () => {
+    return request(app.getHttpServer())
+      .get('/api/search?q=industrial')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.success).toBe(true);
+        expect(res.body.data).toHaveProperty('companies');
+        expect(res.body.data).toHaveProperty('listings');
+        expect(res.body.data).toHaveProperty('categories');
+      });
+  });
+
+  it('GET /api/marketplace/top-vendors — returns vendor list', () => {
+    return request(app.getHttpServer())
+      .get('/api/marketplace/top-vendors')
+      .expect(200)
+      .expect((res) => {
+        expect(res.body.success).toBe(true);
+        expect(Array.isArray(res.body.data)).toBe(true);
+      });
+  });
 });
