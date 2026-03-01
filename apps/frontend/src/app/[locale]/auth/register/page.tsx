@@ -42,8 +42,16 @@ export default function RegisterPage() {
   const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, user, company, isLoading } = useAuth();
   const ar = locale === 'ar';
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.replace(company?.type === 'SUPPLIER'
+        ? `/${locale}/dashboard/supplier`
+        : `/${locale}/dashboard/buyer`);
+    }
+  }, [isLoading, user, company, locale, router]);
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);

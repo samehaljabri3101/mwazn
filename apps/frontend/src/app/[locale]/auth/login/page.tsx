@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useLocale } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -12,6 +12,7 @@ import { Eye, EyeOff, Shield } from 'lucide-react';
 export default function LoginPage() {
   const locale = useLocale();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
 
   const [email, setEmail] = useState('');
@@ -28,7 +29,20 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
-      router.push(`/${locale}/dashboard`);
+      const redirect = searchParams?.get('redirect');
+      if (redirect) {
+        router.push(redirect);
+        return;
+      }
+      const storedCompany = localStorage.getItem('mwazn_company');
+      const parsedCompany = storedCompany ? JSON.parse(storedCompany) : null;
+      if (parsedCompany?.type === 'BUYER') {
+        router.push(`/${locale}/dashboard/buyer`);
+      } else if (parsedCompany?.type === 'SUPPLIER') {
+        router.push(`/${locale}/dashboard/supplier`);
+      } else {
+        router.push(`/${locale}/dashboard`);
+      }
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||

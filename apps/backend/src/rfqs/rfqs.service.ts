@@ -31,6 +31,11 @@ export class RFQsService {
       ];
     }
 
+    // Hide invite-only RFQs from public browsing; buyer's own RFQs bypass via buyerId
+    if (!query.buyerId) {
+      where.visibility = 'PUBLIC';
+    }
+
     const [items, total] = await Promise.all([
       this.prisma.rFQ.findMany({
         where,
@@ -87,6 +92,18 @@ export class RFQsService {
         currency: dto.currency || 'SAR',
         deadline: dto.deadline ? new Date(dto.deadline) : null,
         buyerId: user.companyId,
+        projectType: dto.projectType,
+        budgetMin: dto.budgetMin,
+        budgetMax: dto.budgetMax,
+        budgetUndisclosed: dto.budgetUndisclosed ?? false,
+        vatIncluded: dto.vatIncluded ?? false,
+        expectedStartDate: dto.expectedStartDate ? new Date(dto.expectedStartDate) : null,
+        locationRequirement: dto.locationRequirement,
+        siteVisitRequired: dto.siteVisitRequired ?? false,
+        ndaRequired: dto.ndaRequired ?? false,
+        requiredCertifications: dto.requiredCertifications ?? [],
+        visibility: dto.visibility ?? 'PUBLIC',
+        allowPartialBids: dto.allowPartialBids ?? true,
       },
       include: { category: true, buyer: { select: { id: true, nameAr: true, nameEn: true } } },
     });
