@@ -1,8 +1,8 @@
 /**
- * Mwazn — Demo Marketplace Seed (v3)
+ * Mwazn — Demo Marketplace Seed (v4)
  * 200 companies · 900+ listings · 400 RFQs · 600+ quotes
  * 200 deals · 2000+ messages · 300+ ratings
- * Images use picsum.photos with category-semantic seeds — no local files needed.
+ * Images: curated Unsplash direct CDN URLs, product-type level manifest.
  */
 
 import {
@@ -26,37 +26,154 @@ const randInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 const randPrice = (min: number, max: number) =>
   Math.round((Math.random() * (max - min) + min) * 100) / 100;
-// Category-semantic image seeds: picsum.photos selects a deterministic photo
-// based on a hash of the seed string, giving consistent per-product images.
-const CAT_IMG_SEEDS: Record<string, string> = {
-  'building-materials':      'build-concrete',
-  'furniture-decor':         'office-furniture',
-  'industrial-equipment':    'factory-machinery',
-  'technology-electronics':  'tech-electronics',
-  'food-beverages':          'food-market',
-  'logistics-transport':     'logistics-warehouse',
-  'chemicals-raw-materials': 'chemical-industry',
-  'medical-devices':         'medical-clinic',
-  'energy-petroleum':        'energy-plant',
-  'clothing-textiles':       'textile-fabric',
-  'safety-security':         'security-camera',
-  'agriculture-food':        'agriculture-farm',
-  'it-services':             'server-datacenter',
-  'electrical-equipment':    'electrical-panel',
-  'hvac-equipment':          'hvac-system',
-  'vehicles-automotive':     'automotive-vehicle',
-  'paper-printing':          'printing-press',
-  'restaurant-equipment':    'kitchen-equipment',
-  'tools-hardware':          'tools-hardware',
-  'cleaning-supplies':       'cleaning-products',
-  'construction-contracting':'construction-site',
-  'laboratory-equipment':    'lab-equipment',
-  'packaging-wrapping':      'packaging-boxes',
-  'office-equipment':        'office-supplies',
-  'consulting-services':     'business-meeting',
+// ── Product image manifest ─────────────────────────────────────────────────────
+// Curated direct Unsplash CDN URLs (stable, free). Relevance > uniqueness.
+const U = (id: string) => `https://images.unsplash.com/photo-${id}?w=800&q=80`;
+
+const PRODUCT_IMAGE_MAP: Record<string, [string, string]> = {
+  // ── Industrial Equipment ──────────────────────────────────────────────────
+  'Hydraulic Forklift 3-Ton':               [U('A0Cfu8mddwg'),  U('MdI7uzMw5JI')],
+  'Industrial Air Compressor 200L':          [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  'Diesel Generator 50 kW':                  [U('dRMQiAubdws'),  U('tajjW9PxsFQ')],
+  'High-Pressure Industrial Water Pump':     [U('pxs2yJ6Lb9k'),  U('F4nEetWGt0A')],
+  'Factory Conveyor Belt System':            [U('cHWzlU8lEcc'),  U('hSO87BU4BIc')],
+  'Automated Welding Station':               [U('9sJMyPKlKhw'),  U('enPxH6uqABg')],
+  'Industrial Hydraulic Pump':               [U('buVGbunsQyU'),  U('dRMQiAubdws')],
+  'Automated Filling & Packing Line':        [U('cHWzlU8lEcc'),  U('c6BIhsuRIDg')],
+  '100-Ton Hydraulic Press':                 [U('buVGbunsQyU'),  U('dRMQiAubdws')],
+  'Industrial Rubber Conveyor Belt':         [U('GG02YTZl0GM'),  U('cHWzlU8lEcc')],
+  'Industrial Electric Motor 30 kW':        [U('dRMQiAubdws'),  U('tajjW9PxsFQ')],
+  '500L Pressurized Storage Tank':           [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  // ── Building Materials ────────────────────────────────────────────────────
+  'Rebar Steel 16mm Grade 60':               [U('XRuBqN8o7Pg'),  U('XRuBqN8o7Pg')],
+  'Sulphate-Resistant Portland Cement':      [U('rc5crEySTXo'),  U('qgXz4qXViCg')],
+  'High-Quality Hollow Red Brick':           [U('XEsx2NVpqWY'),  U('k-ztJVy2C1M')],
+  'Washed Fine Concrete Sand':               [U('rc5crEySTXo'),  U('1504307651254-35680f356dfd')],
+  'Ceramic Floor Tile 60×60 cm':             [U('qui1Ni2Avk8'),  U('j8DSRdECM6o')],
+  'Gypsum Board 12mm':                       [U('1504307651254-35680f356dfd'), U('rc5crEySTXo')],
+  'PVC Drainage Pipes':                      [U('pxs2yJ6Lb9k'),  U('F4nEetWGt0A')],
+  'Heat-Resistant Thermal Insulation':       [U('1504307651254-35680f356dfd'), U('rc5crEySTXo')],
+  'Weather-Resistant Exterior Paint':        [U('tmhLbZ2g_lE'),  U('yhBR1Dhs56w')],
+  'A-Grade Treated Structural Lumber':       [U('1504307651254-35680f356dfd'), U('XRuBqN8o7Pg')],
+  'Washed Gravel 20mm':                      [U('rc5crEySTXo'),  U('1504307651254-35680f356dfd')],
+  'Steel Reinforcement Mesh 200×200':        [U('XRuBqN8o7Pg'),  U('rc5crEySTXo')],
+  // ── Technology & Electronics ──────────────────────────────────────────────
+  'Dell Latitude i7 Business Laptop':        [U('hG1MJ6alVfU'),  U('dpbXgTh0Lac')],
+  '32" 4K Professional Monitor':             [U('gD1KwZtDjiw'),  U('mHm1ASYNC0I')],
+  'Network A3 Color Laser Printer':          [U('5AoOejjRUrA'),  U('5AoOejjRUrA')],
+  'Dell PowerEdge R750 Server':              [U('J0WJ7auDGsw'),  U('2JJ3wBHu4_0')],
+  '8-Camera IP CCTV System':                 [U('aNgsW-Rz-18'),  U('XErNnZw0okA')],
+  '3 KVA UPS Power Backup':                  [U('J0WJ7auDGsw'),  U('VHmBX7FnXw0')],
+  'HD VoIP IP Office Phone':                 [U('syCXK9WndqQ'),  U('NHsMaqZ5B14')],
+  '4000 Lumen Conference Projector':         [U('xeEukPZjZi0'),  U('herDcGvxblU')],
+  'Cisco Enterprise Network Router':         [U('KpLbgbFlQWs'),  U('ISG-rUel0Uw')],
+  'Samsung Galaxy Tab Business':             [U('hG1MJ6alVfU'),  U('gD1KwZtDjiw')],
+  'Wi-Fi 6 Enterprise Access Point':         [U('KpLbgbFlQWs'),  U('vE5AKQRUs7c')],
+  '4TB Enterprise SSD Storage':              [U('J0WJ7auDGsw'),  U('1FbFuzNesR4')],
+  // ── Food & Beverages ──────────────────────────────────────────────────────
+  'Saudi Extra Virgin Olive Oil':            [U('fQHQp75Ap3E'),  U('WiCo1iTLMRY')],
+  'Premium Grade-A Sukkari Dates':           [U('sp-1ZI3zrXY'),  U('Ae6qKztd0Xw')],
+  'Authentic Arabic Coffee with Cardamom':   [U('1509042239860-f519d6dc87b4'), U('fQHQp75Ap3E')],
+  'Premium Indian Basmati Rice':             [U('xmuIgjuQG0M'),  U('qM8PlclZGg4')],
+  'Natural Yemeni Sidr Honey':               [U('X7d2jpGtiZM'),  U('q98J_eiecHA')],
+  'Refined Palm Oil for Industry':           [U('fQHQp75Ap3E'),  U('c_xqdv4QIcU')],
+  'Premium Gulf Mixed Spice Blend':          [U('fQHQp75Ap3E'),  U('sp-1ZI3zrXY')],
+  'Premium Bakery Wheat Flour':              [U('xmuIgjuQG0M'),  U('zXNC_lBBVGE')],
+  'Packaged Water 500ml (Carton)':           [U('xmuIgjuQG0M'),  U('qM8PlclZGg4')],
+  'Natural Restaurant Packaged Juices':      [U('fQHQp75Ap3E'),  U('X7d2jpGtiZM')],
+  'Full-Fat UHT Milk':                       [U('xmuIgjuQG0M'),  U('fQHQp75Ap3E')],
+  'Fine Industrial White Sugar':             [U('xmuIgjuQG0M'),  U('zXNC_lBBVGE')],
+  // ── Chemicals & Raw Materials ─────────────────────────────────────────────
+  'Pool & Water Treatment Chlorine':         [U('pxs2yJ6Lb9k'),  U('GROaOafbSKY')],
+  'High-Grade Industrial Epoxy Resin':       [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  'Hydrochloric Acid 33%':                   [U('GROaOafbSKY'),  U('dRMQiAubdws')],
+  'Boiler Water Treatment Chemical':         [U('pxs2yJ6Lb9k'),  U('GROaOafbSKY')],
+  'Concentrated Industrial Dyes':            [U('tmhLbZ2g_lE'),  U('zcGe4MHffL4')],
+  'Specialized Industrial Lubricants':       [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  'High-Resistance Industrial Adhesive':     [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  'HDPE Raw Plastic Polymer':                [U('GROaOafbSKY'),  U('dRMQiAubdws')],
+  'Industrial Carbon Black Powder':          [U('dRMQiAubdws'),  U('GROaOafbSKY')],
+  'Industrial Packaging Adhesive':           [U('GROaOafbSKY'),  U('dRMQiAubdws')],
+  'Sodium Hydroxide Solution':               [U('GROaOafbSKY'),  U('dRMQiAubdws')],
+  'Chemical Tank Insulation Material':       [U('dRMQiAubdws'),  U('pxs2yJ6Lb9k')],
+  // ── Electrical Equipment ──────────────────────────────────────────────────
+  'Heat-Resistant Copper Electrical Cable':  [U('l090uFWoPaI'),  U('fMXC9nAWv3w')],
+  'Main Electrical Panel with Breakers':     [U('maXnRLszYY0'),  U('maXnRLszYY0')],
+  '100 KVA Power Transformer':               [U('maXnRLszYY0'),  U('dRMQiAubdws')],
+  '200W Industrial LED High Bay Light':      [U('z6DJJZ1-1Cg'),  U('xNRWQv1Bz38')],
+  '100A Automatic Circuit Breaker':          [U('maXnRLszYY0'),  U('l090uFWoPaI')],
+  'Electrical Distribution Board with Meter':[U('maXnRLszYY0'),  U('dRMQiAubdws')],
+  '100 kW Emergency Power Generator':        [U('dRMQiAubdws'),  U('maXnRLszYY0')],
+  'Certified Smoke & Fire Detector':         [U('aNgsW-Rz-18'),  U('XErNnZw0okA')],
+  'Industrial Power Factor Capacitor':       [U('maXnRLszYY0'),  U('l090uFWoPaI')],
+  'Industrial PLC Control Unit':             [U('J0WJ7auDGsw'),  U('1FbFuzNesR4')],
+  'Safe Electrical Earthing System':         [U('maXnRLszYY0'),  U('GROaOafbSKY')],
+  '400W Solar Panel Module':                 [U('Dp_5zHiR6mM'),  U('omfN1pW-n2Y')],
+  // ── Medical Devices ───────────────────────────────────────────────────────
+  'Adjustable Electric Hospital Bed':        [U('zbpgmGe27p8'),  U('60YFPezQ-oc')],
+  'Digital Blood Pressure Monitor':          [U('yQLLZ28esdo'),  U('zbpgmGe27p8')],
+  'Medical Clinic Furniture Set':            [U('zbpgmGe27p8'),  U('yQLLZ28esdo')],
+  'Volumetric IV Infusion Pump':             [U('yQLLZ28esdo'),  U('zbpgmGe27p8')],
+  '100mA Portable X-Ray Machine':            [U('ouyjDk-KdfY'),  U('j-GLujeG0f4')],
+  'Sterile Emergency Surgical Kit':          [U('zbpgmGe27p8'),  U('yQLLZ28esdo')],
+  'Complete Dental Chair Unit':              [U('dNJp2dcHUoY'),  U('O00CiqRgM14')],
+  '12-Channel ECG Machine':                  [U('beXUIzvxW-Q'),  U('ZSo4axN3ZXI')],
+  'Steam Autoclave Sterilizer':              [U('zbpgmGe27p8'),  U('yQLLZ28esdo')],
+  'Medical Personal Protective Equipment':   [U('zbpgmGe27p8'),  U('yQLLZ28esdo')],
+  'Blood Glucose Monitoring System':         [U('yQLLZ28esdo'),  U('beXUIzvxW-Q')],
+  'Foldable Medical Examination Table':      [U('zbpgmGe27p8'),  U('60YFPezQ-oc')],
+  // ── Furniture & Decor ─────────────────────────────────────────────────────
+  'Executive Leather Office Chair':          [U('KVU0Sga8vIU'),  U('w_zE6qlkQKA')],
+  'L-Shaped Executive Manager Desk':         [U('eHD8Y1Znfpk'),  U('CzXaCYqeu3Y')],
+  '12-Person Boardroom Table':               [U('GWe0dlVD9e0'),  U('bV5dFLEYecM')],
+  '4-Drawer Metal Filing Cabinet':           [U('Q9y3LRuuxmg'),  U('Q9y3LRuuxmg')],
+  '3-Seat Leather Reception Sofa':           [U('Ypv0MH4izf8'),  U('mnfB8xoUxkY')],
+  'Adjustable Office Partition Panel':       [U('eHD8Y1Znfpk'),  U('GWe0dlVD9e0')],
+  'Premium Wooden Wall Bookcase':            [U('GWe0dlVD9e0'),  U('eHD8Y1Znfpk')],
+  'Comfortable Metal-Frame Waiting Chair':   [U('KVU0Sga8vIU'),  U('Ypv0MH4izf8')],
+  'Modern Reception Counter Desk':           [U('Ypv0MH4izf8'),  U('Is2xP3QGb74')],
+  '6-Section Staff Locker Cabinet':          [U('Q9y3LRuuxmg'),  U('eHD8Y1Znfpk')],
+  'Office Kitchen Dining Table':             [U('eHD8Y1Znfpk'),  U('GWe0dlVD9e0')],
+  'Retail Product Display Shelf':            [U('Q9y3LRuuxmg'),  U('Ypv0MH4izf8')],
 };
-const productImg = (catSlug: string, seq: number) =>
-  `https://picsum.photos/seed/${CAT_IMG_SEEDS[catSlug] ?? 'product'}-${seq}/800/600`;
+
+// Category-level fallback when product title is not in the map
+const CAT_FALLBACK_IMAGES: Record<string, [string, string]> = {
+  'industrial-equipment':     [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  'building-materials':       [U('rc5crEySTXo'),  U('1504307651254-35680f356dfd')],
+  'furniture-decor':          [U('eHD8Y1Znfpk'),  U('KVU0Sga8vIU')],
+  'technology-electronics':   [U('hG1MJ6alVfU'),  U('J0WJ7auDGsw')],
+  'food-beverages':           [U('fQHQp75Ap3E'),  U('sp-1ZI3zrXY')],
+  'chemicals-raw-materials':  [U('dRMQiAubdws'),  U('GROaOafbSKY')],
+  'electrical-equipment':     [U('maXnRLszYY0'),  U('l090uFWoPaI')],
+  'medical-devices':          [U('zbpgmGe27p8'),  U('yQLLZ28esdo')],
+  'logistics-transport':      [U('A0Cfu8mddwg'),  U('hSO87BU4BIc')],
+  'safety-security':          [U('aNgsW-Rz-18'),  U('XErNnZw0okA')],
+  'energy-petroleum':         [U('Dp_5zHiR6mM'),  U('omfN1pW-n2Y')],
+  'agriculture-food':         [U('fQHQp75Ap3E'),  U('sp-1ZI3zrXY')],
+  'it-services':              [U('J0WJ7auDGsw'),  U('hG1MJ6alVfU')],
+  'clothing-textiles':        [U('tmhLbZ2g_lE'),  U('zcGe4MHffL4')],
+  'vehicles-automotive':      [U('A0Cfu8mddwg'),  U('MdI7uzMw5JI')],
+  'paper-printing':           [U('5AoOejjRUrA'),  U('gD1KwZtDjiw')],
+  'restaurant-equipment':     [U('cHWzlU8lEcc'),  U('dRMQiAubdws')],
+  'tools-hardware':           [U('9sJMyPKlKhw'),  U('enPxH6uqABg')],
+  'cleaning-supplies':        [U('tmhLbZ2g_lE'),  U('zcGe4MHffL4')],
+  'construction-contracting': [U('rc5crEySTXo'),  U('1504307651254-35680f356dfd')],
+  'laboratory-equipment':     [U('J0WJ7auDGsw'),  U('yQLLZ28esdo')],
+  'packaging-wrapping':       [U('hSO87BU4BIc'),  U('GG02YTZl0GM')],
+  'office-equipment':         [U('5AoOejjRUrA'),  U('gD1KwZtDjiw')],
+  'hvac-equipment':           [U('dRMQiAubdws'),  U('VQGGmDWclBM')],
+  'consulting-services':      [U('GWe0dlVD9e0'),  U('eHD8Y1Znfpk')],
+};
+
+function getProductImages(titleEn: string, catSlug: string): [string, string] {
+  return (
+    PRODUCT_IMAGE_MAP[titleEn] ??
+    CAT_FALLBACK_IMAGES[catSlug] ??
+    [U('dRMQiAubdws'), U('VQGGmDWclBM')]
+  );
+}
+
 const logoImg = (s: number) => `https://picsum.photos/seed/company-logo-${s}/200/200`;
 
 // ── Categories ────────────────────────────────────────────────────────────────
@@ -573,7 +690,7 @@ const SEED_BUY_PASSWORD   = process.env.SEED_BUY_PASSWORD   || 'Buyer@1234';
 
 // ── Main Seed ─────────────────────────────────────────────────────────────────
 async function main() {
-  console.log('Mwazn v2 massive seed starting...');
+  console.log('Mwazn v4 seed starting (curated image manifest)...');
 
   // Clean up in FK-safe order
   await prisma.analyticsEvent.deleteMany().catch(() => {});
@@ -774,10 +891,13 @@ async function main() {
           sku, vatPercent: vatPct, stockAvailability: rand(STOCK_STATUSES),
           requestQuoteOnly, specsJson: specs,
           images: {
-            create: [
-              { url: productImg(cat.slug, imgSeed), alt: titleEn, isPrimary: true, sortOrder: 0 },
-              { url: productImg(cat.slug, imgSeed + 500), alt: `${titleEn} detail`, isPrimary: false, sortOrder: 1 },
-            ],
+            create: (() => {
+              const [primary, detail] = getProductImages(titleEn, cat.slug);
+              return [
+                { url: primary, alt: titleEn, isPrimary: true, sortOrder: 0 },
+                { url: detail, alt: `${titleEn} detail`, isPrimary: false, sortOrder: 1 },
+              ];
+            })(),
           },
         },
       });
