@@ -1,8 +1,8 @@
 /**
- * Mwazn — Massive Production Seed (v2)
- * 200 companies · 800+ listings · 250 RFQs · 400+ quotes
- * 130+ deals · 2000+ messages · 300+ ratings
- * Images use picsum.photos — no local files needed.
+ * Mwazn — Demo Marketplace Seed (v3)
+ * 200 companies · 900+ listings · 400 RFQs · 600+ quotes
+ * 200 deals · 2000+ messages · 300+ ratings
+ * Images use picsum.photos with category-semantic seeds — no local files needed.
  */
 
 import {
@@ -26,8 +26,38 @@ const randInt = (min: number, max: number) =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 const randPrice = (min: number, max: number) =>
   Math.round((Math.random() * (max - min) + min) * 100) / 100;
-const productImg = (s: number) => `https://picsum.photos/seed/mwazn-${s}/800/600`;
-const logoImg = (s: number) => `https://picsum.photos/seed/logo-${s}/200/200`;
+// Category-semantic image seeds: picsum.photos selects a deterministic photo
+// based on a hash of the seed string, giving consistent per-product images.
+const CAT_IMG_SEEDS: Record<string, string> = {
+  'building-materials':      'build-concrete',
+  'furniture-decor':         'office-furniture',
+  'industrial-equipment':    'factory-machinery',
+  'technology-electronics':  'tech-electronics',
+  'food-beverages':          'food-market',
+  'logistics-transport':     'logistics-warehouse',
+  'chemicals-raw-materials': 'chemical-industry',
+  'medical-devices':         'medical-clinic',
+  'energy-petroleum':        'energy-plant',
+  'clothing-textiles':       'textile-fabric',
+  'safety-security':         'security-camera',
+  'agriculture-food':        'agriculture-farm',
+  'it-services':             'server-datacenter',
+  'electrical-equipment':    'electrical-panel',
+  'hvac-equipment':          'hvac-system',
+  'vehicles-automotive':     'automotive-vehicle',
+  'paper-printing':          'printing-press',
+  'restaurant-equipment':    'kitchen-equipment',
+  'tools-hardware':          'tools-hardware',
+  'cleaning-supplies':       'cleaning-products',
+  'construction-contracting':'construction-site',
+  'laboratory-equipment':    'lab-equipment',
+  'packaging-wrapping':      'packaging-boxes',
+  'office-equipment':        'office-supplies',
+  'consulting-services':     'business-meeting',
+};
+const productImg = (catSlug: string, seq: number) =>
+  `https://picsum.photos/seed/${CAT_IMG_SEEDS[catSlug] ?? 'product'}-${seq}/800/600`;
+const logoImg = (s: number) => `https://picsum.photos/seed/company-logo-${s}/200/200`;
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
@@ -607,7 +637,7 @@ async function main() {
         verificationStatus: s.status, plan: s.plan, city: s.city,
         phone: s.phone ?? `+9665${randInt(10000000, 99999999)}`,
         website: s.website ?? null,
-        logoUrl: s.status === VerificationStatus.VERIFIED ? logoImg(i + 1) : null,
+        logoUrl: s.status === VerificationStatus.VERIFIED ? logoImg(i + 10) : null,
         descriptionAr: `نحن ${s.nameAr} — نقدم منتجات وخدمات عالية الجودة في المملكة العربية السعودية. نلتزم بأعلى معايير الجودة والخدمة لعملائنا.`,
         descriptionEn: `${s.nameEn} — delivering premium products and services across Saudi Arabia. Committed to the highest quality standards.`,
         vatNumber: vatNum, crExpiryDate: new Date(Date.now() + randInt(365, 1095) * 86400_000),
@@ -744,7 +774,10 @@ async function main() {
           sku, vatPercent: vatPct, stockAvailability: rand(STOCK_STATUSES),
           requestQuoteOnly, specsJson: specs,
           images: {
-            create: { url: productImg(imgSeed), alt: titleEn, isPrimary: true, sortOrder: 0 },
+            create: [
+              { url: productImg(cat.slug, imgSeed), alt: titleEn, isPrimary: true, sortOrder: 0 },
+              { url: productImg(cat.slug, imgSeed + 500), alt: `${titleEn} detail`, isPrimary: false, sortOrder: 1 },
+            ],
           },
         },
       });
@@ -755,13 +788,13 @@ async function main() {
   }
   console.log(`  + ${listingCount} listings`);
 
-  // ── 6. RFQs (250 total) ────────────────────────────────────────────────────
+  // ── 6. RFQs (400 total) ────────────────────────────────────────────────────
   console.log('  Creating RFQs...');
   const rfqs: any[] = [];
-  for (let i = 0; i < 250; i++) {
+  for (let i = 0; i < 400; i++) {
     const buyer = rand(buyerCompanies);
     const cat = rand(categories);
-    const isOpen = i < 100; // first 100 OPEN, rest mixed
+    const isOpen = i < 150; // first 150 OPEN, rest mixed
     const budgetBase = randPrice(10000, 500000);
     const budgetMin = Math.round(budgetBase * 0.7);
     const budgetMax = Math.round(budgetBase * 1.3);
@@ -859,9 +892,9 @@ async function main() {
     }));
   }
 
-  // Backfill deals from any quote to reach 150
+  // Backfill deals from any quote to reach 200
   for (const q of quotes) {
-    if (deals.length >= 150) break;
+    if (deals.length >= 200) break;
     if (usedQuoteIds.has(q.id)) continue;
     usedQuoteIds.add(q.id);
     const rfq = rfqs.find((r) => r.id === q.rfqId);
@@ -891,6 +924,30 @@ async function main() {
     ratingCount++;
     // Supplier rates buyer (80% of the time)
     if (Math.random() < 0.8) {
+      await prisma.rating.create({
+        data: {
+          dealId: deal.id, raterId: deal.supplierId, ratedId: deal.buyerId,
+          score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+        },
+      });
+      ratingCount++;
+    }
+  }
+  // Backfill ratings to reach 300+ — rate on DELIVERED deals too
+  const deliveredDeals = deals.filter((d) => d.status === DealStatus.DELIVERED);
+  const usedRatingDealIds = new Set(completedDeals.map((d: any) => d.id));
+  for (const deal of deliveredDeals) {
+    if (ratingCount >= 320) break;
+    if (usedRatingDealIds.has(deal.id)) continue;
+    usedRatingDealIds.add(deal.id);
+    await prisma.rating.create({
+      data: {
+        dealId: deal.id, raterId: deal.buyerId, ratedId: deal.supplierId,
+        score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+      },
+    });
+    ratingCount++;
+    if (Math.random() < 0.7) {
       await prisma.rating.create({
         data: {
           dealId: deal.id, raterId: deal.supplierId, ratedId: deal.buyerId,
@@ -1004,7 +1061,7 @@ async function main() {
   console.log('  + supplier scores computed');
 
   // ── Summary ───────────────────────────────────────────────────────────────
-  console.log('\nSeed complete!');
+  console.log('\nMwazn v3 seed complete!');
   console.log('-'.repeat(60));
   console.log('Demo Credentials:');
   console.log(`  Admin     -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);

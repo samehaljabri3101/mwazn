@@ -264,6 +264,26 @@ export class SearchService {
     return result;
   }
 
+  async getLatestRFQs(limit = 6) {
+    const cacheKey = `marketplace:latest-rfqs:${limit}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const rfqs = await this.prisma.rFQ.findMany({
+      where: { status: 'OPEN', visibility: 'PUBLIC' },
+      include: {
+        category: { select: { nameEn: true, nameAr: true, slug: true } },
+        buyer: { select: { nameEn: true, nameAr: true, city: true } },
+        _count: { select: { quotes: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    await this.cache.set(cacheKey, rfqs, 60_000); // cache 1 min
+    return rfqs;
+  }
+
   async getFeaturedShowrooms(limit = 6) {
     const cacheKey = `marketplace:showrooms:${limit}`;
     const cached = await this.cache.get(cacheKey);

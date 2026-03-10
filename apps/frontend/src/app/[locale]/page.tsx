@@ -26,7 +26,7 @@ import {
   ArrowRight, CheckCircle2, FileText, BarChart3,
   Shield, TrendingUp, TrendingDown, Building2, Package,
   Award, ShoppingBag, HandshakeIcon, ArrowUpRight,
-  Minus, Activity, Layers,
+  Minus, Activity, Layers, Clock, Tag,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -48,6 +48,14 @@ interface Product {
 }
 interface Showroom extends Vendor {
   listings: Array<{ id: string; titleEn: string; titleAr: string; images: Array<{ url: string }> }>;
+}
+interface LatestRFQ {
+  id: string; title: string; quantity: number; unit: string;
+  budget: string | null; budgetUndisclosed: boolean; currency: string;
+  deadline: string; createdAt: string;
+  category: { nameEn: string; nameAr: string; slug: string };
+  buyer: { nameEn: string; nameAr: string; city: string | null };
+  _count: { quotes: number };
 }
 
 // ─── Static mock data for comparison preview ──────────────────────────────────
@@ -104,17 +112,19 @@ export default async function HomePage() {
   const locale = await getLocale();
   const ar = locale === 'ar';
 
-  const [stats, vendors, products, showrooms] = await Promise.all([
+  const [stats, vendors, products, showrooms, latestRFQs] = await Promise.all([
     fetchJSON<Stat>('/marketplace/stats'),
     fetchJSON<Vendor[]>('/marketplace/top-vendors?limit=8'),
     fetchJSON<Product[]>('/marketplace/top-products?limit=8'),
     fetchJSON<Showroom[]>('/marketplace/featured-showrooms?limit=6'),
+    fetchJSON<LatestRFQ[]>('/marketplace/latest-rfqs?limit=6'),
   ]);
 
   const safeStats: Stat = stats ?? { totalRFQs: 0, totalVendors: 0, totalProducts: 0, totalTransactions: 0 };
   const safeVendors: Vendor[] = vendors ?? [];
   const safeProducts: Product[] = products ?? [];
   const safeShowrooms: Showroom[] = showrooms ?? [];
+  const safeRFQs: LatestRFQ[] = latestRFQs ?? [];
 
   return (
     <div className="min-h-screen bg-white">
@@ -666,6 +676,104 @@ export default async function HomePage() {
                   </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Latest Open RFQs ─────────────────────────────────────────────────── */}
+      {safeRFQs.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between mb-10">
+              <div>
+                <span className="mb-2 inline-block rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                  {ar ? 'أحدث الفرص' : 'Latest Opportunities'}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
+                  {ar ? 'طلبات عروض الأسعار المفتوحة' : 'Open Requests for Quotation'}
+                </h2>
+              </div>
+              <Link
+                href={`/${locale}/auth/register?type=SUPPLIER`}
+                className="hidden items-center gap-1.5 text-sm font-semibold text-brand-700 transition-colors hover:text-brand-800 sm:inline-flex"
+              >
+                {ar ? 'قدّم عرضك' : 'Submit a Quote'}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {safeRFQs.map((rfq) => {
+                const daysLeft = Math.max(0, Math.ceil((new Date(rfq.deadline).getTime() - Date.now()) / 86400_000));
+                return (
+                  <Link
+                    key={rfq.id}
+                    href={`/${locale}/auth/register?type=SUPPLIER`}
+                    className="card card-hover group flex flex-col gap-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-50">
+                        <FileText className="h-5 w-5 text-brand-700" />
+                      </div>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        daysLeft <= 3 ? 'bg-red-50 text-red-700' :
+                        daysLeft <= 7 ? 'bg-amber-50 text-amber-700' :
+                        'bg-emerald-50 text-emerald-700'
+                      }`}>
+                        {daysLeft === 0 ? (ar ? 'ينتهي اليوم' : 'Ends today') :
+                         ar ? `${daysLeft} يوم متبقٍ` : `${daysLeft}d left`}
+                      </span>
+                    </div>
+
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-brand-700 transition-colors mb-1">
+                        {rfq.title}
+                      </h3>
+                      <p className="text-xs text-slate-400 mb-3">
+                        {ar ? rfq.buyer.nameAr : rfq.buyer.nameEn}
+                        {rfq.buyer.city ? ` · ${rfq.buyer.city}` : ''}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                        <Tag className="h-3 w-3" />
+                        {ar ? rfq.category.nameAr : rfq.category.nameEn}
+                      </span>
+                      <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                        <Package className="h-3 w-3" />
+                        {rfq.quantity.toLocaleString()} {rfq.unit}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                      {!rfq.budgetUndisclosed && rfq.budget ? (
+                        <span className="text-sm font-bold text-brand-700">
+                          {Number(rfq.budget).toLocaleString()} {rfq.currency}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-400">{ar ? 'الميزانية غير محددة' : 'Budget undisclosed'}</span>
+                      )}
+                      <span className="flex items-center gap-1 text-xs text-slate-400">
+                        <Clock className="h-3 w-3" />
+                        {rfq._count.quotes} {ar ? 'عروض' : 'quotes'}
+                      </span>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="mt-8 text-center">
+              <Link
+                href={`/${locale}/auth/register?type=BUYER`}
+                className="inline-flex items-center gap-2 rounded-xl border border-brand-200 px-6 py-3 text-sm font-semibold text-brand-700 transition-all hover:bg-brand-50"
+              >
+                <FileText className="h-4 w-4" />
+                {ar ? 'انشر طلب عرض سعر' : 'Post Your Own RFQ'}
+                <ArrowRight className="h-4 w-4" />
+              </Link>
             </div>
           </div>
         </section>

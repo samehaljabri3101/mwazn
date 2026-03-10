@@ -84,4 +84,11 @@ export class SearchController {
   getFeaturedShowrooms(@Query('limit') limit?: number) {
     return this.searchService.getFeaturedShowrooms(limit ? Number(limit) : 6);
   }
+
+  @Get('marketplace/latest-rfqs')
+  @Public()
+  @ApiOperation({ summary: 'Latest open public RFQs for homepage display' })
+  getLatestRFQs(@Query('limit') limit?: number) {
+    return this.searchService.getLatestRFQs(limit ? Number(limit) : 6);
+  }
 }
