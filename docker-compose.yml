@@ -39,11 +39,20 @@ services:
       - '3001:3001'
     volumes:
       - uploads_data:/app/uploads
-    env_file:
-      - ./apps/backend/.env
     environment:
       DATABASE_URL: postgresql://mwazn:mwazn@db:5432/mwazn
       REDIS_URL: redis://redis:6379
+      PORT: '3001'
+      NODE_ENV: production
+      FRONTEND_URL: http://localhost:3000
+      JWT_ACCESS_SECRET: mwazn_jwt_access_secret_docker_2026
+      JWT_REFRESH_SECRET: mwazn_jwt_refresh_secret_docker_2026
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      SEED_ADMIN_EMAIL: admin@mwazn.sa
+      SEED_ADMIN_PASSWORD: Admin@1234
+      SEED_SUP_PASSWORD: Supplier@1234
+      SEED_BUY_PASSWORD: Buyer@1234
     depends_on:
       db:
         condition: service_healthy
@@ -51,22 +60,27 @@ services:
         condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'wget -q -O- http://localhost:3001/health || exit 1']
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
       start_period: 60s
 
   frontend:
     build:
       context: ./apps/frontend
       dockerfile: Dockerfile
+      args:
+        # Baked in at build time for client-side bundle.
+        # Browser → localhost:3001 (port is mapped); SSR uses API_INTERNAL_URL.
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api
     restart: unless-stopped
     ports:
       - '3000:3000'
-    env_file:
-      - ./apps/frontend/.env
     environment:
-      NEXT_PUBLIC_API_URL: http://backend:3001/api
+      NODE_ENV: production
+      # Server-side (SSR) components use this to reach backend inside Docker network
+      API_INTERNAL_URL: http://backend:3001/api
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api
     depends_on:
       backend:
         condition: service_healthy
