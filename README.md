@@ -2,7 +2,7 @@
 
 Saudi B2B Procurement Marketplace — connecting verified suppliers with buyers.
 
-[![CI](https://github.com/your-org/mwazn/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/mwazn/actions/workflows/ci.yml)
+[![CI](https://github.com/samehaljabri3101/mwazn/actions/workflows/ci.yml/badge.svg)](https://github.com/samehaljabri3101/mwazn/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -26,7 +26,7 @@ Saudi B2B Procurement Marketplace — connecting verified suppliers with buyers.
 
 ```bash
 # 1. Clone
-git clone https://github.com/your-org/mwazn.git && cd mwazn
+git clone https://github.com/samehaljabri3101/mwazn.git && cd mwazn
 
 # 2. Configure environment
 cp apps/backend/.env.example apps/backend/.env
@@ -119,17 +119,17 @@ npx prisma migrate deploy
 
 ## Production Deployment
 
-1. Set strong `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` (32+ random chars)
+> **Security note:** `docker-compose.yml` includes hardcoded dev-only JWT secrets. Replace them before any production deployment.
+
+1. Generate strong secrets and set them as environment variables or Docker secrets — never commit real secrets to the repository:
+   ```bash
+   openssl rand -hex 32   # run twice — one for JWT_ACCESS_SECRET, one for JWT_REFRESH_SECRET
+   ```
 2. Set `NODE_ENV=production`
 3. Set `FRONTEND_URL` to your actual domain
 4. Set `EMAIL_MODE=smtp` with real SMTP credentials
 5. Run `docker compose up -d --build`
-6. Migrations run automatically on container start
-
-```bash
-# Generate strong secrets
-openssl rand -hex 32   # run twice — once per JWT secret
-```
+6. Migrations and seed run automatically on container start
 
 ---
 
