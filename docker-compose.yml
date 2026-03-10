@@ -45,6 +45,7 @@ services:
       PORT: '3001'
       NODE_ENV: production
       FRONTEND_URL: http://localhost:3000
+      # ⚠️  DEV-ONLY secrets — replace with strong random values (openssl rand -hex 32) before any production deployment
       JWT_ACCESS_SECRET: mwazn_jwt_access_secret_docker_2026
       JWT_REFRESH_SECRET: mwazn_jwt_refresh_secret_docker_2026
       JWT_EXPIRES_IN: 15m
@@ -84,6 +85,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -q -O- http://localhost:3000/ || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   postgres_data:
