@@ -63,7 +63,8 @@ const MOCK_QUOTES: Array<{
 
 // ─── Data Fetching ─────────────────────────────────────────────────────────────
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+// Server components: prefer internal Docker network URL, fall back to public URL
+const API = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
 async function fetchJSON<T>(path: string): Promise<T | null> {
   try {

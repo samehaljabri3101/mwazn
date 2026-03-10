@@ -3,11 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy manifests first for better layer caching
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Accept API URL as build arg so client-side bundle uses the right base URL
+ARG NEXT_PUBLIC_API_URL=http://localhost:3001/api
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 
 RUN npm run build
 
@@ -18,16 +21,13 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install production dependencies only
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy Next.js build output and static assets
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-
-# next.config.mjs is required by `next start`
 COPY --from=builder /app/next.config.mjs ./next.config.mjs
+COPY --from=builder /app/messages ./messages
 
 EXPOSE 3000
 

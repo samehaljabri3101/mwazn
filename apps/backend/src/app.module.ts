@@ -29,6 +29,7 @@ import { MaroofModule } from './maroof/maroof.module';
 import { BillingModule } from './billing/billing.module';
 import { VerificationModule } from './verification/verification.module';
 import { ScoringModule } from './scoring/scoring.module';
+import { MarketplaceModule } from './marketplace/marketplace.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { ScoringModule } from './scoring/scoring.module';
     AnalyticsModule,
     PaymentsModule,
     InvoiceModule,
+    MarketplaceModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
