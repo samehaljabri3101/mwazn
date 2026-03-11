@@ -241,7 +241,7 @@ export default function DashboardPage() {
                 className="btn-primary inline-flex items-center gap-2 text-sm"
               >
                 <Package className="h-4 w-4" />
-                {ar ? 'إضافة منتج' : 'Add Listing'}
+                {ar ? 'إضافة منتج' : 'Add Product'}
               </Link>
             )}
           </div>
@@ -304,12 +304,14 @@ export default function DashboardPage() {
 
         {/* Stat cards */}
         {isBuyer && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <StatCard
               icon={<FileText className="h-5 w-5" />}
-              label={ar ? 'إجمالي الطلبات' : 'Total RFQs'}
+              label={ar ? 'طلبات عروضي' : 'My RFQs'}
               value={stats.totalRfqs ?? '—'}
-              sub={ar ? `${stats.openRfqs ?? 0} مفتوح` : `${stats.openRfqs ?? 0} open`}
+              sub={(stats.openRfqs ?? 0) > 0
+                ? (ar ? `${stats.openRfqs} مفتوح — ينتظر عروض` : `${stats.openRfqs} open — awaiting quotes`)
+                : (ar ? 'لا يوجد مفتوح' : 'None open')}
               href={`${base}/buyer/rfqs`}
               color="brand"
             />
@@ -317,33 +319,24 @@ export default function DashboardPage() {
               icon={<Briefcase className="h-5 w-5" />}
               label={ar ? 'صفقاتي' : 'My Deals'}
               value={stats.totalDeals ?? '—'}
-              sub={ar ? `${stats.activeDeals ?? 0} نشط` : `${stats.activeDeals ?? 0} active`}
+              sub={(stats.activeDeals ?? 0) > 0
+                ? (ar ? `${stats.activeDeals} نشط` : `${stats.activeDeals} in progress`)
+                : (ar ? 'لا توجد صفقات نشطة' : 'No active deals')}
               href={`${base}/buyer/deals`}
               color="green"
-            />
-            <StatCard
-              icon={<MessageSquare className="h-5 w-5" />}
-              label={ar ? 'الرسائل' : 'Messages'}
-              value="—"
-              href={`${base}/messages`}
-              color="purple"
-            />
-            <StatCard
-              icon={<TrendingUp className="h-5 w-5" />}
-              label={ar ? 'موفّر بموازن' : 'Saved with Mwazn'}
-              value="SAR —"
-              color="amber"
             />
           </div>
         )}
 
         {isSupplier && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard
               icon={<ScrollText className="h-5 w-5" />}
               label={ar ? 'عروضي' : 'My Quotes'}
               value={stats.totalQuotes ?? '—'}
-              sub={ar ? `${stats.pendingQuotes ?? 0} معلق` : `${stats.pendingQuotes ?? 0} pending`}
+              sub={(stats.pendingQuotes ?? 0) > 0
+                ? (ar ? `${stats.pendingQuotes} تحتاج متابعة` : `${stats.pendingQuotes} need attention`)
+                : (ar ? 'لا يوجد معلق' : 'None pending')}
               href={`${base}/supplier/quotes`}
               color="brand"
             />
@@ -351,22 +344,17 @@ export default function DashboardPage() {
               icon={<Briefcase className="h-5 w-5" />}
               label={ar ? 'صفقاتي' : 'My Deals'}
               value={stats.totalDeals ?? '—'}
+              sub={ar ? 'صفقات نشطة ومنجزة' : 'Active & completed'}
               href={`${base}/supplier/deals`}
               color="green"
             />
             <StatCard
               icon={<Package className="h-5 w-5" />}
-              label={ar ? 'منتجاتي' : 'My Listings'}
+              label={ar ? 'منتجاتي' : 'My Products'}
               value={stats.totalListings ?? '—'}
+              sub={ar ? 'منتجات في الكتالوج' : 'Listed in catalog'}
               href={`${base}/supplier/listings`}
               color="amber"
-            />
-            <StatCard
-              icon={<MessageSquare className="h-5 w-5" />}
-              label={ar ? 'الرسائل' : 'Messages'}
-              value="—"
-              href={`${base}/messages`}
-              color="purple"
             />
           </div>
         )}
@@ -395,8 +383,8 @@ export default function DashboardPage() {
             />
             <StatCard
               icon={<TrendingUp className="h-5 w-5" />}
-              label={ar ? 'إجمالي النشاط' : 'Platform Health'}
-              value="100%"
+              label={ar ? 'طلبات العروض المفتوحة' : 'Open RFQs'}
+              value={stats.openRfqs ?? '—'}
               color="amber"
             />
           </div>
@@ -426,7 +414,7 @@ export default function DashboardPage() {
               {isSupplier && [
                 { href: `${base}/supplier/rfqs`, label: ar ? 'تصفح طلبات العروض' : 'Browse Open RFQs', icon: <FileText className="h-4 w-4" /> },
                 { href: `${base}/supplier/quotes`, label: ar ? 'عروضي المقدمة' : 'My Submitted Quotes', icon: <ScrollText className="h-4 w-4" /> },
-                { href: `${base}/supplier/listings/new`, label: ar ? 'إضافة منتج جديد' : 'Add New Listing', icon: <Package className="h-4 w-4" /> },
+                { href: `${base}/supplier/listings/new`, label: ar ? 'إضافة منتج جديد' : 'Add New Product', icon: <Package className="h-4 w-4" /> },
                 { href: `${base}/supplier/deals`, label: ar ? 'صفقاتي' : 'My Deals', icon: <Briefcase className="h-4 w-4" /> },
               ].map((item) => (
                 <Link key={item.href} href={item.href}

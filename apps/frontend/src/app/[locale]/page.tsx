@@ -32,7 +32,7 @@ import {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Stat { totalRFQs: number; totalVendors: number; totalProducts: number; totalTransactions: number; }
-interface Vendor {
+interface Supplier {
   id: string; nameEn: string; nameAr: string; city: string | null;
   plan: string; slug: string | null; logoUrl: string | null;
   averageRating: number; totalRatings: number;
@@ -46,7 +46,7 @@ interface Product {
   images: Array<{ url: string }>;
   _count: { quotes: number };
 }
-interface Showroom extends Vendor {
+interface Showroom extends Supplier {
   listings: Array<{ id: string; titleEn: string; titleAr: string; images: Array<{ url: string }> }>;
 }
 interface LatestRFQ {
@@ -112,16 +112,16 @@ export default async function HomePage() {
   const locale = await getLocale();
   const ar = locale === 'ar';
 
-  const [stats, vendors, products, showrooms, latestRFQs] = await Promise.all([
+  const [stats, suppliers, products, showrooms, latestRFQs] = await Promise.all([
     fetchJSON<Stat>('/marketplace/stats'),
-    fetchJSON<Vendor[]>('/marketplace/top-vendors?limit=8'),
+    fetchJSON<Supplier[]>('/marketplace/top-vendors?limit=8'),
     fetchJSON<Product[]>('/marketplace/top-products?limit=8'),
     fetchJSON<Showroom[]>('/marketplace/featured-showrooms?limit=6'),
     fetchJSON<LatestRFQ[]>('/marketplace/latest-rfqs?limit=6'),
   ]);
 
   const safeStats: Stat = stats ?? { totalRFQs: 0, totalVendors: 0, totalProducts: 0, totalTransactions: 0 };
-  const safeVendors: Vendor[] = vendors ?? [];
+  const safeSuppliers: Supplier[] = suppliers ?? [];
   const safeProducts: Product[] = products ?? [];
   const safeShowrooms: Showroom[] = showrooms ?? [];
   const safeRFQs: LatestRFQ[] = latestRFQs ?? [];
@@ -167,8 +167,8 @@ export default async function HomePage() {
           {/* Sub-headline */}
           <p className="mx-auto max-w-2xl text-lg sm:text-xl text-white/70 mb-10 leading-relaxed">
             {ar
-              ? 'قارن الموردين، تحقق من مؤشرات الأسعار، واتخذ قرارات شراء أكثر ذكاءً — في منصة واحدة متكاملة.'
-              : 'Compare suppliers, verify price indicators, and make smarter purchasing decisions — all in one intelligent platform.'}
+              ? 'تواصل مع موردين سعوديين موثقين، احصل على عروض أسعار تنافسية في ساعات، واتخذ قرارات شراء مبنية على بيانات السوق الحقيقية.'
+              : 'Discover verified Saudi suppliers, receive competitive quotes in hours, and make sourcing decisions backed by real market data.'}
           </p>
 
           {/* CTAs */}
@@ -184,7 +184,7 @@ export default async function HomePage() {
                   <span className="h-2.5 w-2.5 rounded-full bg-amber-400/60" />
                   <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/60" />
                 </div>
-                <span className="ms-2">{ar ? 'معيار — مقارنة العروض' : 'Mwazn — Quote Comparison'}</span>
+                <span className="ms-2">{ar ? 'موازن — مقارنة العروض' : 'Mwazn — Quote Comparison'}</span>
                 <span className="ms-auto flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   {ar ? 'مباشر' : 'Live'}
@@ -265,7 +265,73 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Why Mwazn / لماذا معيار؟ ────────────────────────────────────────── */}
+      {/* ── How it Works ─────────────────────────────────────────────────────── */}
+      <section className="py-20 bg-white" id="how-it-works">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-14">
+            <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700 mb-3">
+              {ar ? 'كيف يعمل موازن' : 'How it works'}
+            </span>
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3">
+              {ar ? 'من الطلب إلى الصفقة في ثلاث خطوات' : 'From request to deal in three steps'}
+            </h2>
+            <p className="text-slate-500 max-w-xl mx-auto">
+              {ar
+                ? 'موازن يبسّط المشتريات بين الشركات — من نشر الطلب إلى إغلاق الصفقة.'
+                : 'Mwazn simplifies B2B procurement — from posting a request to closing the deal.'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-10 max-w-4xl mx-auto">
+            {[
+              {
+                step: '01',
+                color: 'bg-brand-700',
+                titleEn: 'Post an RFQ',
+                titleAr: 'انشر طلب عرض سعر',
+                descEn: 'Describe what you need — quantity, specs, and deadline. Attach drawings or BOQs for precise offers.',
+                descAr: 'اصف ما تحتاجه — الكمية والمواصفات والموعد. أرفق مخططات أو جداول كميات للحصول على عروض دقيقة.',
+              },
+              {
+                step: '02',
+                color: 'bg-emerald-600',
+                titleEn: 'Receive Verified Offers',
+                titleAr: 'استقبل عروضاً من موردين موثقين',
+                descEn: 'CR-verified Saudi suppliers respond with competitive prices, delivery timelines, and certifications — fast.',
+                descAr: 'موردون سعوديون موثقون بالسجل التجاري يردون بأسعار تنافسية ومواعيد تسليم وشهادات — بسرعة.',
+              },
+              {
+                step: '03',
+                color: 'bg-amber-500',
+                titleEn: 'Compare & Award',
+                titleAr: 'قارن وارسِ',
+                descEn: 'Side-by-side comparison with market price signals. Award the best offer in one click.',
+                descAr: 'مقارنة جنباً إلى جنب مع مؤشرات أسعار السوق. أرسِ أفضل عرض بنقرة واحدة.',
+              },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center text-center">
+                <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${item.color} text-white text-lg font-bold mb-5 shadow-md`}>
+                  {item.step}
+                </div>
+                <h3 className="text-base font-bold text-slate-800 mb-2">{ar ? item.titleAr : item.titleEn}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">{ar ? item.descAr : item.descEn}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <Link
+              href={`/${locale}/auth/register?type=BUYER`}
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 transition-all"
+            >
+              {ar ? 'انشر أول طلب مجاناً' : 'Post your first RFQ — Free'}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Why Mwazn / لماذا موازن؟ ────────────────────────────────────────── */}
       <section className="py-20 bg-surface" id="why">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-14">
@@ -273,14 +339,14 @@ export default async function HomePage() {
               className="inline-block rounded-full px-3 py-1 text-xs font-semibold mb-3"
               style={{ background: 'rgba(201,163,73,0.12)', color: '#8B6420' }}
             >
-              {ar ? 'لماذا معيار؟' : 'Why Mwazn?'}
+              {ar ? 'لماذا موازن؟' : 'Why Mwazn?'}
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-3">
               {ar ? 'ليست مجرد سوق — بل طبقة قرار' : 'Not Just a Marketplace — A Decision Layer'}
             </h2>
             <p className="text-slate-500 max-w-xl mx-auto text-base">
               {ar
-                ? 'معيار يمنحك أدوات الذكاء التي تحتاجها لاتخاذ قرارات شراء مبنية على البيانات.'
+                ? 'موازن يمنحك أدوات الذكاء التي تحتاجها لاتخاذ قرارات شراء مبنية على البيانات.'
                 : 'Mwazn gives you the intelligence tools you need to make data-driven purchasing decisions.'}
             </p>
           </div>
@@ -364,7 +430,7 @@ export default async function HomePage() {
             </h2>
             <p className="text-slate-500 max-w-xl mx-auto">
               {ar
-                ? 'معيار يوضح لك على الفور إذا كان العرض أقل أو أعلى من متوسط السوق — لا حدس، بل بيانات.'
+                ? 'موازن يوضح لك على الفور إذا كان العرض أقل أو أعلى من متوسط السوق — لا حدس، بل بيانات.'
                 : 'Mwazn instantly shows you if a quote is below or above market average — no guessing, just data.'}
             </p>
           </div>
@@ -511,14 +577,14 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Top Rated Vendors ────────────────────────────────────────────────── */}
-      {safeVendors.length > 0 && (
+      {/* ── Top Rated Suppliers ──────────────────────────────────────────────── */}
+      {safeSuppliers.length > 0 && (
         <section className="py-20 bg-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="mb-2 inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
-                  {ar ? 'أعلى الموردين تقييماً' : 'Top Rated Vendors'}
+                  {ar ? 'أعلى الموردين تقييماً' : 'Top Rated Suppliers'}
                 </span>
                 <h2 className="text-2xl sm:text-3xl font-bold text-slate-800">
                   {ar ? 'موردون موثقون وذوو سمعة عالية' : 'Verified & Highly-Rated Suppliers'}
@@ -534,15 +600,15 @@ export default async function HomePage() {
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {safeVendors.map((vendor) => (
+              {safeSuppliers.map((supplier) => (
                 <Link
-                  key={vendor.id}
-                  href={`/${locale}/suppliers/${vendor.slug ?? vendor.id}`}
+                  key={supplier.id}
+                  href={`/${locale}/suppliers/${supplier.slug ?? supplier.id}`}
                   className="card card-hover group flex flex-col overflow-hidden p-0"
                 >
                   {/* Banner */}
                   <div className="relative h-16 flex-shrink-0 bg-gradient-to-br from-brand-900 to-brand-700">
-                    {vendor.plan === 'PRO' && (
+                    {supplier.plan === 'PRO' && (
                       <span
                         className="absolute end-2 top-2 rounded-full px-2 py-0.5 text-xs font-semibold text-white"
                         style={{ background: 'rgba(201,163,73,0.85)' }}
@@ -554,11 +620,11 @@ export default async function HomePage() {
                   {/* Logo + verified badge */}
                   <div className="-mt-6 mb-3 flex items-end justify-between px-4">
                     <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-xl border-2 border-white bg-white text-lg font-bold text-brand-700 shadow-card">
-                      {vendor.logoUrl ? (
+                      {supplier.logoUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={vendor.logoUrl} alt="" className="h-14 w-14 object-cover" />
+                        <img src={supplier.logoUrl} alt="" className="h-14 w-14 object-cover" />
                       ) : (
-                        (ar ? vendor.nameAr : vendor.nameEn).charAt(0)
+                        (ar ? supplier.nameAr : supplier.nameEn).charAt(0)
                       )}
                     </div>
                     <span className="mb-1 flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
@@ -569,23 +635,23 @@ export default async function HomePage() {
                   {/* Info */}
                   <div className="flex flex-1 flex-col px-4 pb-4">
                     <h3 className="mb-0.5 line-clamp-2 text-sm font-semibold text-slate-800 transition-colors group-hover:text-brand-700">
-                      {ar ? vendor.nameAr : vendor.nameEn}
+                      {ar ? supplier.nameAr : supplier.nameEn}
                     </h3>
-                    <p className="mb-3 text-xs text-slate-400">{vendor.city}</p>
+                    <p className="mb-3 text-xs text-slate-400">{supplier.city}</p>
                     <div className="mt-auto flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
-                        <StarRating score={vendor.averageRating} />
+                        <StarRating score={supplier.averageRating} />
                         <span className="text-xs font-semibold text-slate-700">
-                          {vendor.averageRating.toFixed(1)}
+                          {supplier.averageRating.toFixed(1)}
                         </span>
                       </div>
                       <span className="text-xs text-slate-400">
-                        {vendor._count.listings} {ar ? 'منتج' : 'products'}
+                        {supplier._count.listings} {ar ? 'منتج' : 'products'}
                       </span>
                     </div>
-                    {vendor.totalRatings > 0 && (
+                    {supplier.totalRatings > 0 && (
                       <p className="mt-1 text-xs text-slate-400">
-                        {vendor.totalRatings} {ar ? 'تقييم' : 'reviews'}
+                        {supplier.totalRatings} {ar ? 'تقييم' : 'reviews'}
                       </p>
                     )}
                   </div>
@@ -799,7 +865,7 @@ export default async function HomePage() {
           </h2>
           <p className="mx-auto mb-10 max-w-xl text-lg text-white/70">
             {ar
-              ? 'انضم إلى مئات الشركات السعودية التي تتخذ قرارات شرائها بذكاء على منصة معيار.'
+              ? 'انضم إلى مئات الشركات السعودية التي تتخذ قرارات شرائها بذكاء على منصة موازن.'
               : 'Join hundreds of Saudi companies making smarter purchasing decisions on Mwazn.'}
           </p>
           <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -844,7 +910,7 @@ export default async function HomePage() {
                 <li><Link href={`/${locale}/suppliers`} className="hover:text-white transition-colors">{ar ? 'الموردون' : 'Suppliers'}</Link></li>
                 <li><Link href={`/${locale}/auth/register?type=BUYER`} className="hover:text-white transition-colors">{ar ? 'أنشر طلب عرض' : 'Post RFQ'}</Link></li>
                 <li><Link href={`/${locale}/auth/register?type=SUPPLIER`} className="hover:text-white transition-colors">{ar ? 'انضم كمورّد' : 'Join as Supplier'}</Link></li>
-                <li><Link href={`/${locale}#why`} className="hover:text-white transition-colors">{ar ? 'لماذا معيار' : 'Why Mwazn'}</Link></li>
+                <li><Link href={`/${locale}#why`} className="hover:text-white transition-colors">{ar ? 'لماذا موازن' : 'Why Mwazn'}</Link></li>
               </ul>
             </div>
             <div>

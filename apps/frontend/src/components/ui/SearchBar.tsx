@@ -155,7 +155,7 @@ export function SearchBar({ className, size = 'md', placeholder }: SearchBarProp
           {results!.companies.length > 0 && (
             <div className="border-t border-slate-50">
               <p className="px-4 pt-3 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                {locale === 'ar' ? 'الموردون' : 'Vendors'}
+                {locale === 'ar' ? 'الموردون' : 'Suppliers'}
               </p>
               {results!.companies.map((co) => (
                 <button

@@ -166,7 +166,11 @@ export default function NewRFQPage() {
         await api.post(`/rfqs/${rfqId}/images`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
       }
       previewUrls.forEach((u) => { if (u) URL.revokeObjectURL(u); });
-      router.push(`/${locale}/dashboard/buyer/rfqs`);
+      if (rfqId) {
+        router.push(`/${locale}/dashboard/buyer/rfqs/${rfqId}?posted=1`);
+      } else {
+        router.push(`/${locale}/dashboard/buyer/rfqs`);
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       setError(Array.isArray(msg) ? msg[0] : msg || (ar ? 'حدث خطأ. حاول مجدداً.' : 'Failed to create RFQ. Please try again.'));

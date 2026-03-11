@@ -51,8 +51,22 @@ export default function SubscriptionPage() {
     : ['10 quotes per month', 'Unlimited product listings', 'Buyer messaging', 'Basic dashboard'];
 
   const proFeatures = ar
-    ? ['عروض أسعار غير محدودة', 'أولوية في نتائج البحث', 'شارة PRO المميزة', 'تحليلات متقدمة', 'دعم مخصص', 'كل مميزات الخطة المجانية']
-    : ['Unlimited quotes', 'Priority in search results', 'PRO badge on profile', 'Advanced analytics', 'Dedicated support', 'All Free features'];
+    ? [
+        'عروض أسعار غير محدودة — لا قيود شهرية',
+        'أولوية في نتائج البحث — ظهور أعلى من المنافسين',
+        'شارة PRO الموثوقة — زيادة ثقة المشترين',
+        'تحليلات متقدمة — فهم أداء منتجاتك وعروضك',
+        'دعم مخصص وأولوي من الفريق',
+        'كل مميزات الخطة المجانية',
+      ]
+    : [
+        'Unlimited quotes — no monthly cap',
+        'Priority in search results — appear above competitors',
+        'PRO trust badge — boost buyer confidence',
+        'Advanced analytics — track product & quote performance',
+        'Dedicated priority support',
+        'All Free plan features included',
+      ];
 
   return (
     <DashboardLayout>
@@ -149,11 +163,11 @@ export default function SubscriptionPage() {
               <Star className="h-4 w-4 text-gold-500 fill-gold-500" />
             </div>
             <p className="text-3xl font-bold text-brand-700 mb-1">
-              {ar ? 'تواصل معنا' : 'Contact Us'}
-              <span className="text-sm font-normal text-slate-400 ms-1">/ {ar ? 'للتسعير' : 'pricing'}</span>
+              {ar ? '299 ر.س' : '299 SAR'}
+              <span className="text-sm font-normal text-slate-400 ms-1">/ {ar ? 'شهرياً' : 'month'}</span>
             </p>
             <p className="text-sm text-slate-500 mb-6">
-              {ar ? 'للموردين النشطين الذين يريدون نمواً أسرع' : 'For active suppliers who want faster growth'}
+              {ar ? 'للموردين النشطين الذين يريدون نمواً أسرع وظهوراً أقوى' : 'For active suppliers ready to win more deals and grow faster'}
             </p>
             <ul className="space-y-3 mb-6">
               {proFeatures.map((f) => (

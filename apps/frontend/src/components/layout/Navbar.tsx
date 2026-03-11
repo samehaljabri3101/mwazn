@@ -69,7 +69,7 @@ export function Navbar({ transparent = false }: NavbarProps) {
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
             <Link href={`/${locale}/suppliers`} className="btn-ghost text-sm">
-              {locale === 'ar' ? 'الموردون' : 'Vendors'}
+              {locale === 'ar' ? 'الموردون' : 'Suppliers'}
             </Link>
             <Link href={`/${locale}/products`} className="btn-ghost text-sm">
               {locale === 'ar' ? 'المنتجات' : 'Products'}

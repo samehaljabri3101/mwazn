@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import api from '@/lib/api';
 import type { Listing, Category, PaginatedResponse } from '@/types';
-import { Package, Search, SlidersHorizontal, Star, Clock, ChevronDown } from 'lucide-react';
+import { Package, Search, SlidersHorizontal, Star, Clock, ChevronDown, MapPin, ShieldCheck } from 'lucide-react';
 
 const SORT_OPTIONS = [
   { value: '', label: { en: 'Latest', ar: 'الأحدث' } },
@@ -179,10 +179,10 @@ export default function ProductsPage() {
 
         {/* Products grid */}
         {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
             {[...Array(12)].map((_, i) => (
               <div key={i} className="rounded-2xl bg-white animate-pulse">
-                <div className="aspect-square rounded-t-2xl bg-slate-100" />
+                <div className="aspect-[4/3] rounded-t-2xl bg-slate-100" />
                 <div className="p-3 space-y-2">
                   <div className="h-3 bg-slate-100 rounded w-3/4" />
                   <div className="h-3 bg-slate-100 rounded w-1/2" />
@@ -204,7 +204,7 @@ export default function ProductsPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
             {listings.map((listing) => {
               const title = ar ? listing.titleAr : listing.titleEn;
               const href = `/${locale}/products/${listing.slug || listing.id}`;
@@ -212,7 +212,7 @@ export default function ProductsPage() {
               return (
                 <Link key={listing.id} href={href} className="group rounded-2xl bg-white border border-slate-100 hover:shadow-card hover:border-brand-100 transition-all overflow-hidden flex flex-col">
                   {/* Image */}
-                  <div className="aspect-square bg-slate-50 overflow-hidden">
+                  <div className="aspect-[4/3] bg-slate-50 overflow-hidden relative">
                     {img ? (
                       <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     ) : (
@@ -220,44 +220,61 @@ export default function ProductsPage() {
                         <Package className="h-8 w-8 text-slate-300" />
                       </div>
                     )}
+                    {(listing.supplier as any)?.verificationStatus === 'VERIFIED' && (
+                      <span className="absolute top-2 start-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+                        <ShieldCheck className="h-2 w-2" />
+                        CR
+                      </span>
+                    )}
                   </div>
 
                   {/* Info */}
-                  <div className="flex-1 p-3 flex flex-col gap-1">
-                    <p className="text-xs font-medium text-slate-800 line-clamp-2 leading-snug">{title}</p>
-
-                    {listing.supplier && (
-                      <p className="text-[10px] text-slate-400 truncate">
-                        {ar ? listing.supplier.nameAr : listing.supplier.nameEn}
+                  <div className="flex-1 p-3 flex flex-col gap-1.5">
+                    {/* Category */}
+                    {(listing as any).category && (
+                      <p className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                        {ar ? (listing as any).category.nameAr : (listing as any).category.nameEn}
                       </p>
                     )}
 
-                    {/* Price */}
-                    <div className="mt-auto pt-1">
-                      {listing.price ? (
-                        <p className="text-xs font-bold text-brand-700">
-                          {listing.price.toLocaleString()}
-                          {listing.priceTo && `–${(listing.priceTo as number).toLocaleString()}`} {listing.currency}
-                          {listing.unit && <span className="text-[10px] font-normal text-slate-400">/{listing.unit}</span>}
-                        </p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400">{ar ? 'عند الطلب' : 'On request'}</p>
-                      )}
-                    </div>
+                    <p className="text-xs font-semibold text-slate-800 line-clamp-2 leading-snug group-hover:text-brand-700 transition-colors">{title}</p>
 
-                    {/* Lead time + certifications */}
-                    <div className="flex items-center gap-2">
-                      {listing.leadTimeDays && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
-                          <Clock className="h-2.5 w-2.5" />
-                          {listing.leadTimeDays}d
-                        </span>
-                      )}
-                      {listing.certifications && listing.certifications.length > 0 && (
-                        <span className="rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] text-green-600">
-                          {listing.certifications[0]}
-                        </span>
-                      )}
+                    {/* Supplier + city */}
+                    {listing.supplier && (
+                      <div className="flex items-center gap-1">
+                        <p className="text-[10px] text-slate-400 truncate flex-1">
+                          {ar ? listing.supplier.nameAr : listing.supplier.nameEn}
+                        </p>
+                        {(listing.supplier as any)?.city && (
+                          <span className="text-[9px] text-slate-300 flex items-center gap-0.5 shrink-0">
+                            <MapPin className="h-2 w-2" />
+                            {(listing.supplier as any).city}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Price */}
+                    <div className="mt-auto pt-1 border-t border-slate-50 flex items-center justify-between">
+                      <div>
+                        {listing.price ? (
+                          <p className="text-xs font-bold text-brand-700">
+                            {listing.price.toLocaleString()}
+                            {listing.priceTo && `–${(listing.priceTo as number).toLocaleString()}`} <span className="text-[10px] font-normal text-slate-400">{listing.currency}{listing.unit && `/${listing.unit}`}</span>
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-slate-400">{ar ? 'عند الطلب' : 'On request'}</p>
+                        )}
+                        {listing.leadTimeDays && (
+                          <span className="flex items-center gap-0.5 text-[9px] text-slate-400 mt-0.5">
+                            <Clock className="h-2 w-2" />
+                            {listing.leadTimeDays}{ar ? ' يوم' : 'd lead'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-semibold text-brand-700 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        {ar ? 'اطلب عرض ←' : 'Get Quote →'}
+                      </span>
                     </div>
                   </div>
                 </Link>

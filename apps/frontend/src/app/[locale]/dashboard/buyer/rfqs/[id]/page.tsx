@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useLocale } from 'next-intl';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { ImageUploader } from '@/components/ui/ImageUploader';
@@ -43,6 +43,8 @@ export default function RFQDetailPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [dealByQuoteId, setDealByQuoteId] = useState<Record<string, string>>({});
   const [expandedBoq, setExpandedBoq] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const justPosted = searchParams?.get('posted') === '1';
 
   const fetchData = async () => {
     try {
@@ -189,6 +191,23 @@ export default function RFQDetailPage() {
             </div>
           )}
         </div>
+
+        {/* Success banner — shown after posting */}
+        {justPosted && (
+          <div className="rounded-2xl bg-emerald-50 border border-emerald-200 px-5 py-4 flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-emerald-800 text-sm">
+                {ar ? 'تم نشر طلبك بنجاح!' : 'Your RFQ has been posted!'}
+              </p>
+              <p className="text-xs text-emerald-600 mt-0.5">
+                {ar
+                  ? 'سيتلقى الموردون الموثقون إشعاراً بطلبك وسيبدأون في تقديم عروضهم.'
+                  : 'Verified suppliers have been notified and will start submitting their offers shortly.'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Cancel confirmation */}
         {confirmCancel && (

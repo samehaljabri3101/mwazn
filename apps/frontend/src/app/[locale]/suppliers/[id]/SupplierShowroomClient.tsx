@@ -191,7 +191,7 @@ export function SupplierShowroomClient() {
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-white/60 justify-center sm:justify-start">
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/60 justify-center sm:justify-start">
               {company.city && (
                 <span className="flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
@@ -201,15 +201,20 @@ export function SupplierShowroomClient() {
               {totalRatings > 0 && (
                 <span className="flex items-center gap-1">
                   <Star className="h-3.5 w-3.5 text-amber-400 fill-amber-400" />
-                  {averageRating.toFixed(1)} ({ar ? `${totalRatings} تقييم` : `${totalRatings} ratings`})
+                  {averageRating.toFixed(1)}
+                  <span className="text-white/40">({totalRatings})</span>
                 </span>
               )}
               <span className="flex items-center gap-1">
                 <Package className="h-3.5 w-3.5" />
                 {ar ? `${listings.length} منتج` : `${listings.length} products`}
               </span>
-              <span>CR: {company.crNumber}</span>
-              <span>{ar ? `عضو منذ ${memberSince}` : `Member since ${memberSince}`}</span>
+              <span className="flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-xs">
+                {ar ? `س.ت: ${company.crNumber}` : `CR: ${company.crNumber}`}
+              </span>
+              <span className="text-white/40 text-xs">
+                {ar ? `عضو منذ ${memberSince}` : `Since ${memberSince}`}
+              </span>
             </div>
           </div>
 
@@ -221,7 +226,7 @@ export function SupplierShowroomClient() {
               className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-brand-700 hover:bg-brand-50 transition-all shadow-md disabled:opacity-60"
             >
               <MessageSquare className="h-4 w-4" />
-              {contacting ? (ar ? 'جاري...' : 'Opening...') : (ar ? 'تواصل معنا' : 'Contact Us')}
+              {contacting ? (ar ? 'جاري...' : 'Opening...') : (ar ? 'راسل المورد' : 'Message Supplier')}
             </button>
             <div className="flex gap-2">
               <button
@@ -261,6 +266,24 @@ export function SupplierShowroomClient() {
 
           {/* Sidebar */}
           <div className="space-y-4">
+            {/* Post RFQ CTA */}
+            <div className="rounded-2xl border border-brand-100 bg-brand-50 p-4">
+              <h3 className="font-semibold text-brand-800 text-sm mb-1">
+                {ar ? 'هل تريد الشراء من هذا المورد؟' : 'Want to source from this supplier?'}
+              </h3>
+              <p className="text-xs text-brand-600 mb-3 leading-relaxed">
+                {ar
+                  ? 'أنشر طلب عرض سعر وسيرد عليك المورد بعرض مخصص.'
+                  : 'Post an RFQ and get a tailored quote directly from them.'}
+              </p>
+              <Link
+                href={user ? `/${locale}/dashboard/buyer/rfqs/new` : `/${locale}/auth/login?redirect=rfq`}
+                className="block w-full rounded-xl bg-brand-700 px-4 py-2 text-center text-sm font-semibold text-white hover:bg-brand-800 transition-colors"
+              >
+                {ar ? 'انشر طلب عرض' : 'Post an RFQ'}
+              </Link>
+            </div>
+
             {/* About */}
             {description && (
               <div className="card">
@@ -279,6 +302,23 @@ export function SupplierShowroomClient() {
                   ))}
                 </div>
                 <p className="text-xs text-slate-500">{ar ? `${totalRatings} تقييم` : `${totalRatings} ratings`}</p>
+              </div>
+            )}
+
+            {/* Specializations */}
+            {categories.length > 0 && (
+              <div className="card">
+                <h3 className="font-semibold text-slate-800 mb-3 text-sm">{ar ? 'التخصصات' : 'Specializations'}</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {categories.map((cat) => (
+                    <span
+                      key={cat.id}
+                      className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600"
+                    >
+                      {ar ? cat.nameAr : cat.nameEn}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
@@ -337,9 +377,16 @@ export function SupplierShowroomClient() {
             {filtered.length === 0 ? (
               <div className="card text-center py-12">
                 <Package className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500 text-sm">
-                  {search ? (ar ? 'لا توجد نتائج' : 'No results found') : (ar ? 'لا توجد منتجات بعد' : 'No products listed yet')}
+                <p className="text-slate-500 text-sm font-medium">
+                  {search ? (ar ? 'لا توجد نتائج مطابقة' : 'No matching products found') : (ar ? 'لا توجد منتجات مدرجة بعد' : 'No products listed yet')}
                 </p>
+                {!search && (
+                  <p className="text-xs text-slate-400 mt-1.5 max-w-xs mx-auto">
+                    {ar
+                      ? 'يمكنك التواصل مع المورد مباشرة أو نشر طلب عرض سعر.'
+                      : 'You can message the supplier directly or post an RFQ to get a quote.'}
+                  </p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
