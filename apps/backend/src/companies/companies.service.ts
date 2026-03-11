@@ -13,23 +13,38 @@ import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 export class CompaniesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(query: PaginationDto & { type?: CompanyType; status?: VerificationStatus }) {
+  async findAll(query: PaginationDto & { type?: CompanyType; status?: VerificationStatus; search?: string }) {
+    // Coerce to numbers — intersection types bypass class-transformer
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(Math.max(1, Number(query.limit) || 20), 200);
+    const skip = (page - 1) * limit;
+
     const where: any = {};
     if (query.type) where.type = query.type;
     if (query.status) where.verificationStatus = query.status;
+    if (query.search) {
+      where.OR = [
+        { nameEn: { contains: query.search, mode: 'insensitive' } },
+        { nameAr: { contains: query.search } },
+        { crNumber: { contains: query.search } },
+      ];
+    }
 
     const [items, total] = await Promise.all([
       this.prisma.company.findMany({
         where,
-        skip: query.skip,
-        take: query.limit,
+        skip,
+        take: limit,
         orderBy: { createdAt: 'desc' },
-        include: { _count: { select: { users: true, listings: true, rfqs: true } } },
+        include: {
+          _count: { select: { users: true, listings: true, rfqs: true } },
+          verificationDocs: { orderBy: { uploadedAt: 'desc' }, take: 10 },
+        },
       }),
       this.prisma.company.count({ where }),
     ]);
 
-    return paginate(items, total, query.page ?? 1, query.limit ?? 20);
+    return paginate(items, total, page, limit);
   }
 
   async findOne(id: string) {

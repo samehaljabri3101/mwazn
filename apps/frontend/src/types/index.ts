@@ -59,6 +59,9 @@ export interface Company {
   taxCertUrl?: string;
   // Admin
   adminNotes?: string;
+  verifiedAt?: string;
+  verificationNotes?: string;
+  slug?: string;
   createdAt: string;
 }
 

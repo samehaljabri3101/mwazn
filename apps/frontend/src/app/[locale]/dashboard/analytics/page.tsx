@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   TrendingUp, Package, Star, DollarSign, FileText, CheckCircle2,
-  XCircle, Trophy, BarChart2, Eye, Zap, Download,
+  XCircle, Trophy, BarChart2, Eye, Zap, Download, ShieldCheck,
 } from 'lucide-react';
 
 // Simple bar chart using Tailwind CSS — no external libs
@@ -65,6 +65,7 @@ export default function AnalyticsPage() {
   const locale = useLocale();
   const { user, company } = useAuth();
   const ar = locale === 'ar';
+  const isAdmin = user?.role === 'PLATFORM_ADMIN';
   const isSupplier = user?.role === 'SUPPLIER_ADMIN';
   const isBuyer = user?.role === 'BUYER_ADMIN';
   const isPro = company?.plan === 'PRO';
@@ -74,11 +75,12 @@ export default function AnalyticsPage() {
   const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
+    if (isAdmin) { setLoading(false); return; }
     const endpoint = isSupplier ? '/analytics/supplier' : '/analytics/buyer';
     api.get(endpoint).then((res) => {
       setData(res.data.data);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [isSupplier]);
+  }, [isSupplier, isAdmin]);
 
   const handleExport = async () => {
     if (!isPro) return;
@@ -133,7 +135,25 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        {loading ? (
+        {isAdmin ? (
+          <div className="card text-center py-16">
+            <ShieldCheck className="h-12 w-12 text-brand-400 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold text-slate-800 mb-2">
+              {ar ? 'لوحة الإدارة' : 'Admin Dashboard'}
+            </h2>
+            <p className="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
+              {ar
+                ? 'بوصفك مدير المنصة، تجد إحصائيات النظام الكاملة في لوحة الإدارة.'
+                : 'As platform admin, full system analytics are available on the Admin Dashboard.'}
+            </p>
+            <Link
+              href={`/${locale}/dashboard/admin`}
+              className="btn-primary inline-flex items-center gap-2 text-sm"
+            >
+              {ar ? 'اذهب إلى لوحة الإدارة' : 'Go to Admin Dashboard'}
+            </Link>
+          </div>
+        ) : loading ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28" />)}
