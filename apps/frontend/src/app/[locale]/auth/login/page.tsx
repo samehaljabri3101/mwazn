@@ -169,6 +169,8 @@ export default function LoginPage() {
                 { role: ar ? 'مشترٍ' : 'Buyer', email: 'admin@buyer1.sa', password: 'Buyer@1234' },
                 { role: ar ? 'مورّد' : 'Supplier', email: 'admin@supplier1.sa', password: 'Supplier@1234' },
                 { role: ar ? 'إداري' : 'Admin', email: 'admin@mwazn.sa', password: 'Admin@1234' },
+                { role: ar ? 'بائع مستقل' : 'Freelancer', email: 'freelancer@demo.sa', password: 'Freelancer@1234' },
+                { role: ar ? 'مستخدم' : 'Customer', email: 'customer@demo.sa', password: 'Customer@1234' },
               ].map((cred) => (
                 <button
                   key={cred.email}
