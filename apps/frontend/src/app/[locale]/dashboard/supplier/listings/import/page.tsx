@@ -29,7 +29,7 @@ interface ImportResult {
 export default function BulkImportPage() {
   const locale = useLocale();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, accessToken } = useAuth();
   const ar = locale === 'ar';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -48,9 +48,8 @@ export default function BulkImportPage() {
   const handleDownloadTemplate = async () => {
     setDownloading(true);
     try {
-      const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/listings/bulk-import/template`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
       if (!res.ok) throw new Error('Failed to download template');
       const blob = await res.blob();
