@@ -182,9 +182,13 @@ export const REQUIRED_DOCS_CHECKLIST = [
 ] as const;
 
 export const DOC_TYPE_LABELS: Record<string, { en: string; ar: string }> = {
-  CR:      { en: 'Commercial Registration',   ar: 'السجل التجاري'                 },
-  VAT:     { en: 'VAT Certificate',            ar: 'شهادة ضريبة القيمة المضافة'   },
-  LICENSE: { en: 'Business License',           ar: 'الرخصة التجارية'              },
-  ISO:     { en: 'ISO / Quality Certificate',  ar: 'شهادة الجودة / ISO'           },
-  OTHER:   { en: 'Other Document',             ar: 'وثيقة أخرى'                   },
+  CR:               { en: 'Commercial Registration',   ar: 'السجل التجاري'                       },
+  VAT:              { en: 'VAT Certificate',            ar: 'شهادة ضريبة القيمة المضافة'         },
+  LICENSE:          { en: 'Business License',           ar: 'الرخصة التجارية'                    },
+  ISO:              { en: 'ISO / Quality Certificate',  ar: 'شهادة الجودة / ISO'                 },
+  OTHER:            { en: 'Other Document',             ar: 'وثيقة أخرى'                         },
+  NATIONAL_ID:      { en: 'National ID / Iqama',        ar: 'الهوية الوطنية / الإقامة'           },
+  IQAMA:            { en: 'Iqama (Residency)',          ar: 'الإقامة'                             },
+  BUSINESS_PLATFORM:{ en: 'Business Platform Proof',   ar: 'إثبات منصة الأعمال'                 },
+  MAROOF:           { en: 'Maroof Certificate',        ar: 'شهادة معروف'                         },
 };

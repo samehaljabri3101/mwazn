@@ -46,4 +46,20 @@ export class RegisterFreelancerDto {
   @IsOptional()
   @IsString()
   bio?: string;
+
+  @ApiPropertyOptional({
+    example: 'SA12-345678',
+    description: 'Saudi Business Platform verification number (منصة الأعمال السعودية)',
+  })
+  @IsOptional()
+  @IsString()
+  businessPlatformNumber?: string;
+
+  @ApiPropertyOptional({
+    example: 'MR-12345',
+    description: 'Maroof platform registration number (optional fallback)',
+  })
+  @IsOptional()
+  @IsString()
+  maroofNumber?: string;
 }

@@ -10,10 +10,10 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import {
   Building2, User, CheckCircle2, ChevronRight, ChevronLeft,
-  Briefcase, ShoppingCart, UserCircle,
+  Briefcase, UserCircle,
 } from 'lucide-react';
 
-type RegistrationType = 'BUSINESS_BUYER' | 'BUSINESS_SUPPLIER' | 'FREELANCER' | 'CUSTOMER';
+type RegistrationType = 'BUSINESS' | 'FREELANCER' | 'CUSTOMER';
 
 const LEGAL_FORMS = [
   { value: 'LLC', ar: 'شركة ذات مسؤولية محدودة', en: 'LLC' },
@@ -42,6 +42,7 @@ interface BusinessForm {
 interface IndividualForm {
   fullName: string; email: string; password: string; confirmPassword: string;
   city: string; phone: string; bio: string; nationalId: string;
+  businessPlatformNumber: string;
 }
 
 export default function RegisterPage() {
@@ -71,7 +72,7 @@ export default function RegisterPage() {
 
   const [ind, setInd] = useState<IndividualForm>({
     fullName: '', email: '', password: '', confirmPassword: '',
-    city: '', phone: '', bio: '', nationalId: '',
+    city: '', phone: '', bio: '', nationalId: '', businessPlatformNumber: '',
   });
 
   const setBizField = (key: keyof BusinessForm, value: string) =>
@@ -84,7 +85,7 @@ export default function RegisterPage() {
       sectors: p.sectors.includes(val) ? p.sectors.filter((s) => s !== val) : [...p.sectors, val],
     }));
 
-  const isBusiness = regType === 'BUSINESS_BUYER' || regType === 'BUSINESS_SUPPLIER';
+  const isBusiness = regType === 'BUSINESS';
   const isFreelancer = regType === 'FREELANCER';
   const isCustomer = regType === 'CUSTOMER';
 
@@ -102,7 +103,7 @@ export default function RegisterPage() {
   const handleBusinessSubmit = async () => {
     setError(''); setLoading(true);
     try {
-      const endpoint = regType === 'BUSINESS_BUYER' ? '/auth/register/buyer' : '/auth/register/supplier';
+      const endpoint = '/auth/register/supplier';
       await api.post(endpoint, {
         companyNameAr: biz.nameAr, companyNameEn: biz.nameEn,
         crNumber: biz.crNumber,
@@ -136,6 +137,7 @@ export default function RegisterPage() {
       if (isFreelancer) {
         if (ind.nationalId) payload.nationalId = ind.nationalId;
         if (ind.bio) payload.bio = ind.bio;
+        if (ind.businessPlatformNumber) payload.businessPlatformNumber = ind.businessPlatformNumber;
       }
       await api.post(endpoint, payload);
       await login(ind.email, ind.password);
@@ -149,34 +151,28 @@ export default function RegisterPage() {
   // ── Type cards ───────────────────────────────────────────────────────────
   const typeOptions: Array<{ type: RegistrationType; icon: React.ReactNode; titleEn: string; titleAr: string; descEn: string; descAr: string; badge?: string }> = [
     {
-      type: 'BUSINESS_BUYER',
-      icon: <ShoppingCart className="h-5 w-5" />,
-      titleEn: 'Business Buyer', titleAr: 'مشترٍ تجاري',
-      descEn: 'Company buyer with CR — post RFQs, compare quotes, manage deals',
-      descAr: 'مشترٍ بسجل تجاري — أنشر طلبات، قارن عروضاً، أدر الصفقات',
-    },
-    {
-      type: 'BUSINESS_SUPPLIER',
+      type: 'BUSINESS',
       icon: <Building2 className="h-5 w-5" />,
-      titleEn: 'Business Supplier', titleAr: 'مورّد تجاري',
-      descEn: 'Company seller with CR — list products, respond to RFQs',
-      descAr: 'مورّد بسجل تجاري — أضف منتجات، قدّم عروض أسعار',
+      titleEn: 'Business', titleAr: 'شركة / مؤسسة',
+      descEn: 'Company account with CR — buy, sell, list products, manage deals',
+      descAr: 'حساب شركة بسجل تجاري — اشترِ، بِع، أضف منتجات، وأدر الصفقات',
+      badge: 'CR Required',
     },
     {
       type: 'FREELANCER',
       icon: <Briefcase className="h-5 w-5" />,
       titleEn: 'Freelancer', titleAr: 'بائع مستقل',
-      descEn: 'Individual seller, no CR required — auto-verified, can sell and buy',
-      descAr: 'بائع فردي بدون سجل تجاري — موثّق فوراً، يمكنه البيع والشراء',
-      badge: 'Auto-verified',
+      descEn: 'Individual seller — list products/services and respond to RFQs without a CR',
+      descAr: 'بائع فردي — أضف منتجات وخدمات وقدّم عروضاً بدون سجل تجاري',
+      badge: 'No CR required',
     },
     {
       type: 'CUSTOMER',
       icon: <UserCircle className="h-5 w-5" />,
       titleEn: 'Customer', titleAr: 'مستهلك',
-      descEn: 'Individual buyer, no CR required — browse and post RFQs immediately',
-      descAr: 'مشترٍ فردي بدون سجل تجاري — تصفح وأنشر طلبات فوراً',
-      badge: 'Instant access',
+      descEn: 'Individual buyer — browse, compare suppliers, and post buying requests',
+      descAr: 'مشترٍ فردي — تصفح الموردين وقارن وأنشر طلبات الشراء',
+      badge: 'Personal Buyer',
     },
   ];
 
@@ -267,7 +263,7 @@ export default function RegisterPage() {
                 </button>
                 <span className="text-slate-300">·</span>
                 <span className="text-xs font-medium text-brand-700">
-                  {regType === 'BUSINESS_BUYER' ? (ar ? 'مشترٍ تجاري' : 'Business Buyer') : (ar ? 'مورّد تجاري' : 'Business Supplier')}
+                  {ar ? 'شركة / مؤسسة' : 'Business'}
                 </span>
               </div>
               <h2 className="text-xl font-bold text-slate-800 mb-1">
@@ -412,16 +408,14 @@ export default function RegisterPage() {
                       <div><p className="text-slate-400 text-xs">{ar ? 'البريد الإلكتروني' : 'Email'}</p><p className="font-medium text-slate-800">{biz.email}</p></div>
                     </div>
                   </div>
-                  {regType === 'BUSINESS_SUPPLIER' && (
-                    <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-700">
-                      <p className="font-medium mb-0.5">{ar ? 'مراجعة السجل التجاري' : 'CR Document Review'}</p>
-                      <p className="text-xs text-amber-600">
-                        {ar
-                          ? 'فريق موازن سيراجع مستندات سجلك التجاري يدوياً (عادةً خلال 24 ساعة).'
-                          : 'The Mwazn team manually reviews your CR documents (usually within 24 hours).'}
-                      </p>
-                    </div>
-                  )}
+                  <div className="rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-sm text-amber-700">
+                    <p className="font-medium mb-0.5">{ar ? 'مراجعة السجل التجاري' : 'CR Document Review'}</p>
+                    <p className="text-xs text-amber-600">
+                      {ar
+                        ? 'سيتم تفعيل حسابك بعد مراجعة السجل التجاري، عادةً خلال 24 ساعة.'
+                        : 'Your business account will be activated after CR document review, usually within 24 hours.'}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -462,8 +456,8 @@ export default function RegisterPage() {
             </h2>
             <p className="text-sm text-slate-500 mb-6">
               {isFreelancer
-                ? (ar ? 'ستحصل على تحقق فوري وتتمكن من البيع والشراء' : 'You\'ll be auto-verified and can sell and buy immediately')
-                : (ar ? 'ستحصل على وصول فوري للسوق' : 'You\'ll get instant access to browse and post RFQs')}
+                ? (ar ? 'بِع منتجاتك وخدماتك بدون سجل تجاري' : 'Sell products and services without a commercial registration')
+                : (ar ? 'تصفح الموردين وقارن الأسعار وانشر طلبات الشراء' : 'Browse suppliers, compare prices, and post buying requests')}
             </p>
 
             {error && <div className="mb-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600">{error}</div>}
@@ -513,6 +507,11 @@ export default function RegisterPage() {
                     <Input value={ind.nationalId} onChange={(e) => setIndField('nationalId', e.target.value.replace(/\D/g, '').slice(0, 10))} placeholder="10 digits" maxLength={10} />
                   </div>
                   <div>
+                    <label className="label-base">{ar ? 'رقم منصة الأعمال' : 'Business Platform No.'} <span className="text-slate-400 text-xs">({ar ? 'اختياري' : 'optional'})</span></label>
+                    <Input value={ind.businessPlatformNumber} onChange={(e) => setIndField('businessPlatformNumber', e.target.value)} placeholder="e.g. SA12-345678" />
+                    <p className="text-xs text-slate-400 mt-1">{ar ? 'من منصة الأعمال السعودية' : 'From the Saudi Business Platform (منصة الأعمال السعودية)'}</p>
+                  </div>
+                  <div>
                     <label className="label-base">{ar ? 'نبذة عنك' : 'Bio'} <span className="text-slate-400 text-xs">({ar ? 'اختياري' : 'optional'})</span></label>
                     <Input value={ind.bio} onChange={(e) => setIndField('bio', e.target.value)} placeholder={ar ? 'خبراتك ومجالات عملك...' : 'Your skills and areas of work...'} />
                   </div>
@@ -522,12 +521,12 @@ export default function RegisterPage() {
               <div className="rounded-xl bg-emerald-50 border border-emerald-100 px-4 py-3 text-sm text-emerald-700">
                 <p className="font-medium mb-0.5 flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4" />
-                  {isFreelancer ? (ar ? 'موثّق تلقائياً' : 'Auto-verified') : (ar ? 'وصول فوري' : 'Instant access')}
+                  {isFreelancer ? (ar ? 'لا يشترط سجل تجاري' : 'No CR required') : (ar ? 'حساب مشترٍ شخصي' : 'Personal Buyer account')}
                 </p>
                 <p className="text-xs text-emerald-600">
                   {isFreelancer
-                    ? (ar ? 'لا تحتاج إلى مراجعة يدوية. يمكنك البدء فوراً.' : 'No manual review needed. Start immediately.')
-                    : (ar ? 'يمكنك تصفح السوق ونشر طلبات العروض فوراً.' : 'Browse the marketplace and post RFQs right away.')}
+                    ? (ar ? 'لا تحتاج إلى سجل تجاري. ابدأ بإضافة منتجاتك فوراً.' : 'No commercial registration needed. Start listing right away.')
+                    : (ar ? 'تصفح الموردين وقارن الأسعار وانشر طلبات الشراء.' : 'Browse suppliers, compare prices, and post buying requests.')}
                 </p>
               </div>
             </div>

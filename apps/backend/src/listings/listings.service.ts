@@ -16,6 +16,15 @@ const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'listing-images');
 const MAX_SIZE = 5 * 1024 * 1024;
 const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 
+function isValidHttpUrl(s: string): boolean {
+  try {
+    const u = new URL(s);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
 function generateSlug(title: string, id: string): string {
   const base = title
     .toLowerCase()
@@ -309,6 +318,39 @@ export class ListingsService {
     ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 16) }));
 
     XLSX.utils.book_append_sheet(wb, ws, 'Products');
+
+    // ── Instructions sheet ──────────────────────────────────────────────────
+    const instructions = [
+      ['Mwazn Bulk Product Import — Instructions'],
+      [],
+      ['REQUIRED COLUMNS',    'DESCRIPTION',                           'ALLOWED VALUES / NOTES'],
+      ['external_id',         'Your unique product reference',         'Any string; must be unique within this file'],
+      ['product_name_en',     'Product name in English',               'Required'],
+      ['description_en',      'Description in English',                'Required'],
+      ['category_slug',       'Category identifier',                   'building-materials | safety-security | technology-electronics | food-beverages | industrial-equipment | ...'],
+      ['unit',                'Selling unit',                          'piece | box | kg | liter | set | meter | ton'],
+      ['image_url',           'Product image URL',                     'Must start with http:// or https://'],
+      ['rfq_only',            'Quote-only? (no public price)',         'YES or NO'],
+      ['status',              'Listing status',                        'ACTIVE | INACTIVE'],
+      [],
+      ['OPTIONAL COLUMNS',    '',                                      ''],
+      ['product_name_ar',     'Product name in Arabic',                'Optional'],
+      ['description_ar',      'Description in Arabic',                 'Optional'],
+      ['brand',               'Brand name',                            'Optional'],
+      ['model_number',        'Model / SKU',                           'Optional'],
+      ['price_sar',           'Price in SAR',                          'Required if rfq_only=NO; leave blank if rfq_only=YES'],
+      ['currency',            'Currency',                              'SAR only'],
+      ['minimum_order_qty',   'Minimum order quantity',                'Positive integer'],
+      ['stock_qty',           'Available stock',                       'Positive integer'],
+      ['lead_time_days',      'Lead time in days',                     'Positive integer'],
+      ['country_of_origin',   'Country of manufacture',               'e.g. Saudi Arabia'],
+      ['warranty_months',     'Warranty in months',                    'Positive integer'],
+      ['tags',                'Comma-separated search tags',           'e.g. safety,industrial,PPE'],
+    ];
+    const wsI = XLSX.utils.aoa_to_sheet(instructions);
+    wsI['!cols'] = [{ wch: 26 }, { wch: 36 }, { wch: 58 }];
+    XLSX.utils.book_append_sheet(wb, wsI, 'Instructions');
+
     return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
   }
 
@@ -379,7 +421,11 @@ export class ListingsService {
       if (!unit) rowErrors.push({ field: 'unit', message: 'Required' });
 
       const imageUrl = get('image_url');
-      if (!imageUrl) rowErrors.push({ field: 'image_url', message: 'Required' });
+      if (!imageUrl) {
+        rowErrors.push({ field: 'image_url', message: 'Required' });
+      } else if (!isValidHttpUrl(imageUrl)) {
+        rowErrors.push({ field: 'image_url', message: 'Must be a valid http:// or https:// URL' });
+      }
 
       const rfqOnlyRaw = get('rfq_only').toUpperCase();
       if (!rfqOnlyRaw || !['YES', 'NO'].includes(rfqOnlyRaw)) {

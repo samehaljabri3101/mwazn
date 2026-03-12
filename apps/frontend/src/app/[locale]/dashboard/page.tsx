@@ -222,8 +222,20 @@ export default function DashboardPage() {
             </h1>
             <p className="text-slate-500 mt-1 text-sm">
               {companyName} &bull; {ar
-                ? (isBuyer ? 'حساب مشترٍ' : isSeller ? 'حساب مورّد' : 'إداري المنصة')
-                : (isBuyer ? 'Buyer Account' : isSeller ? 'Supplier Account' : 'Platform Admin')}
+                ? (
+                    user?.role === 'CUSTOMER'    ? 'مشترٍ فردي' :
+                    user?.role === 'FREELANCER'  ? 'بائع مستقل' :
+                    isBuyer                      ? 'حساب مشترٍ' :
+                    isSeller                     ? 'حساب مورّد' :
+                                                   'إداري المنصة'
+                  )
+                : (
+                    user?.role === 'CUSTOMER'    ? 'Individual Buyer' :
+                    user?.role === 'FREELANCER'  ? 'Independent Seller' :
+                    isBuyer                      ? 'Buyer Account' :
+                    isSeller                     ? 'Supplier Account' :
+                                                   'Platform Admin'
+                  )}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -308,7 +320,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <StatCard
               icon={<FileText className="h-5 w-5" />}
-              label={ar ? 'طلبات عروضي' : 'My RFQs'}
+              label={user?.role === 'CUSTOMER' ? (ar ? 'طلباتي' : 'My Requests') : (ar ? 'طلبات عروضي' : 'My RFQs')}
               value={stats.totalRfqs ?? '—'}
               sub={(stats.openRfqs ?? 0) > 0
                 ? (ar ? `${stats.openRfqs} مفتوح — ينتظر عروض` : `${stats.openRfqs} open — awaiting quotes`)
@@ -400,7 +412,7 @@ export default function DashboardPage() {
             </h3>
             <div className="space-y-2">
               {isBuyer && [
-                { href: `${base}/buyer/rfqs/new`, label: ar ? 'إنشاء طلب عرض سعر' : 'Create New RFQ', icon: <FileText className="h-4 w-4" /> },
+                { href: `${base}/buyer/rfqs/new`, label: ar ? (user?.role === 'CUSTOMER' ? 'طلب عرض سعر' : 'إنشاء طلب عرض سعر') : (user?.role === 'CUSTOMER' ? 'Request a Quote' : 'Create New RFQ'), icon: <FileText className="h-4 w-4" /> },
                 { href: `${base}/buyer/rfqs`, label: ar ? 'استعراض طلباتي' : 'View My RFQs', icon: <FileText className="h-4 w-4" /> },
                 { href: `${base}/buyer/deals`, label: ar ? 'متابعة الصفقات' : 'Track Deals', icon: <Briefcase className="h-4 w-4" /> },
                 { href: `${locale}/suppliers`, label: ar ? 'تصفح الموردين' : 'Browse Suppliers', icon: <ShieldCheck className="h-4 w-4" /> },

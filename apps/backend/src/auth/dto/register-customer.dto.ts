@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, Matches, MinLength } from 'class-validator';
 
 export class RegisterCustomerDto {
   @ApiProperty({ example: 'Sara Al-Qahtani' })
@@ -25,4 +25,13 @@ export class RegisterCustomerDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @ApiPropertyOptional({
+    example: '1098765432',
+    description: '10-digit Saudi National ID number (optional)',
+  })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{10}$/, { message: 'National ID must be exactly 10 digits' })
+  nationalId?: string;
 }

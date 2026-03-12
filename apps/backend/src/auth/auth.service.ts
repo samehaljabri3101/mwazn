@@ -220,7 +220,7 @@ export class AuthService {
     if (existing) throw new ConflictException('Email already registered');
 
     if (dto.nationalId) {
-      const existingNID = await this.prisma.company.findUnique({ where: { crNumber: dto.nationalId } });
+      const existingNID = await this.prisma.company.findFirst({ where: { governmentId: dto.nationalId } });
       if (existingNID) throw new ConflictException('National ID / Iqama already registered');
     }
 
@@ -230,13 +230,20 @@ export class AuthService {
       data: {
         nameAr: dto.fullName,
         nameEn: dto.fullName,
-        crNumber: dto.nationalId ?? null,
+        crNumber: null,
         type: CompanyType.SUPPLIER,
         city: dto.city,
         phone: dto.phone,
         descriptionEn: dto.bio,
         isFreelancer: true,
         verificationStatus: VerificationStatus.VERIFIED,
+        governmentId: dto.nationalId ?? null,
+        governmentIdType: dto.nationalId ? 'NATIONAL_ID' : null,
+        businessPlatformVerificationNumber: dto.businessPlatformNumber ?? null,
+        maroofNumber: dto.maroofNumber ?? null,
+        verificationSource: dto.businessPlatformNumber
+          ? 'BUSINESS_PLATFORM'
+          : dto.maroofNumber ? 'MAROOF' : 'MANUAL',
         users: {
           create: { email: dto.email, passwordHash, fullName: dto.fullName, role: Role.FREELANCER },
         },
@@ -266,6 +273,9 @@ export class AuthService {
         phone: dto.phone,
         isFreelancer: false,
         verificationStatus: VerificationStatus.VERIFIED,
+        governmentId: dto.nationalId ?? null,
+        governmentIdType: dto.nationalId ? 'NATIONAL_ID' : null,
+        verificationSource: 'MANUAL',
         users: {
           create: { email: dto.email, passwordHash, fullName: dto.fullName, role: Role.CUSTOMER },
         },
@@ -336,7 +346,14 @@ export class AuthService {
   }
 
   private sanitizeCompany(company: any) {
-    const { users: _u, ...safe } = company ?? {};
+    const {
+      users: _u,
+      governmentId: _gi,
+      governmentIdType: _git,
+      businessPlatformVerificationNumber: _bpvn,
+      maroofNumber: _mn,
+      ...safe
+    } = company ?? {};
     return safe;
   }
 }

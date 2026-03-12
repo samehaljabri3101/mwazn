@@ -178,12 +178,13 @@ export function getCategoryImage(categorySlug: string, index = 0): string {
 /**
  * Resolves the display image for a listing.
  *
- * Always returns a category-accurate image for investor-demo quality.
- * The stored `imageUrl` is ignored — all catalog surfaces use curated
- * Unsplash photos mapped to the product category.
+ * If the stored URL is a valid http/https URL that is not a picsum placeholder,
+ * it is used as-is (e.g. bulk-imported products with real image URLs).
+ * Otherwise, falls back to a category-accurate Unsplash image for
+ * investor-demo quality across all catalog surfaces.
  *
- * @param imageUrl   - ignored (kept for call-site compatibility)
- * @param categorySlug - product category slug for image selection
+ * @param imageUrl   - stored image URL from DB (used if valid & non-picsum)
+ * @param categorySlug - product category slug for fallback image selection
  * @param index      - fallback index if productId is not provided
  * @param productId  - product/listing ID for stable hash-based variety
  */
@@ -193,6 +194,14 @@ export function resolveListingImage(
   index = 0,
   productId?: string,
 ): string {
+  // Use stored URL if it's a valid non-picsum http/https URL
+  if (imageUrl && !isPicsumPlaceholder(imageUrl)) {
+    try {
+      const u = new URL(imageUrl);
+      if (u.protocol === 'http:' || u.protocol === 'https:') return imageUrl;
+    } catch { /* invalid URL — fall through */ }
+  }
+  // Fall back to category-accurate Unsplash image
   const pool = CATEGORY_IMAGES[categorySlug ?? ''] ?? DEFAULT_IMAGES;
   const i = productId !== undefined ? stableHash(productId) : index;
   return pool[i % pool.length];

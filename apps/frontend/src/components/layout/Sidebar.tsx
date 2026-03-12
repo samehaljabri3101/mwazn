@@ -40,7 +40,7 @@ export function Sidebar() {
     { href: `${base}`,              label: t('overview'),  icon: <LayoutDashboard className="h-4 w-4" /> },
 
     // Buyer
-    { href: `${base}/buyer/rfqs`,        label: t('rfqs'),      icon: <FileText className="h-4 w-4" />,    roles: ['BUYER_ADMIN', 'CUSTOMER'] },
+    { href: `${base}/buyer/rfqs`,        label: role === 'CUSTOMER' ? (locale === 'ar' ? 'طلباتي' : 'My Requests') : t('rfqs'), icon: <FileText className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'CUSTOMER'] },
     { href: `${base}/buyer/deals`,       label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['BUYER_ADMIN', 'CUSTOMER'] },
 
     // Supplier / Freelancer

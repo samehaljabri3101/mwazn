@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import {
   TrendingUp, Package, Star, DollarSign, FileText, CheckCircle2,
   XCircle, Trophy, BarChart2, Eye, Zap, Download, ShieldCheck,
+  PlusCircle, Search, ArrowRight,
 } from 'lucide-react';
 
 // Simple bar chart using Tailwind CSS — no external libs
@@ -61,14 +62,71 @@ function StatCard({ icon, label, value, sub, color = 'brand' }: {
   );
 }
 
+function EmptyState({ role, locale, ar }: { role?: string; locale: string; ar: boolean }) {
+  if (role === 'FREELANCER') {
+    return (
+      <div className="card text-center py-12">
+        <BarChart2 className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-700 font-medium mb-1">
+          {ar ? 'لا توجد بيانات بعد' : 'No data yet'}
+        </p>
+        <p className="text-slate-500 text-sm mb-5">
+          {ar
+            ? 'ستظهر إحصائياتك بمجرد أن تبدأ في البيع.'
+            : 'Your seller analytics will appear once you start selling.'}
+        </p>
+        <Link
+          href={`/${locale}/dashboard/supplier/listings/new`}
+          className="btn-primary inline-flex items-center gap-2 text-sm"
+        >
+          <PlusCircle className="h-4 w-4" />
+          {ar ? 'أضف منتجاً' : 'Add Product'}
+        </Link>
+      </div>
+    );
+  }
+  if (role === 'CUSTOMER') {
+    return (
+      <div className="card text-center py-12">
+        <BarChart2 className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+        <p className="text-slate-700 font-medium mb-1">
+          {ar ? 'لا توجد بيانات بعد' : 'No data yet'}
+        </p>
+        <p className="text-slate-500 text-sm mb-5">
+          {ar
+            ? 'ستظهر نشاطاتك بمجرد أن تنشر طلبك الأول.'
+            : 'Your activity will appear once you post your first request.'}
+        </p>
+        <Link
+          href={`/${locale}/dashboard/buyer/rfqs/new`}
+          className="btn-primary inline-flex items-center gap-2 text-sm"
+        >
+          <PlusCircle className="h-4 w-4" />
+          {ar ? 'انشر طلباً' : 'Post a Request'}
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="card text-center py-12">
+      <BarChart2 className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+      <p className="text-slate-500">{ar ? 'لا توجد بيانات كافية بعد' : 'Not enough data yet'}</p>
+    </div>
+  );
+}
+
 export default function AnalyticsPage() {
   const locale = useLocale();
   const { user, company } = useAuth();
   const ar = locale === 'ar';
   const isAdmin = user?.role === 'PLATFORM_ADMIN';
-  const isSupplier = user?.role === 'SUPPLIER_ADMIN';
-  const isBuyer = user?.role === 'BUYER_ADMIN';
-  const isPro = company?.plan === 'PRO';
+
+  const isSellerRole     = user?.role === 'SUPPLIER_ADMIN' || user?.role === 'FREELANCER';
+  const isBuyerRole      = user?.role === 'BUYER_ADMIN'    || user?.role === 'CUSTOMER';
+  const isFreelancerRole = user?.role === 'FREELANCER';
+  const isCustomerRole   = user?.role === 'CUSTOMER';
+  // Export CSV only for paid-plan business accounts
+  const isPro = (user?.role === 'SUPPLIER_ADMIN' || user?.role === 'BUYER_ADMIN') && company?.plan === 'PRO';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -76,17 +134,18 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     if (isAdmin) { setLoading(false); return; }
-    const endpoint = isSupplier ? '/analytics/supplier' : '/analytics/buyer';
+    if (!isSellerRole && !isBuyerRole) { setLoading(false); return; }
+    const endpoint = isSellerRole ? '/analytics/supplier' : '/analytics/buyer';
     api.get(endpoint).then((res) => {
       setData(res.data.data);
     }).catch(() => {}).finally(() => setLoading(false));
-  }, [isSupplier, isAdmin]);
+  }, [isSellerRole, isBuyerRole, isAdmin]);
 
   const handleExport = async () => {
     if (!isPro) return;
     setExporting(true);
     try {
-      const endpoint = isSupplier ? '/analytics/supplier/export' : '/analytics/buyer/export';
+      const endpoint = isSellerRole ? '/analytics/supplier/export' : '/analytics/buyer/export';
       const res = await api.get(endpoint, { responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
       const a = document.createElement('a');
@@ -98,40 +157,58 @@ export default function AnalyticsPage() {
     setExporting(false);
   };
 
+  // Role-aware title / subtitle
+  const title = ar
+    ? isFreelancerRole ? 'إحصائيات البيع'
+      : isCustomerRole ? 'نشاطي'
+      : 'التحليلات'
+    : isFreelancerRole ? 'Seller Analytics'
+      : isCustomerRole ? 'My Activity'
+      : 'Analytics';
+
+  const subtitle = ar
+    ? isFreelancerRole ? 'أداء مبيعاتك عبر المنتجات والعروض والصفقات'
+      : isCustomerRole ? 'نشاط شرائك عبر الطلبات والعروض والصفقات'
+      : isSellerRole ? 'مؤشرات أداء نشاطك التجاري'
+      : 'مؤشرات أداء المشتريات'
+    : isFreelancerRole ? 'Your sales performance across listings, quotes, and deals'
+      : isCustomerRole ? 'Your buying activity across requests, quotes, and orders'
+      : isSellerRole ? 'Business performance insights'
+      : 'Procurement performance insights';
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">
-              {ar ? 'التحليلات' : 'Analytics'}
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              {ar ? 'مؤشرات الأداء لنشاطك التجاري' : 'Business performance insights'}
-            </p>
+            <h1 className="text-2xl font-bold text-slate-800">{title}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
           </div>
-          {isPro ? (
-            <button
-              onClick={handleExport}
-              disabled={exporting}
-              className="btn-primary inline-flex items-center gap-2 text-sm"
-            >
-              <Download className="h-4 w-4" />
-              {exporting ? '...' : (ar ? 'تصدير CSV' : 'Export CSV')}
-            </button>
-          ) : (
-            <div className="relative group">
+          {/* Export CSV — only for SUPPLIER_ADMIN / BUYER_ADMIN */}
+          {(user?.role === 'SUPPLIER_ADMIN' || user?.role === 'BUYER_ADMIN') && (
+            isPro ? (
               <button
-                disabled
-                className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-400 cursor-not-allowed"
+                onClick={handleExport}
+                disabled={exporting}
+                className="btn-primary inline-flex items-center gap-2 text-sm"
               >
                 <Download className="h-4 w-4" />
-                {ar ? 'تصدير CSV' : 'Export CSV'}
+                {exporting ? '...' : (ar ? 'تصدير CSV' : 'Export CSV')}
               </button>
-              <div className="absolute end-0 top-full mt-1 hidden group-hover:block bg-slate-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10">
-                {ar ? 'الترقية لـ PRO لتصدير البيانات' : 'Upgrade to PRO to export data'}
+            ) : (
+              <div className="relative group">
+                <button
+                  disabled
+                  className="inline-flex items-center gap-2 text-sm px-4 py-2 rounded-xl border border-slate-200 text-slate-400 cursor-not-allowed"
+                >
+                  <Download className="h-4 w-4" />
+                  {ar ? 'تصدير CSV' : 'Export CSV'}
+                </button>
+                <div className="absolute end-0 top-full mt-1 hidden group-hover:block bg-slate-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10">
+                  {ar ? 'الترقية لـ PRO لتصدير البيانات' : 'Upgrade to PRO to export data'}
+                </div>
               </div>
-            </div>
+            )
           )}
         </div>
 
@@ -161,22 +238,25 @@ export default function AnalyticsPage() {
             <Skeleton className="h-48" />
           </div>
         ) : !data ? (
-          <div className="card text-center py-12">
-            <BarChart2 className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500">{ar ? 'لا توجد بيانات كافية بعد' : 'Not enough data yet'}</p>
-          </div>
-        ) : isSupplier ? (
-          <SupplierAnalytics data={data} ar={ar} locale={locale} />
-        ) : isBuyer ? (
-          <BuyerAnalytics data={data} ar={ar} />
+          <EmptyState role={user?.role} locale={locale} ar={ar} />
+        ) : isSellerRole ? (
+          <SupplierAnalytics data={data} ar={ar} locale={locale} isFreelancer={isFreelancerRole} />
+        ) : isBuyerRole ? (
+          <BuyerAnalytics data={data} ar={ar} locale={locale} isCustomer={isCustomerRole} />
         ) : null}
       </div>
     </DashboardLayout>
   );
 }
 
-function SupplierAnalytics({ data, ar, locale }: { data: any; ar: boolean; locale: string }) {
+function SupplierAnalytics({ data, ar, locale, isFreelancer = false }: {
+  data: any; ar: boolean; locale: string; isFreelancer?: boolean;
+}) {
   const { overview, topProducts, monthlyQuotes } = data;
+
+  const quotesLabel      = ar ? (isFreelancer ? 'العروض المقدّمة' : 'إجمالي العروض')  : (isFreelancer ? 'Quotes Submitted'  : 'Total Quotes');
+  const winRateLabel     = ar ? (isFreelancer ? 'معدل النجاح'     : 'معدل الفوز')      : (isFreelancer ? 'Success Rate'       : 'Win Rate');
+  const revenueLabel     = ar ? (isFreelancer ? 'الأرباح التقديرية': 'إجمالي الإيراد') : (isFreelancer ? 'Est. Earnings'       : 'Total Revenue');
 
   return (
     <div className="space-y-6">
@@ -184,21 +264,21 @@ function SupplierAnalytics({ data, ar, locale }: { data: any; ar: boolean; local
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<FileText className="h-5 w-5" />}
-          label={ar ? 'إجمالي العروض' : 'Total Quotes'}
+          label={quotesLabel}
           value={overview.totalQuotes}
           sub={ar ? `${overview.pendingQuotes} معلق` : `${overview.pendingQuotes} pending`}
           color="brand"
         />
         <StatCard
           icon={<Trophy className="h-5 w-5" />}
-          label={ar ? 'معدل الفوز' : 'Win Rate'}
+          label={winRateLabel}
           value={`${overview.winRate}%`}
           sub={ar ? `${overview.acceptedQuotes} مقبول` : `${overview.acceptedQuotes} accepted`}
           color="green"
         />
         <StatCard
           icon={<DollarSign className="h-5 w-5" />}
-          label={ar ? 'إجمالي الإيراد' : 'Total Revenue'}
+          label={revenueLabel}
           value={`${overview.totalRevenue.toLocaleString()} SAR`}
           sub={ar ? `${overview.completedDeals} صفقة مكتملة` : `${overview.completedDeals} completed deals`}
           color="amber"
@@ -243,7 +323,7 @@ function SupplierAnalytics({ data, ar, locale }: { data: any; ar: boolean; local
         />
       </div>
 
-      {/* Win rate donut visualization */}
+      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Quote status breakdown */}
         <div className="card">
@@ -306,12 +386,55 @@ function SupplierAnalytics({ data, ar, locale }: { data: any; ar: boolean; local
           </div>
         </div>
       )}
+
+      {/* Freelancer quick actions CTA */}
+      {isFreelancer && (
+        <div className="card bg-brand-50 border-brand-100">
+          <h3 className="font-semibold text-slate-800 mb-3">{ar ? 'إجراءات سريعة' : 'Quick Actions'}</h3>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/${locale}/dashboard/supplier/listings/new`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-900"
+            >
+              <PlusCircle className="h-4 w-4" />
+              {ar ? 'إضافة منتج / خدمة' : 'Add Product / Service'}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link
+              href={`/${locale}/dashboard/supplier/rfqs`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-900"
+            >
+              <Search className="h-4 w-4" />
+              {ar ? 'تصفح الطلبات' : 'Browse RFQs'}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link
+              href={`/${locale}/dashboard/supplier/listings/import`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-900"
+            >
+              <Download className="h-4 w-4" />
+              {ar ? 'استيراد مجمّع' : 'Bulk Import'}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function BuyerAnalytics({ data, ar }: { data: any; ar: boolean }) {
+function BuyerAnalytics({ data, ar, locale, isCustomer = false }: {
+  data: any; ar: boolean; locale: string; isCustomer?: boolean;
+}) {
   const { overview, categoryStats = [], monthlyRfqs } = data;
+
+  const rfqsLabel      = ar ? (isCustomer ? 'طلباتي'          : 'إجمالي الطلبات')    : (isCustomer ? 'My Requests'         : 'Total RFQs');
+  const awardRateLabel = ar ? (isCustomer ? 'معدل إتمام الطلبات' : 'معدل الترسية')    : (isCustomer ? 'Order Rate'           : 'Award Rate');
+  const spendLabel     = ar ? (isCustomer ? 'الإنفاق التقديري'  : 'إجمالي الإنفاق')  : (isCustomer ? 'Estimated Spend'      : 'Total Spending');
+  const avgLabel       = ar ? (isCustomer ? 'متوسط العروض الواردة': 'متوسط العروض لكل طلب') : (isCustomer ? 'Avg Quotes Received' : 'Avg Quotes/RFQ');
+  const statusHeader   = ar ? (isCustomer ? 'حالة الطلبات'      : 'حالة الطلبات')    : (isCustomer ? 'Request Status'       : 'RFQ Status Breakdown');
 
   return (
     <div className="space-y-6">
@@ -319,28 +442,28 @@ function BuyerAnalytics({ data, ar }: { data: any; ar: boolean }) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<FileText className="h-5 w-5" />}
-          label={ar ? 'إجمالي الطلبات' : 'Total RFQs'}
+          label={rfqsLabel}
           value={overview.totalRfqs}
           sub={ar ? `${overview.openRfqs} مفتوح` : `${overview.openRfqs} open`}
           color="brand"
         />
         <StatCard
           icon={<Trophy className="h-5 w-5" />}
-          label={ar ? 'معدل الترسية' : 'Award Rate'}
+          label={awardRateLabel}
           value={`${overview.awardRate}%`}
           sub={ar ? `${overview.awardedRfqs} مُرسى` : `${overview.awardedRfqs} awarded`}
           color="green"
         />
         <StatCard
           icon={<DollarSign className="h-5 w-5" />}
-          label={ar ? 'إجمالي الإنفاق' : 'Total Spending'}
+          label={spendLabel}
           value={`${overview.totalSpending.toLocaleString()} SAR`}
           sub={ar ? `${overview.completedDeals} صفقة مكتملة` : `${overview.completedDeals} completed`}
           color="amber"
         />
         <StatCard
           icon={<Zap className="h-5 w-5" />}
-          label={ar ? 'متوسط العروض لكل طلب' : 'Avg Quotes/RFQ'}
+          label={avgLabel}
           value={overview.avgQuotesPerRfq}
           sub={ar ? `${overview.totalQuotesReceived} إجمالي العروض` : `${overview.totalQuotesReceived} total quotes`}
           color="purple"
@@ -351,7 +474,7 @@ function BuyerAnalytics({ data, ar }: { data: any; ar: boolean }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* RFQ status breakdown */}
         <div className="card">
-          <h3 className="font-semibold text-slate-800 mb-4">{ar ? 'حالة الطلبات' : 'RFQ Status Breakdown'}</h3>
+          <h3 className="font-semibold text-slate-800 mb-4">{statusHeader}</h3>
           <div className="space-y-3">
             {[
               { label: ar ? 'مفتوحة' : 'Open', count: overview.openRfqs, color: 'bg-brand-500' },
@@ -401,6 +524,41 @@ function BuyerAnalytics({ data, ar }: { data: any; ar: boolean }) {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Customer quick actions CTA */}
+      {isCustomer && (
+        <div className="card bg-brand-50 border-brand-100">
+          <h3 className="font-semibold text-slate-800 mb-3">{ar ? 'إجراءات سريعة' : 'Quick Actions'}</h3>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/${locale}/dashboard/buyer/rfqs/new`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-900"
+            >
+              <PlusCircle className="h-4 w-4" />
+              {ar ? 'انشر طلباً' : 'Post a Request'}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link
+              href={`/${locale}/products`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-900"
+            >
+              <Search className="h-4 w-4" />
+              {ar ? 'تصفح المنتجات' : 'Browse Products'}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <span className="text-slate-300">|</span>
+            <Link
+              href={`/${locale}/suppliers`}
+              className="inline-flex items-center gap-2 text-sm font-medium text-brand-700 hover:text-brand-900"
+            >
+              <Search className="h-4 w-4" />
+              {ar ? 'تصفح الموردين' : 'Browse Suppliers'}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
       )}

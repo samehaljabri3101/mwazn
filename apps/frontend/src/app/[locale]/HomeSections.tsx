@@ -606,6 +606,8 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
   // ── Signed-in buyer / supplier — personalized home ──────────────────────────
   if (user) {
     const isBuyer = user.role === 'BUYER_ADMIN' || user.role === 'CUSTOMER';
+    const isCustomer = user.role === 'CUSTOMER';
+    const isFreelancerUser = user.role === 'FREELANCER';
     const displayName = ar
       ? (company?.nameAr || user.fullName || user.email)
       : (company?.nameEn || user.fullName || user.email);
@@ -648,7 +650,55 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
             )}
 
             {/* Quick actions */}
-            {isBuyer ? (
+            {isCustomer ? (
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Link
+                  href={`/${locale}/dashboard/buyer/rfqs/new`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-800 shadow-lift hover:bg-slate-50 transition-all hover:-translate-y-0.5"
+                >
+                  <PlusCircle className="h-4 w-4" />
+                  {ar ? 'نشر طلب' : 'Post a Request'}
+                </Link>
+                <Link
+                  href={`/${locale}/products`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
+                >
+                  <Package className="h-4 w-4" />
+                  {ar ? 'تصفح المنتجات' : 'Browse Products'}
+                </Link>
+                <Link
+                  href={`/${locale}/dashboard`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  {ar ? 'لوحة التحكم' : 'My Dashboard'}
+                </Link>
+              </div>
+            ) : isFreelancerUser ? (
+              <div className="flex flex-wrap gap-3 justify-center">
+                <Link
+                  href={`/${locale}/dashboard/supplier/rfqs`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-800 shadow-lift hover:bg-slate-50 transition-all hover:-translate-y-0.5"
+                >
+                  <FileText className="h-4 w-4" />
+                  {ar ? 'تصفح طلبات العروض' : 'Browse RFQs'}
+                </Link>
+                <Link
+                  href={`/${locale}/dashboard/supplier/listings`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
+                >
+                  <Package className="h-4 w-4" />
+                  {ar ? 'منتجاتي' : 'My Products'}
+                </Link>
+                <Link
+                  href={`/${locale}/dashboard`}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  {ar ? 'لوحة التحكم' : 'My Dashboard'}
+                </Link>
+              </div>
+            ) : isBuyer ? (
               <div className="flex flex-wrap gap-3 justify-center">
                 <Link
                   href={`/${locale}/dashboard/buyer/rfqs/new`}
@@ -675,14 +725,14 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
             ) : (
               <div className="flex flex-wrap gap-3 justify-center">
                 <Link
-                  href={`/${locale}/dashboard/rfqs`}
+                  href={`/${locale}/dashboard/supplier/rfqs`}
                   className="inline-flex items-center gap-2 rounded-xl bg-white px-6 py-3 text-sm font-semibold text-brand-800 shadow-lift hover:bg-slate-50 transition-all hover:-translate-y-0.5"
                 >
                   <FileText className="h-4 w-4" />
                   {ar ? 'تصفح طلبات العروض' : 'Browse Open RFQs'}
                 </Link>
                 <Link
-                  href={`/${locale}/dashboard/listings`}
+                  href={`/${locale}/dashboard/supplier/listings`}
                   className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
                 >
                   <Package className="h-4 w-4" />

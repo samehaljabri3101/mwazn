@@ -74,6 +74,10 @@ enum DocumentType {
   LICENSE
   ISO
   OTHER
+  NATIONAL_ID
+  IQAMA
+  BUSINESS_PLATFORM
+  MAROOF
 }
 
 // ─── Models ───────────────────────────────────────────────────────────────────
@@ -144,7 +148,12 @@ model Company {
   taxCertUrl          String?
 
   // ── Identity ───────────────────────────────────────────────────────────────
-  isFreelancer        Boolean            @default(false)
+  isFreelancer                        Boolean   @default(false)
+  governmentId                        String?   // National ID or Iqama — private, never public
+  governmentIdType                    String?   // "NATIONAL_ID" | "IQAMA"
+  businessPlatformVerificationNumber  String?   // Saudi Business Platform No. (FREELANCER)
+  maroofNumber                        String?   // Maroof legacy/fallback (FREELANCER, optional)
+  verificationSource                  String?   // "CR" | "BUSINESS_PLATFORM" | "MAROOF" | "MANUAL"
 
   // ── Admin ──────────────────────────────────────────────────────────────────
   adminNotes          String?            @db.Text
