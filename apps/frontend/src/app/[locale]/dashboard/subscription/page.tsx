@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/Button';
 import api from '@/lib/api';
-import { CheckCircle2, Zap, Star, MessageSquare, FileText, Infinity } from 'lucide-react';
+import { CheckCircle2, Zap, Star, MessageSquare, FileText, Infinity, CreditCard } from 'lucide-react';
 
 function Toast({ msg }: { msg: string }) {
   return (
@@ -33,8 +33,8 @@ export default function SubscriptionPage() {
       const { checkoutUrl, isMock } = res.data.data || {};
       if (isMock) {
         setToast(ar
-          ? 'بوابة الدفع قيد الإعداد — تواصل معنا عبر pro@mwazn.sa'
-          : 'Payment gateway coming soon — contact us at pro@mwazn.sa');
+          ? 'للترقية إلى PRO تواصل معنا عبر pro@mwazn.sa — سيتم ترقية حسابك خلال 24 ساعة'
+          : 'To upgrade to PRO, contact us at pro@mwazn.sa — your account will be upgraded within 24 hours');
         setTimeout(() => setToast(''), 5000);
       } else if (checkoutUrl) {
         window.location.href = checkoutUrl;
@@ -191,6 +191,21 @@ export default function SubscriptionPage() {
                 {ar ? 'أنت على PRO 🎉' : 'You\'re on PRO 🎉'}
               </Button>
             )}
+          </div>
+        </div>
+
+        {/* Payment infrastructure note */}
+        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <CreditCard className="h-5 w-5 text-slate-400 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-slate-700">
+              {ar ? 'بنية تحتية للدفع جاهزة' : 'Payment infrastructure ready'}
+            </p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {ar
+                ? 'تكامل Stripe مكتمل. الفوترة تُفعَّل عند إطلاق خطط الاشتراك المدفوعة. تواصل: pro@mwazn.sa'
+                : 'Stripe integration complete. Billing activates upon paid subscription launch. Contact: pro@mwazn.sa'}
+            </p>
           </div>
         </div>
 

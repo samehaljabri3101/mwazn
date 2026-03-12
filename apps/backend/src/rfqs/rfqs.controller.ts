@@ -11,6 +11,7 @@ import { RFQsService } from './rfqs.service';
 import { RfqImagesService } from './rfq-images.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
 
@@ -27,12 +28,16 @@ export class RFQsController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'List open RFQs (suppliers browse)' })
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'List RFQs — public sees PUBLIC only; PLATFORM_ADMIN sees all' })
   @ApiQuery({ name: 'categoryId', required: false })
   @ApiQuery({ name: 'status', enum: RFQStatus, required: false })
   @ApiQuery({ name: 'search', required: false })
-  findAll(@Query() query: PaginationDto & { categoryId?: string; status?: RFQStatus; search?: string }) {
-    return this.rfqsService.findAll(query);
+  findAll(
+    @Query() query: PaginationDto & { categoryId?: string; status?: RFQStatus; search?: string },
+    @CurrentUser() user?: any,
+  ) {
+    return this.rfqsService.findAll(Object.assign(query, { adminOverride: user?.role === 'PLATFORM_ADMIN' }));
   }
 
   @Get('my')

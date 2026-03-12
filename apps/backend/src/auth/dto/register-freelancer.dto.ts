@@ -14,14 +14,14 @@ export class RegisterFreelancerDto {
   @IsNotEmpty()
   fullName: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: '1098765432',
-    description: '10-digit Saudi National ID or Iqama number',
+    description: '10-digit Saudi National ID or Iqama number (optional)',
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @Matches(/^\d{10}$/, { message: 'National ID / Iqama must be exactly 10 digits' })
-  nationalId: string;
+  nationalId?: string;
 
   @ApiProperty({ example: 'khalid@freelance.sa' })
   @IsEmail()

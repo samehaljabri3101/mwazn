@@ -1,10 +1,11 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Body, Param, Query, UseGuards,
-  UseInterceptors, UploadedFiles, ParseIntPipe, DefaultValuePipe,
+  Body, Param, Query, UseGuards, Res, BadRequestException,
+  UseInterceptors, UploadedFiles, UploadedFile, ParseIntPipe, DefaultValuePipe,
 } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
+import { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes } from '@nestjs/swagger';
 import { ListingsService } from './listings.service';
 import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
@@ -16,6 +17,33 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 @Controller()
 export class ListingsController {
   constructor(private readonly listingsService: ListingsService) {}
+
+  // ─── Bulk Import ────────────────────────────────────────────────────────────
+
+  @Get('listings/bulk-import/template')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({ summary: 'Download bulk import Excel template' })
+  getBulkImportTemplate(@Res() res: Response) {
+    const buffer = this.listingsService.getBulkImportTemplate();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="mwazn-bulk-import-template.xlsx"');
+    res.send(buffer);
+  }
+
+  @Post('listings/bulk-import')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Bulk import products from Excel (verified supplier / freelancer only)' })
+  @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 10_485_760 } }))
+  bulkImport(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser('id') userId: string,
+  ) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    return this.listingsService.bulkImport(file, userId);
+  }
 
   // ─── Public marketplace ─────────────────────────────────────────────────────
 

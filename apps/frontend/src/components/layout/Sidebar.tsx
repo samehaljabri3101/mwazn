@@ -16,6 +16,7 @@ import {
   Briefcase,
   Zap,
   BarChart2,
+  Upload,
 } from 'lucide-react';
 
 interface NavItem {
@@ -39,20 +40,21 @@ export function Sidebar() {
     { href: `${base}`,              label: t('overview'),  icon: <LayoutDashboard className="h-4 w-4" /> },
 
     // Buyer
-    { href: `${base}/buyer/rfqs`,        label: t('rfqs'),      icon: <FileText className="h-4 w-4" />,    roles: ['BUYER_ADMIN'] },
-    { href: `${base}/buyer/deals`,       label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['BUYER_ADMIN'] },
+    { href: `${base}/buyer/rfqs`,        label: t('rfqs'),      icon: <FileText className="h-4 w-4" />,    roles: ['BUYER_ADMIN', 'CUSTOMER'] },
+    { href: `${base}/buyer/deals`,       label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['BUYER_ADMIN', 'CUSTOMER'] },
 
-    // Supplier
-    { href: `${base}/supplier/listings`, label: t('listings'),  icon: <Package className="h-4 w-4" />,    roles: ['SUPPLIER_ADMIN'] },
-    { href: `${base}/supplier/rfqs`,     label: t('rfqs'),      icon: <FileText className="h-4 w-4" />,   roles: ['SUPPLIER_ADMIN'] },
-    { href: `${base}/supplier/quotes`,   label: t('quotes'),    icon: <ScrollText className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN'] },
-    { href: `${base}/supplier/deals`,    label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['SUPPLIER_ADMIN'] },
+    // Supplier / Freelancer
+    { href: `${base}/supplier/listings`, label: t('listings'),  icon: <Package className="h-4 w-4" />,    roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/rfqs`,     label: t('rfqs'),      icon: <FileText className="h-4 w-4" />,   roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/quotes`,   label: t('quotes'),    icon: <ScrollText className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/deals`,    label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/listings/import`, label: locale === 'ar' ? 'استيراد المنتجات' : 'Bulk Import', icon: <Upload className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
 
     // Common
     { href: `${base}/messages`,      label: t('messages'),  icon: <MessageSquare className="h-4 w-4" /> },
-    { href: `${base}/analytics`,     label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart2 className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'SUPPLIER_ADMIN'] },
+    { href: `${base}/analytics`,     label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart2 className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'SUPPLIER_ADMIN', 'FREELANCER', 'CUSTOMER'] },
 
-    // Supplier subscription
+    // Supplier subscription (SUPPLIER_ADMIN only — FREELANCER has different model)
     { href: `${base}/subscription`,  label: locale === 'ar' ? 'الاشتراك' : 'Subscription', icon: <Zap className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN'] },
 
     // Admin

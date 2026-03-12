@@ -311,7 +311,7 @@ function SupplierAnalytics({ data, ar, locale }: { data: any; ar: boolean; local
 }
 
 function BuyerAnalytics({ data, ar }: { data: any; ar: boolean }) {
-  const { overview, categoryStats, monthlyRfqs } = data;
+  const { overview, categoryStats = [], monthlyRfqs } = data;
 
   return (
     <div className="space-y-6">

@@ -3,10 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Navbar } from '@/components/layout/Navbar';
 import api from '@/lib/api';
 import type { Listing, Category, PaginatedResponse } from '@/types';
 import { Package, Search, SlidersHorizontal, Star, Clock, ChevronDown, MapPin, ShieldCheck } from 'lucide-react';
+import { resolveListingImage } from '@/lib/categoryImages';
 
 const SORT_OPTIONS = [
   { value: '', label: { en: 'Latest', ar: 'الأحدث' } },
@@ -18,6 +20,7 @@ const SORT_OPTIONS = [
 export default function ProductsPage() {
   const locale = useLocale();
   const ar = locale === 'ar';
+  const searchParams = useSearchParams();
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -57,9 +60,16 @@ export default function ProductsPage() {
 
   useEffect(() => {
     api.get('/categories').then((res) => {
-      setCategories(res.data.data?.items || res.data.data || []);
+      const cats: Category[] = res.data.data?.items || res.data.data || [];
+      setCategories(cats);
+      // Pre-select category from URL param (e.g. ?category=building-materials)
+      const slugParam = searchParams?.get('category');
+      if (slugParam) {
+        const match = cats.find((c) => (c as any).slug === slugParam);
+        if (match) { setCategoryId(match.id); setPage(1); }
+      }
     }).catch(() => {});
-  }, []);
+  }, [searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,24 +218,29 @@ export default function ProductsPage() {
             {listings.map((listing) => {
               const title = ar ? listing.titleAr : listing.titleEn;
               const href = `/${locale}/products/${listing.slug || listing.id}`;
-              const img = listing.images?.[0]?.url;
+              const catSlug = (listing as any).category?.slug;
+              const img = resolveListingImage(listing.images?.[0]?.url, catSlug, 0, listing.id);
               return (
                 <Link key={listing.id} href={href} className="group rounded-2xl bg-white border border-slate-100 hover:shadow-card hover:border-brand-100 transition-all overflow-hidden flex flex-col">
                   {/* Image */}
                   <div className="aspect-[4/3] bg-slate-50 overflow-hidden relative">
-                    {img ? (
-                      <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <Package className="h-8 w-8 text-slate-300" />
-                      </div>
-                    )}
-                    {(listing.supplier as any)?.verificationStatus === 'VERIFIED' && (
-                      <span className="absolute top-2 start-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
-                        <ShieldCheck className="h-2 w-2" />
-                        CR
-                      </span>
-                    )}
+                    <img src={img} alt={title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    {(() => {
+                      const sup = listing.supplier as any;
+                      if (sup?.isFreelancer) return (
+                        <span className="absolute top-2 start-2 inline-flex items-center gap-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+                          <ShieldCheck className="h-2 w-2" />
+                          {ar ? 'مستقل' : 'Freelancer'}
+                        </span>
+                      );
+                      if (sup?.verificationStatus === 'VERIFIED') return (
+                        <span className="absolute top-2 start-2 inline-flex items-center gap-0.5 rounded-full bg-emerald-600 px-1.5 py-0.5 text-[9px] font-bold text-white shadow-sm">
+                          <ShieldCheck className="h-2 w-2" />
+                          CR
+                        </span>
+                      );
+                      return null;
+                    })()}
                   </div>
 
                   {/* Info */}

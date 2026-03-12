@@ -13,6 +13,7 @@ import {
   MapPin, Globe, Phone, Star, Package, MessageSquare,
   CheckCircle2, Building2, Tag, Clock, Award, Search, Share2,
 } from 'lucide-react';
+import { resolveListingImage } from '@/lib/categoryImages';
 
 interface ShowroomListing {
   id: string;
@@ -31,7 +32,7 @@ interface ShowroomListing {
   certifications?: string[];
   viewCount?: number;
   images: Array<{ url: string; isPrimary: boolean }>;
-  category?: { id: string; nameAr: string; nameEn: string };
+  category?: { id: string; nameAr: string; nameEn: string; slug?: string };
   _count?: { quotes: number };
 }
 
@@ -40,7 +41,7 @@ interface ShowroomData {
     id: string;
     nameAr: string;
     nameEn: string;
-    crNumber: string;
+    crNumber?: string | null;
     slug?: string;
     city?: string;
     phone?: string;
@@ -50,6 +51,7 @@ interface ShowroomData {
     descriptionEn?: string;
     plan: string;
     verificationStatus: string;
+    isFreelancer?: boolean;
     createdAt: string;
   };
   listings: ShowroomListing[];
@@ -101,7 +103,7 @@ export function SupplierShowroomClient() {
     setContacting(true);
     try {
       const res = await api.post('/conversations/start', {
-        participantCompanyId: data.company.id,
+        targetCompanyId: data.company.id,
       });
       router.push(`/${locale}/dashboard/messages/${res.data.data?.id}`);
     } catch { /* silent */ }
@@ -183,12 +185,17 @@ export function SupplierShowroomClient() {
               {company.plan === 'PRO' && (
                 <span className="rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-bold text-amber-900">PRO</span>
               )}
-              {company.verificationStatus === 'VERIFIED' && (
+              {company.isFreelancer ? (
+                <span className="flex items-center gap-1 rounded-full bg-blue-500/20 px-2.5 py-0.5 text-xs font-medium text-blue-300">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {ar ? 'بائع مستقل' : 'Independent Seller'}
+                </span>
+              ) : company.verificationStatus === 'VERIFIED' ? (
                 <span className="flex items-center gap-1 rounded-full bg-green-500/20 px-2.5 py-0.5 text-xs font-medium text-green-300">
                   <CheckCircle2 className="h-3 w-3" />
-                  {ar ? 'موثق' : 'Verified'}
+                  {ar ? 'سجل تجاري موثّق' : 'CR Verified'}
                 </span>
-              )}
+              ) : null}
             </div>
 
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/60 justify-center sm:justify-start">
@@ -398,15 +405,11 @@ export function SupplierShowroomClient() {
                   >
                     {/* Image */}
                     <div className="aspect-video w-full rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden">
-                      {listing.images?.[0] ? (
-                        <img
-                          src={listing.images[0].url}
-                          alt={ar ? listing.titleAr : listing.titleEn}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      ) : (
-                        <Package className="h-10 w-10 text-slate-300" />
-                      )}
+                      <img
+                        src={resolveListingImage(listing.images?.[0]?.url, listing.category?.slug, 0, listing.id)}
+                        alt={ar ? listing.titleAr : listing.titleEn}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                     </div>
 
                     <div className="flex-1 flex flex-col gap-1.5">

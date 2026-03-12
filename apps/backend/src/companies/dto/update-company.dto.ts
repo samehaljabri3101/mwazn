@@ -12,6 +12,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LegalForm, CompanySizeRange } from '../../auth/dto/register-supplier.dto';
+import { SubscriptionPlan } from '@prisma/client';
 
 export class UpdateCompanyDto {
   // ── Names & basic ─────────────────────────────────────
@@ -62,4 +63,11 @@ export class UpdateCompanyDto {
   @ApiPropertyOptional() @IsOptional() @IsString() isoUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() chamberCertUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() taxCertUrl?: string;
+
+  // ── Admin-only ────────────────────────────────────────
+  @ApiPropertyOptional({ description: 'Internal admin notes (admin only)' })
+  @IsOptional() @IsString() adminNotes?: string;
+
+  @ApiPropertyOptional({ enum: SubscriptionPlan, description: 'Subscription plan (admin only)' })
+  @IsOptional() @IsEnum(SubscriptionPlan) plan?: SubscriptionPlan;
 }

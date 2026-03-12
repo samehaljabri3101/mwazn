@@ -740,6 +740,13 @@ const SEED_BUY_PASSWORD   = process.env.SEED_BUY_PASSWORD   || 'Buyer@1234';
 
 // ── Main Seed ─────────────────────────────────────────────────────────────────
 async function main() {
+  // ── Idempotency guard ───────────────────────────────────────────────────────
+  const existingCount = await prisma.company.count();
+  if (existingCount > 0) {
+    console.log(`Seed guard: ${existingCount} companies already exist. Skipping reseed to preserve live data.`);
+    return;
+  }
+
   console.log('Mwazn v4 seed starting (curated image manifest)...');
 
   // Clean up in FK-safe order
@@ -883,6 +890,54 @@ async function main() {
   console.log(`  + ${buyerCompanies.length} buyer companies`);
 
   const verifiedSuppliers = supplierCompanies.filter((s) => s.verificationStatus === VerificationStatus.VERIFIED);
+
+  // ── 4b. Demo individual accounts (Freelancer + Customer) ─────────────────
+  console.log('  Creating demo individual accounts...');
+  const freelancerCat = catBySlug['technology-electronics'] ?? categories[0];
+  const freelancerCompany = await prisma.company.create({
+    data: {
+      nameAr: 'فيصل الحربي', nameEn: 'Faisal Al-Harbi',
+      crNumber: null, type: CompanyType.SUPPLIER,
+      isFreelancer: true,
+      verificationStatus: VerificationStatus.VERIFIED,
+      plan: SubscriptionPlan.FREE,
+      city: 'Riyadh',
+      phone: '+966501234567',
+      descriptionEn: 'Independent technology consultant and product seller. Specialises in IT hardware and software solutions.',
+      users: {
+        create: {
+          email: 'freelancer@demo.sa',
+          passwordHash: hash('Freelancer@1234'),
+          fullName: 'Faisal Al-Harbi',
+          role: Role.FREELANCER,
+        },
+      },
+      categories: { connect: [{ id: freelancerCat.id }] },
+    },
+  });
+  supplierCompanies.push(freelancerCompany);
+  verifiedSuppliers.push(freelancerCompany);
+
+  await prisma.company.create({
+    data: {
+      nameAr: 'سارة القحطاني', nameEn: 'Sara Al-Qahtani',
+      crNumber: null, type: CompanyType.BUYER,
+      isFreelancer: false,
+      verificationStatus: VerificationStatus.VERIFIED,
+      plan: SubscriptionPlan.FREE,
+      city: 'Jeddah',
+      phone: '+966502345678',
+      users: {
+        create: {
+          email: 'customer@demo.sa',
+          passwordHash: hash('Customer@1234'),
+          fullName: 'Sara Al-Qahtani',
+          role: Role.CUSTOMER,
+        },
+      },
+    },
+  });
+  console.log('  + freelancer@demo.sa + customer@demo.sa created');
 
   // ── 5. Listings (~7 per verified supplier = 840+) ─────────────────────────
   console.log('  Creating listings...');
@@ -1225,7 +1280,11 @@ async function main() {
 
     await prisma.company.update({
       where: { id: sup.id },
-      data: { supplierScore: Math.round(score), scoreUpdatedAt: new Date() },
+      data: {
+        supplierScore: Math.round(score),
+        avgRating: avgRating > 0 ? Math.round(avgRating * 10) / 10 : null,
+        scoreUpdatedAt: new Date(),
+      },
     });
   }
   console.log('  + supplier scores computed');
@@ -1234,11 +1293,13 @@ async function main() {
   console.log('\nMwazn v3 seed complete!');
   console.log('-'.repeat(60));
   console.log('Demo Credentials:');
-  console.log(`  Admin     -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);
-  console.log(`  Buyer     -> admin@buyer1.sa  /  ${SEED_BUY_PASSWORD}`);
+  console.log(`  Admin      -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);
+  console.log(`  Buyer      -> admin@buyer1.sa  /  ${SEED_BUY_PASSWORD}`);
   console.log(`  Supplier (PRO+Verified)  -> admin@supplier1.sa  /  ${SEED_SUP_PASSWORD}`);
   console.log(`  Supplier (FREE+Verified) -> admin@supplier3.sa  /  ${SEED_SUP_PASSWORD}`);
   console.log(`  Supplier (Unverified)    -> admin@supplier9.sa  /  ${SEED_SUP_PASSWORD}`);
+  console.log(`  Freelancer -> freelancer@demo.sa  /  Freelancer@1234`);
+  console.log(`  Customer   -> customer@demo.sa    /  Customer@1234`);
   console.log('-'.repeat(60));
   console.log('Showroom URLs:');
   console.log('  http://localhost:3000/en/suppliers/demo-1  (Gulf Industrial)');

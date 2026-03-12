@@ -15,6 +15,7 @@ import {
   Tag, Award, Clock, ShoppingCart, MessageSquare, FileText,
   Eye, ExternalLink, Building2,
 } from 'lucide-react';
+import { resolveListingImage } from '@/lib/categoryImages';
 
 export function ProductDetailClient() {
   const locale = useLocale();
@@ -51,7 +52,7 @@ export function ProductDetailClient() {
     setInquiring(true);
     try {
       const res = await api.post('/conversations/start', {
-        participantCompanyId: listing.supplier.id,
+        targetCompanyId: listing.supplier.id,
         subject: ar ? `استفسار عن: ${listing.titleAr}` : `Inquiry about: ${listing.titleEn}`,
       });
       const convId = res.data.data?.id;
@@ -102,7 +103,12 @@ export function ProductDetailClient() {
   const title = ar ? listing.titleAr : listing.titleEn;
   const description = ar ? listing.descriptionAr : listing.descriptionEn;
   const supplierName = listing.supplier ? (ar ? listing.supplier.nameAr : listing.supplier.nameEn) : '';
-  const images = listing.images || [];
+  const catSlug = listing.category?.slug;
+  const rawImages = listing.images || [];
+  // Resolve category-accurate images (always uses curated category pool for demo quality)
+  const images = rawImages.length > 0
+    ? rawImages.map((img, i) => ({ ...img, url: resolveListingImage(img.url, catSlug, i, listing.id) }))
+    : [{ id: 'fallback', url: resolveListingImage(null, catSlug, 0, listing.id), isPrimary: true, sortOrder: 0 }];
 
   return (
     <div className="min-h-screen bg-surface">
@@ -132,17 +138,11 @@ export function ProductDetailClient() {
           <div className="space-y-3">
             {/* Main image */}
             <div className="relative aspect-square rounded-2xl bg-slate-100 overflow-hidden border border-slate-200">
-              {images[activeImg] ? (
-                <img
-                  src={images[activeImg].url}
-                  alt={title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center">
-                  <Package className="h-24 w-24 text-slate-300" />
-                </div>
-              )}
+              <img
+                src={images[activeImg]?.url}
+                alt={title}
+                className="w-full h-full object-cover"
+              />
               {/* Nav arrows */}
               {images.length > 1 && (
                 <>
@@ -381,17 +381,11 @@ export function ProductDetailClient() {
                   className="card card-hover flex flex-col gap-2 group"
                 >
                   <div className="aspect-square rounded-xl bg-slate-100 overflow-hidden">
-                    {item.images?.[0] ? (
-                      <img
-                        src={item.images[0].url}
-                        alt={ar ? item.titleAr : item.titleEn}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <Package className="h-8 w-8 text-slate-300" />
-                      </div>
-                    )}
+                    <img
+                      src={resolveListingImage(item.images?.[0]?.url, (item as any).category?.slug, 0, item.id)}
+                      alt={ar ? item.titleAr : item.titleEn}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-700 line-clamp-2">

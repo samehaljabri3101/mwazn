@@ -13,7 +13,7 @@ import type { Listing } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Package, Plus, Tag, DollarSign, Archive, Eye, EyeOff,
-  Camera, X, ExternalLink, Clock, Pencil,
+  Camera, X, ExternalLink, Clock, Pencil, Upload,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, 'green' | 'amber' | 'gray'> = {
@@ -100,11 +100,18 @@ export default function SupplierListingsPage() {
               {ar ? `${listings.length} منتج` : `${listings.length} products`}
             </p>
           </div>
-          <Link href={`/${locale}/dashboard/supplier/listings/new`}>
-            <Button icon={<Plus className="h-4 w-4" />}>
-              {ar ? 'إضافة منتج' : 'Add Product'}
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href={`/${locale}/dashboard/supplier/listings/import`}>
+              <Button variant="secondary" icon={<Upload className="h-4 w-4" />}>
+                {ar ? 'استيراد بالجملة' : 'Bulk Import'}
+              </Button>
+            </Link>
+            <Link href={`/${locale}/dashboard/supplier/listings/new`}>
+              <Button icon={<Plus className="h-4 w-4" />}>
+                {ar ? 'إضافة منتج' : 'Add Product'}
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Hidden file input for image upload */}

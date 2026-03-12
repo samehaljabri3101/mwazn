@@ -42,7 +42,7 @@ export default function NewRFQPage() {
 
   useEffect(() => {
     if (!isLoading && company && company.type !== 'BUYER') {
-      router.replace(`/${locale}/dashboard/supplier`);
+      router.replace(`/${locale}/dashboard`);
     }
   }, [isLoading, company, locale, router]);
 

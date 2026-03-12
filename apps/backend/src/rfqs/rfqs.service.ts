@@ -19,7 +19,7 @@ export class RFQsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string }) {
+  async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string; adminOverride?: boolean }) {
     const where: any = {};
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.status) where.status = query.status;
@@ -31,16 +31,18 @@ export class RFQsService {
       ];
     }
 
-    // Hide invite-only RFQs from public browsing; buyer's own RFQs bypass via buyerId
-    if (!query.buyerId) {
+    // PLATFORM_ADMIN sees all RFQs; all other callers see only PUBLIC unless they are the buyer
+    if (!query.buyerId && !query.adminOverride) {
       where.visibility = 'PUBLIC';
     }
 
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.rFQ.findMany({
         where,
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         orderBy: { createdAt: 'desc' },
         include: {
           category: true,
@@ -51,7 +53,7 @@ export class RFQsService {
       this.prisma.rFQ.count({ where }),
     ]);
 
-    return paginate(items, total, query.page ?? 1, query.limit ?? 20);
+    return paginate(items, total, _page, _limit);
   }
 
   async findOne(id: string) {
@@ -77,8 +79,8 @@ export class RFQsService {
 
   async create(dto: CreateRFQDto, userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { company: true } });
-    if (!user || user.company.type !== 'BUYER') {
-      throw new ForbiddenException('Only buyers can create RFQs');
+    if (!user || (user.company.type !== 'BUYER' && user.role !== Role.FREELANCER)) {
+      throw new ForbiddenException('Only buyers and freelancers can create RFQs');
     }
 
     return this.prisma.rFQ.create({

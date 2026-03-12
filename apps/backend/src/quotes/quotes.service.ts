@@ -42,17 +42,19 @@ export class QuotesService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     const where = { supplierId: user?.companyId };
 
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.quote.findMany({
         where,
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         include: { rfq: { include: { buyer: { select: { nameAr: true, nameEn: true } }, category: true } } },
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.quote.count({ where }),
     ]);
-    return paginate(items, total, query.page ?? 1, query.limit ?? 20);
+    return paginate(items, total, _page, _limit);
   }
 
   async create(dto: CreateQuoteDto, userId: string) {

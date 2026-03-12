@@ -44,7 +44,7 @@ function OnboardingChecklist({
   const supplierSteps = [
     { labelEn: 'Create account', labelAr: 'إنشاء حساب', done: true, href: '' },
     { labelEn: 'Complete profile', labelAr: 'إكمال الملف الشخصي', done: false, href: `${base}/profile` },
-    { labelEn: 'Add a listing', labelAr: 'إضافة منتج', done: (stats.totalListings ?? 0) > 0, href: `${base}/supplier/listings/new` },
+    { labelEn: 'Add a product', labelAr: 'إضافة منتج', done: (stats.totalListings ?? 0) > 0, href: `${base}/supplier/listings/new` },
     { labelEn: 'Submit first quote', labelAr: 'تقديم أول عرض', done: (stats.totalQuotes ?? 0) > 0, href: `${base}/supplier/rfqs` },
   ];
 
@@ -161,9 +161,10 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<StatsData>({});
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
-  const isBuyer = user?.role === 'BUYER_ADMIN';
-  const isSupplier = user?.role === 'SUPPLIER_ADMIN';
   const isAdmin = user?.role === 'PLATFORM_ADMIN';
+  const isSeller = user?.role === 'SUPPLIER_ADMIN' || user?.role === 'FREELANCER';
+  const isBuyer = user?.role === 'BUYER_ADMIN' || user?.role === 'CUSTOMER';
+  const isSupplier = user?.role === 'SUPPLIER_ADMIN'; // legacy compat (for PRO quota / CR warning)
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -179,7 +180,7 @@ export default function DashboardPage() {
             totalDeals: dealsRes.data.data?.meta?.total ?? 0,
             activeDeals: dealsRes.data.data?.items?.filter((d: any) => ['AWARDED', 'IN_PROGRESS'].includes(d.status)).length ?? 0,
           });
-        } else if (isSupplier) {
+        } else if (isSeller) {
           const [quotesRes, dealsRes, listingsRes] = await Promise.all([
             api.get('/quotes/my', { params: { limit: 1 } }),
             api.get('/deals', { params: { limit: 1 } }),
@@ -195,16 +196,16 @@ export default function DashboardPage() {
           const res = await api.get('/admin/dashboard');
           const d = res.data.data;
           setStats({
-            totalRfqs: d.totalRfqs,
-            openRfqs: d.openRfqs,
-            totalDeals: d.totalDeals,
-            totalListings: d.totalCompanies,
+            totalRfqs: d.rfqs?.total,
+            openRfqs: d.rfqs?.open,
+            totalDeals: d.deals?.total,
+            totalListings: d.listings?.active,
           });
         }
       } catch { /* silent */ }
     };
     fetchStats();
-  }, [isBuyer, isSupplier, isAdmin]);
+  }, [isBuyer, isSeller, isAdmin]);
 
   const companyName = ar ? company?.nameAr : company?.nameEn;
   const quota = company?.plan === 'FREE' ? 10 : null;
@@ -221,8 +222,8 @@ export default function DashboardPage() {
             </h1>
             <p className="text-slate-500 mt-1 text-sm">
               {companyName} &bull; {ar
-                ? (isBuyer ? 'حساب مشترٍ' : isSupplier ? 'حساب مورّد' : 'إداري المنصة')
-                : (isBuyer ? 'Buyer Account' : isSupplier ? 'Supplier Account' : 'Platform Admin')}
+                ? (isBuyer ? 'حساب مشترٍ' : isSeller ? 'حساب مورّد' : 'إداري المنصة')
+                : (isBuyer ? 'Buyer Account' : isSeller ? 'Supplier Account' : 'Platform Admin')}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -235,7 +236,7 @@ export default function DashboardPage() {
                 {ar ? 'طلب عرض سعر جديد' : 'New RFQ'}
               </Link>
             )}
-            {isSupplier && (
+            {isSeller && (
               <Link
                 href={`${base}/supplier/listings/new`}
                 className="btn-primary inline-flex items-center gap-2 text-sm"
@@ -248,10 +249,10 @@ export default function DashboardPage() {
         </div>
 
         {/* Onboarding checklist */}
-        {(isBuyer || isSupplier) && (
+        {(isBuyer || isSeller) && (
           <OnboardingChecklist
             isBuyer={isBuyer}
-            isSupplier={isSupplier}
+            isSupplier={isSeller}
             stats={stats}
             ar={ar}
             base={base}
@@ -264,12 +265,12 @@ export default function DashboardPage() {
             <Clock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-amber-800 text-sm">
-                {ar ? 'الحساب قيد المراجعة' : 'Account Pending Verification'}
+                {ar ? 'السجل التجاري قيد المراجعة' : 'CR Document Under Review'}
               </p>
               <p className="text-xs text-amber-600 mt-0.5">
                 {ar
-                  ? 'يمكنك استعراض طلبات الأسعار لكن لا يمكنك تقديم عروض حتى يتم التحقق من شركتك.'
-                  : 'You can browse RFQs but cannot submit quotes until your company is verified.'}
+                  ? 'فريقنا يراجع مستندات السجل التجاري. يمكنك استعراض الطلبات الآن وتقديم العروض فور اكتمال التحقق (عادةً خلال 24 ساعة).'
+                  : 'Our team is reviewing your CR documents. You can browse RFQs now and submit quotes once verification is complete (usually within 24 hours).'}
               </p>
             </div>
           </div>
@@ -328,7 +329,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {isSupplier && (
+        {isSeller && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard
               icon={<ScrollText className="h-5 w-5" />}
@@ -411,7 +412,7 @@ export default function DashboardPage() {
                   <ChevronRight className="h-3.5 w-3.5 text-slate-300 ms-auto rtl-mirror" />
                 </Link>
               ))}
-              {isSupplier && [
+              {isSeller && [
                 { href: `${base}/supplier/rfqs`, label: ar ? 'تصفح طلبات العروض' : 'Browse Open RFQs', icon: <FileText className="h-4 w-4" /> },
                 { href: `${base}/supplier/quotes`, label: ar ? 'عروضي المقدمة' : 'My Submitted Quotes', icon: <ScrollText className="h-4 w-4" /> },
                 { href: `${base}/supplier/listings/new`, label: ar ? 'إضافة منتج جديد' : 'Add New Product', icon: <Package className="h-4 w-4" /> },

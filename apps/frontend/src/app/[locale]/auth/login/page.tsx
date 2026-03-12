@@ -158,16 +158,29 @@ export default function LoginPage() {
 
           {/* Demo credentials */}
           <div className="mt-8 rounded-xl bg-brand-50 border border-brand-100 p-4">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-3">
               <Shield className="h-4 w-4 text-brand-700" />
               <p className="text-xs font-semibold text-brand-700">
-                {ar ? 'بيانات تجريبية' : 'Demo Accounts'}
+                {ar ? 'حسابات تجريبية — انقر للدخول' : 'Demo Accounts — click to auto-fill'}
               </p>
             </div>
-            <div className="space-y-1 text-xs text-slate-600">
-              <p><span className="font-medium">{ar ? 'مشترٍ:' : 'Buyer:'}</span> admin@buyer1.sa / Buyer@1234</p>
-              <p><span className="font-medium">{ar ? 'مورّد:' : 'Supplier:'}</span> admin@supplier1.sa / Supplier@1234</p>
-              <p><span className="font-medium">{ar ? 'إداري:' : 'Admin:'}</span> admin@mwazn.sa / Admin@1234</p>
+            <div className="space-y-1.5">
+              {[
+                { role: ar ? 'مشترٍ' : 'Buyer', email: 'admin@buyer1.sa', password: 'Buyer@1234' },
+                { role: ar ? 'مورّد' : 'Supplier', email: 'admin@supplier1.sa', password: 'Supplier@1234' },
+                { role: ar ? 'إداري' : 'Admin', email: 'admin@mwazn.sa', password: 'Admin@1234' },
+              ].map((cred) => (
+                <button
+                  key={cred.email}
+                  type="button"
+                  onClick={() => { setEmail(cred.email); setPassword(cred.password); }}
+                  className="w-full text-start rounded-lg bg-white border border-brand-100 hover:border-brand-300 hover:bg-brand-50/50 px-3 py-2 transition-colors"
+                >
+                  <span className="text-xs font-semibold text-brand-700">{cred.role}</span>
+                  <span className="mx-1.5 text-slate-300">·</span>
+                  <span className="text-xs text-slate-500 font-mono">{cred.email}</span>
+                </button>
+              ))}
             </div>
           </div>
         </div>

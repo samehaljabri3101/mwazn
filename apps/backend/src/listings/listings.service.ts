@@ -10,6 +10,7 @@ import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as XLSX from 'xlsx';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'uploads', 'listing-images');
 const MAX_SIZE = 5 * 1024 * 1024;
@@ -277,5 +278,191 @@ export class ListingsService {
     return this.prisma.listingImage.create({
       data: { listingId, url, isPrimary, sortOrder: count, filename: '', alt: listing.titleEn },
     });
+  }
+
+  // ─── Bulk Import ─────────────────────────────────────────────────────────────
+
+  getBulkImportTemplate(): Buffer {
+    const headers = [
+      'external_id', 'product_name_en', 'product_name_ar',
+      'description_en', 'description_ar',
+      'category_slug', 'brand', 'model_number',
+      'price_sar', 'currency', 'minimum_order_qty', 'unit',
+      'stock_qty', 'lead_time_days', 'country_of_origin',
+      'warranty_months', 'image_url', 'rfq_only', 'status', 'tags',
+    ];
+
+    const sample = [
+      'PROD-001', 'Industrial Safety Helmet', 'خوذة السلامة الصناعية',
+      'High-grade ABS safety helmet for industrial use', 'خوذة سلامة عالية الجودة',
+      'safety-security', 'SafeGuard', 'SG-H100',
+      '45.00', 'SAR', '50', 'piece',
+      '500', '7', 'Saudi Arabia',
+      '12', 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80',
+      'NO', 'ACTIVE', 'safety,helmet,industrial',
+    ];
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+
+    // Column widths
+    ws['!cols'] = headers.map((h) => ({ wch: Math.max(h.length + 4, 16) }));
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Products');
+    return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
+  }
+
+  async bulkImport(
+    file: Express.Multer.File,
+    userId: string,
+  ): Promise<{ total: number; imported: number; failed: number; errors: Array<{ row: number; field: string; message: string }> }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { company: true } });
+    if (!user) throw new ForbiddenException();
+    if (
+      user.company.type !== 'SUPPLIER' ||
+      user.company.verificationStatus !== VerificationStatus.VERIFIED
+    ) {
+      throw new ForbiddenException('Only verified suppliers and freelancers can import products');
+    }
+
+    // Load all categories into a slug → id map
+    const allCats = await this.prisma.category.findMany({ select: { id: true, slug: true } });
+    const catMap = new Map<string, string>(allCats.map((c) => [c.slug, c.id]));
+
+    // Parse xlsx
+    const wb = XLSX.read(file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+    if (rows.length < 2) {
+      return { total: 0, imported: 0, failed: 0, errors: [] };
+    }
+
+    const headers: string[] = (rows[0] as string[]).map((h) => String(h).trim().toLowerCase());
+    const col = (name: string) => headers.indexOf(name);
+
+    const dataRows = rows.slice(1).filter((r) => r.some((c) => c !== undefined && c !== ''));
+    const total = dataRows.length;
+    const errors: Array<{ row: number; field: string; message: string }> = [];
+    let imported = 0;
+    const seenExternalIds = new Set<string>();
+
+    for (let i = 0; i < dataRows.length; i++) {
+      const rowNum = i + 2; // 1-indexed, row 1 = headers
+      const row = dataRows[i];
+      const get = (name: string) => String(row[col(name)] ?? '').trim();
+      const rowErrors: Array<{ field: string; message: string }> = [];
+
+      const externalId = get('external_id');
+      if (!externalId) {
+        rowErrors.push({ field: 'external_id', message: 'Required' });
+      } else if (seenExternalIds.has(externalId)) {
+        rowErrors.push({ field: 'external_id', message: 'Duplicate within file' });
+      } else {
+        seenExternalIds.add(externalId);
+      }
+
+      const productNameEn = get('product_name_en');
+      if (!productNameEn) rowErrors.push({ field: 'product_name_en', message: 'Required' });
+
+      const descriptionEn = get('description_en');
+      if (!descriptionEn) rowErrors.push({ field: 'description_en', message: 'Required' });
+
+      const categorySlug = get('category_slug');
+      if (!categorySlug) {
+        rowErrors.push({ field: 'category_slug', message: 'Required' });
+      } else if (!catMap.has(categorySlug)) {
+        rowErrors.push({ field: 'category_slug', message: `Category "${categorySlug}" not found` });
+      }
+
+      const unit = get('unit');
+      if (!unit) rowErrors.push({ field: 'unit', message: 'Required' });
+
+      const imageUrl = get('image_url');
+      if (!imageUrl) rowErrors.push({ field: 'image_url', message: 'Required' });
+
+      const rfqOnlyRaw = get('rfq_only').toUpperCase();
+      if (!rfqOnlyRaw || !['YES', 'NO'].includes(rfqOnlyRaw)) {
+        rowErrors.push({ field: 'rfq_only', message: 'Must be YES or NO' });
+      }
+
+      const statusRaw = get('status').toUpperCase();
+      if (!statusRaw || !['ACTIVE', 'DRAFT', 'INACTIVE'].includes(statusRaw)) {
+        rowErrors.push({ field: 'status', message: 'Must be ACTIVE, DRAFT, or INACTIVE' });
+      }
+
+      const priceRaw = get('price_sar');
+      const rfqOnly = rfqOnlyRaw === 'YES';
+      let price: number | null = null;
+      if (!rfqOnly) {
+        if (!priceRaw) {
+          rowErrors.push({ field: 'price_sar', message: 'Required when rfq_only=NO' });
+        } else {
+          price = parseFloat(priceRaw);
+          if (isNaN(price) || price <= 0) {
+            rowErrors.push({ field: 'price_sar', message: 'Must be a positive number' });
+          }
+        }
+      } else if (priceRaw) {
+        price = parseFloat(priceRaw);
+        if (isNaN(price) || price < 0) price = null;
+      }
+
+      const currency = get('currency') || 'SAR';
+      if (currency !== 'SAR') {
+        rowErrors.push({ field: 'currency', message: 'Only SAR is accepted' });
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push(...rowErrors.map((e) => ({ row: rowNum, ...e })));
+        continue;
+      }
+
+      // Import row
+      try {
+        const categoryId = catMap.get(categorySlug)!;
+        const listingStatus = statusRaw === 'ACTIVE' ? ListingStatus.ACTIVE : ListingStatus.INACTIVE;
+        const tagsRaw = get('tags');
+        const tags = tagsRaw ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : [];
+        const minOrderQty = parseInt(get('minimum_order_qty')) || undefined;
+        const leadTimeDays = parseInt(get('lead_time_days')) || undefined;
+        const sku = get('model_number') || undefined;
+
+        const listing = await this.prisma.listing.create({
+          data: {
+            titleEn: productNameEn,
+            titleAr: get('product_name_ar') || productNameEn,
+            descriptionEn,
+            descriptionAr: get('description_ar') || undefined,
+            price: price ?? undefined,
+            currency: 'SAR',
+            unit,
+            minOrderQty,
+            leadTimeDays,
+            tags,
+            sku,
+            requestQuoteOnly: rfqOnly,
+            status: listingStatus,
+            supplierId: user.companyId,
+            categoryId,
+          },
+        });
+
+        // Generate slug
+        const slug = generateSlug(productNameEn, listing.id);
+        await this.prisma.listing.update({ where: { id: listing.id }, data: { slug } }).catch(() => {});
+
+        // Add image
+        await this.prisma.listingImage.create({
+          data: { listingId: listing.id, url: imageUrl, isPrimary: true, sortOrder: 0, filename: '' },
+        });
+
+        imported++;
+      } catch (err: any) {
+        errors.push({ row: rowNum, field: 'general', message: err?.message ?? 'Failed to save row' });
+      }
+    }
+
+    return { total, imported, failed: total - imported, errors };
   }
 }

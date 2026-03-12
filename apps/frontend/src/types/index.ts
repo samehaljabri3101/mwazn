@@ -1,4 +1,4 @@
-export type Role = 'BUYER_ADMIN' | 'SUPPLIER_ADMIN' | 'PLATFORM_ADMIN';
+export type Role = 'BUYER_ADMIN' | 'SUPPLIER_ADMIN' | 'PLATFORM_ADMIN' | 'FREELANCER' | 'CUSTOMER';
 export type CompanyType = 'BUYER' | 'SUPPLIER';
 export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 export type SubscriptionPlan = 'FREE' | 'PRO';
@@ -27,7 +27,8 @@ export interface Company {
   id: string;
   nameAr: string;
   nameEn: string;
-  crNumber: string;
+  crNumber?: string | null;
+  isFreelancer?: boolean;
   type: CompanyType;
   verificationStatus: VerificationStatus;
   plan: SubscriptionPlan;
@@ -62,6 +63,9 @@ export interface Company {
   verifiedAt?: string;
   verificationNotes?: string;
   slug?: string;
+  supplierScore?: number;    // 0-100 composite platform score
+  avgRating?: number;        // 1-5 customer rating average
+  scoreUpdatedAt?: string;
   createdAt: string;
 }
 

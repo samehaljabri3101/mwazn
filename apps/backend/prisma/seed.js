@@ -1,9 +1,9 @@
 "use strict";
 /**
- * Mwazn — Massive Production Seed (v2)
- * 200 companies · 800+ listings · 250 RFQs · 400+ quotes
- * 130+ deals · 2000+ messages · 300+ ratings
- * Images use picsum.photos — no local files needed.
+ * Mwazn — Demo Marketplace Seed (v4)
+ * 200 companies · 900+ listings · 400 RFQs · 600+ quotes
+ * 200 deals · 2000+ messages · 300+ ratings
+ * Images: curated Unsplash direct CDN URLs, product-type level manifest.
  */
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
@@ -47,8 +47,198 @@ const hash = (pw) => bcrypt.hashSync(pw, 10);
 const rand = (arr) => arr[Math.floor(Math.random() * arr.length)];
 const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 const randPrice = (min, max) => Math.round((Math.random() * (max - min) + min) * 100) / 100;
-const productImg = (s) => `https://picsum.photos/seed/mwazn-${s}/800/600`;
-const logoImg = (s) => `https://picsum.photos/seed/logo-${s}/200/200`;
+// ── Product image manifest ─────────────────────────────────────────────────────
+// Verified working Unsplash CDN URLs (timestamp-hash format, HTTP 200 confirmed).
+// Relevance > uniqueness — same image reused for similar products is acceptable.
+const U = (id) => `https://images.unsplash.com/photo-${id}?w=800&q=80`;
+// Verified working IDs (all return HTTP 200):
+const IMG = {
+    // Technology / computers
+    laptop: '1517336714731-489689fd1ca8',
+    laptop2: '1496181133206-80ce9b88a853',
+    coding: '1498050108023-c5249f4df085',
+    server: '1593642632559-0c6d3fc62b89',
+    tech: '1605289982774-9a6fef564df8',
+    // Industrial machinery
+    machinery: '1558618666-fcd25c85cd64',
+    industrial: '1581091226825-a6a2a5aee158',
+    mech: '1504917595217-d4dc5ebe6122',
+    pipe: '1519389950473-47ba0277781c',
+    // Building & construction
+    construct: '1504307651254-35680f356dfd',
+    construct2: '1530041539828-114de669390e',
+    tiles: '1578575437130-527eed3abbec',
+    paint: '1572635196237-14b3f281503f',
+    // Medical
+    hospital: '1576091160399-112ba8d25d1d',
+    medical: '1542282088-fe8426682b8f',
+    clinic: '1631815589968-fdb09a223b1e',
+    monitor: '1611532736597-de2d4265fba3',
+    // Food
+    food: '1462206092226-f46025ffe607',
+    oliveoil: '1474979266404-7eaacbcd87c5',
+    fooditem: '1590856029826-c7a73142bbf1',
+    grain: '1512621776951-a57141f2eefd',
+    // Furniture / office
+    chair: '1524758631624-e2822e304c36',
+    sofa: '1555041469-a586c61ea9bc',
+    desk: '1501854140801-50d01698950b',
+    boardroom: '1441986380878-c4248f5b8b5b',
+    cabinet: '1556742049-0cfed4f6a45d',
+    lobby: '1507003211169-0a1dd7228f2d',
+    office2: '1556742031-c6961e8560b0',
+    // Electrical / energy
+    elecpanel: '1559209172-0ff8f6d49ff7',
+    solar: '1497435334941-8c899ee9e8e9',
+    electrical: '1635070041078-e363dbe005cb',
+    // Chemicals / materials
+    chemical: '1532187643603-ba119ca4109e',
+    chemical2: '1585776245991-cf89dd7fc73a',
+    // General / misc
+    misc1: '1581578731548-c64695cc6952',
+    misc2: '1586528116311-ad8dd3c8310d',
+    misc3: '1516975080664-ed2fc6a32937',
+};
+const PRODUCT_IMAGE_MAP = {
+    // ── Industrial Equipment ──────────────────────────────────────────────────
+    'Hydraulic Forklift 3-Ton': [U(IMG.industrial), U(IMG.machinery)],
+    'Industrial Air Compressor 200L': [U(IMG.machinery), U(IMG.mech)],
+    'Diesel Generator 50 kW': [U(IMG.machinery), U(IMG.industrial)],
+    'High-Pressure Industrial Water Pump': [U(IMG.pipe), U(IMG.machinery)],
+    'Factory Conveyor Belt System': [U(IMG.industrial), U(IMG.machinery)],
+    'Automated Welding Station': [U(IMG.industrial), U(IMG.mech)],
+    'Industrial Hydraulic Pump': [U(IMG.machinery), U(IMG.mech)],
+    'Automated Filling & Packing Line': [U(IMG.industrial), U(IMG.machinery)],
+    '100-Ton Hydraulic Press': [U(IMG.machinery), U(IMG.industrial)],
+    'Industrial Rubber Conveyor Belt': [U(IMG.industrial), U(IMG.machinery)],
+    'Industrial Electric Motor 30 kW': [U(IMG.machinery), U(IMG.mech)],
+    '500L Pressurized Storage Tank': [U(IMG.pipe), U(IMG.industrial)],
+    // ── Building Materials ────────────────────────────────────────────────────
+    'Rebar Steel 16mm Grade 60': [U(IMG.construct), U(IMG.construct2)],
+    'Sulphate-Resistant Portland Cement': [U(IMG.construct2), U(IMG.construct)],
+    'High-Quality Hollow Red Brick': [U(IMG.construct), U(IMG.construct2)],
+    'Washed Fine Concrete Sand': [U(IMG.construct2), U(IMG.construct)],
+    'Ceramic Floor Tile 60×60 cm': [U(IMG.tiles), U(IMG.construct)],
+    'Gypsum Board 12mm': [U(IMG.construct), U(IMG.construct2)],
+    'PVC Drainage Pipes': [U(IMG.pipe), U(IMG.construct)],
+    'Heat-Resistant Thermal Insulation': [U(IMG.construct), U(IMG.construct2)],
+    'Weather-Resistant Exterior Paint': [U(IMG.paint), U(IMG.construct)],
+    'A-Grade Treated Structural Lumber': [U(IMG.construct2), U(IMG.construct)],
+    'Washed Gravel 20mm': [U(IMG.construct), U(IMG.construct2)],
+    'Steel Reinforcement Mesh 200×200': [U(IMG.construct2), U(IMG.construct)],
+    // ── Technology & Electronics ──────────────────────────────────────────────
+    'Dell Latitude i7 Business Laptop': [U(IMG.laptop), U(IMG.laptop2)],
+    '32" 4K Professional Monitor': [U(IMG.laptop), U(IMG.coding)],
+    'Network A3 Color Laser Printer': [U(IMG.tech), U(IMG.laptop)],
+    'Dell PowerEdge R750 Server': [U(IMG.server), U(IMG.tech)],
+    '8-Camera IP CCTV System': [U(IMG.misc3), U(IMG.industrial)],
+    '3 KVA UPS Power Backup': [U(IMG.server), U(IMG.elecpanel)],
+    'HD VoIP IP Office Phone': [U(IMG.laptop), U(IMG.coding)],
+    '4000 Lumen Conference Projector': [U(IMG.boardroom), U(IMG.lobby)],
+    'Cisco Enterprise Network Router': [U(IMG.server), U(IMG.tech)],
+    'Samsung Galaxy Tab Business': [U(IMG.laptop2), U(IMG.laptop)],
+    'Wi-Fi 6 Enterprise Access Point': [U(IMG.server), U(IMG.tech)],
+    '4TB Enterprise SSD Storage': [U(IMG.server), U(IMG.coding)],
+    // ── Food & Beverages ──────────────────────────────────────────────────────
+    'Saudi Extra Virgin Olive Oil': [U(IMG.oliveoil), U(IMG.food)],
+    'Premium Grade-A Sukkari Dates': [U(IMG.fooditem), U(IMG.grain)],
+    'Authentic Arabic Coffee with Cardamom': [U(IMG.grain), U(IMG.food)],
+    'Premium Indian Basmati Rice': [U(IMG.grain), U(IMG.food)],
+    'Natural Yemeni Sidr Honey': [U(IMG.fooditem), U(IMG.oliveoil)],
+    'Refined Palm Oil for Industry': [U(IMG.oliveoil), U(IMG.food)],
+    'Premium Gulf Mixed Spice Blend': [U(IMG.food), U(IMG.grain)],
+    'Premium Bakery Wheat Flour': [U(IMG.grain), U(IMG.food)],
+    'Packaged Water 500ml (Carton)': [U(IMG.food), U(IMG.grain)],
+    'Natural Restaurant Packaged Juices': [U(IMG.fooditem), U(IMG.food)],
+    'Full-Fat UHT Milk': [U(IMG.food), U(IMG.grain)],
+    'Fine Industrial White Sugar': [U(IMG.grain), U(IMG.food)],
+    // ── Chemicals & Raw Materials ─────────────────────────────────────────────
+    'Pool & Water Treatment Chlorine': [U(IMG.chemical), U(IMG.pipe)],
+    'High-Grade Industrial Epoxy Resin': [U(IMG.chemical), U(IMG.chemical2)],
+    'Hydrochloric Acid 33%': [U(IMG.chemical2), U(IMG.chemical)],
+    'Boiler Water Treatment Chemical': [U(IMG.chemical), U(IMG.pipe)],
+    'Concentrated Industrial Dyes': [U(IMG.paint), U(IMG.chemical)],
+    'Specialized Industrial Lubricants': [U(IMG.machinery), U(IMG.chemical)],
+    'High-Resistance Industrial Adhesive': [U(IMG.chemical), U(IMG.machinery)],
+    'HDPE Raw Plastic Polymer': [U(IMG.chemical2), U(IMG.chemical)],
+    'Industrial Carbon Black Powder': [U(IMG.chemical), U(IMG.industrial)],
+    'Industrial Packaging Adhesive': [U(IMG.chemical), U(IMG.chemical2)],
+    'Sodium Hydroxide Solution': [U(IMG.chemical2), U(IMG.pipe)],
+    'Chemical Tank Insulation Material': [U(IMG.chemical), U(IMG.pipe)],
+    // ── Electrical Equipment ──────────────────────────────────────────────────
+    'Heat-Resistant Copper Electrical Cable': [U(IMG.elecpanel), U(IMG.electrical)],
+    'Main Electrical Panel with Breakers': [U(IMG.elecpanel), U(IMG.electrical)],
+    '100 KVA Power Transformer': [U(IMG.elecpanel), U(IMG.machinery)],
+    '200W Industrial LED High Bay Light': [U(IMG.solar), U(IMG.elecpanel)],
+    '100A Automatic Circuit Breaker': [U(IMG.elecpanel), U(IMG.electrical)],
+    'Electrical Distribution Board with Meter': [U(IMG.elecpanel), U(IMG.electrical)],
+    '100 kW Emergency Power Generator': [U(IMG.machinery), U(IMG.elecpanel)],
+    'Certified Smoke & Fire Detector': [U(IMG.misc3), U(IMG.elecpanel)],
+    'Industrial Power Factor Capacitor': [U(IMG.elecpanel), U(IMG.electrical)],
+    'Industrial PLC Control Unit': [U(IMG.server), U(IMG.elecpanel)],
+    'Safe Electrical Earthing System': [U(IMG.elecpanel), U(IMG.electrical)],
+    '400W Solar Panel Module': [U(IMG.solar), U(IMG.elecpanel)],
+    // ── Medical Devices ───────────────────────────────────────────────────────
+    'Adjustable Electric Hospital Bed': [U(IMG.hospital), U(IMG.clinic)],
+    'Digital Blood Pressure Monitor': [U(IMG.medical), U(IMG.hospital)],
+    'Medical Clinic Furniture Set': [U(IMG.hospital), U(IMG.clinic)],
+    'Volumetric IV Infusion Pump': [U(IMG.hospital), U(IMG.medical)],
+    '100mA Portable X-Ray Machine': [U(IMG.monitor), U(IMG.hospital)],
+    'Sterile Emergency Surgical Kit': [U(IMG.medical), U(IMG.hospital)],
+    'Complete Dental Chair Unit': [U(IMG.clinic), U(IMG.hospital)],
+    '12-Channel ECG Machine': [U(IMG.monitor), U(IMG.medical)],
+    'Steam Autoclave Sterilizer': [U(IMG.medical), U(IMG.hospital)],
+    'Medical Personal Protective Equipment': [U(IMG.medical), U(IMG.clinic)],
+    'Blood Glucose Monitoring System': [U(IMG.medical), U(IMG.monitor)],
+    'Foldable Medical Examination Table': [U(IMG.hospital), U(IMG.clinic)],
+    // ── Furniture & Decor ─────────────────────────────────────────────────────
+    'Executive Leather Office Chair': [U(IMG.chair), U(IMG.lobby)],
+    'L-Shaped Executive Manager Desk': [U(IMG.desk), U(IMG.chair)],
+    '12-Person Boardroom Table': [U(IMG.boardroom), U(IMG.lobby)],
+    '4-Drawer Metal Filing Cabinet': [U(IMG.cabinet), U(IMG.office2)],
+    '3-Seat Leather Reception Sofa': [U(IMG.sofa), U(IMG.lobby)],
+    'Adjustable Office Partition Panel': [U(IMG.desk), U(IMG.chair)],
+    'Premium Wooden Wall Bookcase': [U(IMG.office2), U(IMG.desk)],
+    'Comfortable Metal-Frame Waiting Chair': [U(IMG.chair), U(IMG.sofa)],
+    'Modern Reception Counter Desk': [U(IMG.lobby), U(IMG.sofa)],
+    '6-Section Staff Locker Cabinet': [U(IMG.cabinet), U(IMG.desk)],
+    'Office Kitchen Dining Table': [U(IMG.desk), U(IMG.boardroom)],
+    'Retail Product Display Shelf': [U(IMG.cabinet), U(IMG.lobby)],
+};
+// Category-level fallback when product title is not in the map
+const CAT_FALLBACK_IMAGES = {
+    'industrial-equipment': [U(IMG.machinery), U(IMG.industrial)],
+    'building-materials': [U(IMG.construct), U(IMG.construct2)],
+    'furniture-decor': [U(IMG.chair), U(IMG.sofa)],
+    'technology-electronics': [U(IMG.laptop), U(IMG.server)],
+    'food-beverages': [U(IMG.food), U(IMG.oliveoil)],
+    'chemicals-raw-materials': [U(IMG.chemical), U(IMG.chemical2)],
+    'electrical-equipment': [U(IMG.elecpanel), U(IMG.solar)],
+    'medical-devices': [U(IMG.hospital), U(IMG.medical)],
+    'logistics-transport': [U(IMG.industrial), U(IMG.misc1)],
+    'safety-security': [U(IMG.misc3), U(IMG.industrial)],
+    'energy-petroleum': [U(IMG.solar), U(IMG.elecpanel)],
+    'agriculture-food': [U(IMG.food), U(IMG.oliveoil)],
+    'it-services': [U(IMG.server), U(IMG.laptop)],
+    'clothing-textiles': [U(IMG.misc2), U(IMG.paint)],
+    'vehicles-automotive': [U(IMG.misc1), U(IMG.industrial)],
+    'paper-printing': [U(IMG.tech), U(IMG.laptop)],
+    'restaurant-equipment': [U(IMG.food), U(IMG.machinery)],
+    'tools-hardware': [U(IMG.machinery), U(IMG.mech)],
+    'cleaning-supplies': [U(IMG.paint), U(IMG.misc2)],
+    'construction-contracting': [U(IMG.construct), U(IMG.construct2)],
+    'laboratory-equipment': [U(IMG.chemical), U(IMG.server)],
+    'packaging-wrapping': [U(IMG.misc1), U(IMG.machinery)],
+    'office-equipment': [U(IMG.laptop), U(IMG.tech)],
+    'hvac-equipment': [U(IMG.machinery), U(IMG.pipe)],
+    'consulting-services': [U(IMG.boardroom), U(IMG.lobby)],
+};
+function getProductImages(titleEn, catSlug) {
+    return (PRODUCT_IMAGE_MAP[titleEn] ??
+        CAT_FALLBACK_IMAGES[catSlug] ??
+        [U('dRMQiAubdws'), U('VQGGmDWclBM')]);
+}
+const logoImg = (s) => `https://picsum.photos/seed/company-logo-${s}/200/200`;
 // ── Categories ────────────────────────────────────────────────────────────────
 const CATEGORIES = [
     { nameAr: 'مواد البناء', nameEn: 'Building Materials', slug: 'building-materials' },
@@ -524,8 +714,13 @@ const SEED_SUP_PASSWORD = process.env.SEED_SUP_PASSWORD || 'Supplier@1234';
 const SEED_BUY_PASSWORD = process.env.SEED_BUY_PASSWORD || 'Buyer@1234';
 // ── Main Seed ─────────────────────────────────────────────────────────────────
 async function main() {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
-    console.log('Mwazn v2 massive seed starting...');
+    // ── Idempotency guard ───────────────────────────────────────────────────────
+    const existingCount = await prisma.company.count();
+    if (existingCount > 0) {
+        console.log(`Seed guard: ${existingCount} companies already exist. Skipping reseed to preserve live data.`);
+        return;
+    }
+    console.log('Mwazn v4 seed starting (curated image manifest)...');
     // Clean up in FK-safe order
     await prisma.analyticsEvent.deleteMany().catch(() => { });
     await prisma.invoice.deleteMany().catch(() => { });
@@ -549,7 +744,7 @@ async function main() {
     await prisma.category.deleteMany();
     // ── 1. Categories ─────────────────────────────────────────────────────────
     console.log('  Creating categories...');
-    const categories = await Promise.all(CATEGORIES.map((cat, i) => prisma.category.create({ data: Object.assign(Object.assign({}, cat), { sortOrder: i, isActive: true }) })));
+    const categories = await Promise.all(CATEGORIES.map((cat, i) => prisma.category.create({ data: { ...cat, sortOrder: i, isActive: true } })));
     console.log(`  + ${categories.length} categories`);
     const catBySlug = Object.fromEntries(categories.map((c) => [c.slug, c]));
     // ── 2. Platform Admin ─────────────────────────────────────────────────────
@@ -576,19 +771,19 @@ async function main() {
         const company = await prisma.company.create({
             data: {
                 nameAr: s.nameAr, nameEn: s.nameEn, crNumber: cr,
-                slug: (_a = s.slug) !== null && _a !== void 0 ? _a : null, type: client_1.CompanyType.SUPPLIER,
+                slug: s.slug ?? null, type: client_1.CompanyType.SUPPLIER,
                 verificationStatus: s.status, plan: s.plan, city: s.city,
-                phone: (_b = s.phone) !== null && _b !== void 0 ? _b : `+9665${randInt(10000000, 99999999)}`,
-                website: (_c = s.website) !== null && _c !== void 0 ? _c : null,
-                logoUrl: s.status === client_1.VerificationStatus.VERIFIED ? logoImg(i + 1) : null,
+                phone: s.phone ?? `+9665${randInt(10000000, 99999999)}`,
+                website: s.website ?? null,
+                logoUrl: s.status === client_1.VerificationStatus.VERIFIED ? logoImg(i + 10) : null,
                 descriptionAr: `نحن ${s.nameAr} — نقدم منتجات وخدمات عالية الجودة في المملكة العربية السعودية. نلتزم بأعلى معايير الجودة والخدمة لعملائنا.`,
                 descriptionEn: `${s.nameEn} — delivering premium products and services across Saudi Arabia. Committed to the highest quality standards.`,
                 vatNumber: vatNum, crExpiryDate: new Date(Date.now() + randInt(365, 1095) * 86400000),
-                legalForm: (_d = s.legalForm) !== null && _d !== void 0 ? _d : rand(LEGAL_FORMS), establishmentYear: (_e = s.establishmentYear) !== null && _e !== void 0 ? _e : randInt(2005, 2020),
-                companySizeRange: (_f = s.companySizeRange) !== null && _f !== void 0 ? _f : rand(SIZE_RANGES), sectors: (_g = s.sectors) !== null && _g !== void 0 ? _g : [],
-                keyClients: (_h = s.keyClients) !== null && _h !== void 0 ? _h : [], regionsServed: (_j = s.regionsServed) !== null && _j !== void 0 ? _j : [s.city],
-                paymentTermsAccepted: (_k = s.paymentTermsAccepted) !== null && _k !== void 0 ? _k : rand(PAYMENT_TERMS_OPTIONS),
-                productionCapacity: (_l = s.productionCapacity) !== null && _l !== void 0 ? _l : null,
+                legalForm: s.legalForm ?? rand(LEGAL_FORMS), establishmentYear: s.establishmentYear ?? randInt(2005, 2020),
+                companySizeRange: s.companySizeRange ?? rand(SIZE_RANGES), sectors: s.sectors ?? [],
+                keyClients: s.keyClients ?? [], regionsServed: s.regionsServed ?? [s.city],
+                paymentTermsAccepted: s.paymentTermsAccepted ?? rand(PAYMENT_TERMS_OPTIONS),
+                productionCapacity: s.productionCapacity ?? null,
                 users: {
                     create: { email, passwordHash: hash(SEED_SUP_PASSWORD), fullName: `مدير ${s.nameAr}`.slice(0, 50), role: client_1.Role.SUPPLIER_ADMIN },
                 },
@@ -602,7 +797,7 @@ async function main() {
     for (let i = 0; i < extraSupplierCount; i++) {
         const idx = DEMO_SUPPLIERS.length + i;
         const catSlug = CATEGORY_SLUGS[i % CATEGORY_SLUGS.length];
-        const midfix = (_m = SUP_AR_MIDFIX_BY_CAT[catSlug]) !== null && _m !== void 0 ? _m : ['التجارة'];
+        const midfix = SUP_AR_MIDFIX_BY_CAT[catSlug] ?? ['التجارة'];
         const nameAr = `${rand(SUP_AR_PREFIX)} ${rand(midfix)} ${rand(SUP_AR_SUFFIX)}`;
         const nameEn = `${rand(['Al-', 'Saudi ', 'Gulf ', 'Arabian ', 'National '])}${rand(['Trade', 'Supply', 'Industry', 'Solutions', 'Group', 'Co.', 'Est.'])} ${i + 10}`;
         const cr = String(1000000010 + idx).padStart(10, '0');
@@ -621,7 +816,7 @@ async function main() {
                 descriptionEn: `${nameEn} — Saudi company specialized in premium product supply and services.`,
                 vatNumber: vatNum, crExpiryDate: new Date(Date.now() + randInt(180, 1095) * 86400000),
                 legalForm: rand(LEGAL_FORMS), establishmentYear: randInt(2003, 2022),
-                companySizeRange: rand(SIZE_RANGES), sectors: [(_p = (_o = catBySlug[catSlug]) === null || _o === void 0 ? void 0 : _o.nameEn) !== null && _p !== void 0 ? _p : catSlug],
+                companySizeRange: rand(SIZE_RANGES), sectors: [catBySlug[catSlug]?.nameEn ?? catSlug],
                 regionsServed: [city, rand(SAUDI_CITIES)].filter((v, i, a) => a.indexOf(v) === i),
                 paymentTermsAccepted: rand(PAYMENT_TERMS_OPTIONS),
                 users: {
@@ -655,6 +850,51 @@ async function main() {
         buyerCompanies.push(company);
     }
     console.log(`  + ${buyerCompanies.length} buyer companies`);
+    // ── 4b. Demo individual accounts (Freelancer + Customer) ─────────────────
+    console.log('  Creating demo individual accounts...');
+    const freelancerCat = catBySlug['technology-electronics'] ?? categories[0];
+    const freelancerCompany = await prisma.company.create({
+        data: {
+            nameAr: 'فيصل الحربي', nameEn: 'Faisal Al-Harbi',
+            crNumber: null, type: client_1.CompanyType.SUPPLIER,
+            isFreelancer: true,
+            verificationStatus: client_1.VerificationStatus.VERIFIED,
+            plan: client_1.SubscriptionPlan.FREE,
+            city: 'Riyadh',
+            phone: '+966501234567',
+            descriptionEn: 'Independent technology consultant and product seller. Specialises in IT hardware and software solutions.',
+            users: {
+                create: {
+                    email: 'freelancer@demo.sa',
+                    passwordHash: hash('Freelancer@1234'),
+                    fullName: 'Faisal Al-Harbi',
+                    role: 'FREELANCER',
+                },
+            },
+            categories: { connect: [{ id: freelancerCat.id }] },
+        },
+    });
+    supplierCompanies.push(freelancerCompany);
+    await prisma.company.create({
+        data: {
+            nameAr: 'سارة القحطاني', nameEn: 'Sara Al-Qahtani',
+            crNumber: null, type: client_1.CompanyType.BUYER,
+            isFreelancer: false,
+            verificationStatus: client_1.VerificationStatus.VERIFIED,
+            plan: client_1.SubscriptionPlan.FREE,
+            city: 'Jeddah',
+            phone: '+966502345678',
+            users: {
+                create: {
+                    email: 'customer@demo.sa',
+                    passwordHash: hash('Customer@1234'),
+                    fullName: 'Sara Al-Qahtani',
+                    role: 'CUSTOMER',
+                },
+            },
+        },
+    });
+    console.log('  + freelancer@demo.sa + customer@demo.sa created');
     const verifiedSuppliers = supplierCompanies.filter((s) => s.verificationStatus === client_1.VerificationStatus.VERIFIED);
     // ── 5. Listings (~7 per verified supplier = 840+) ─────────────────────────
     console.log('  Creating listings...');
@@ -664,12 +904,12 @@ async function main() {
     for (let i = 0; i < verifiedSuppliers.length; i++) {
         const company = verifiedSuppliers[i];
         const specIdx = i < DEMO_SUPPLIERS.length ? i : null;
-        const primaryCatSlug = specIdx !== null ? (_q = DEMO_SUPPLIERS[specIdx]) === null || _q === void 0 ? void 0 : _q.primaryCategory : CATEGORY_SLUGS[i % CATEGORY_SLUGS.length];
+        const primaryCatSlug = specIdx !== null ? DEMO_SUPPLIERS[specIdx]?.primaryCategory : CATEGORY_SLUGS[i % CATEGORY_SLUGS.length];
         const count = randInt(6, 9);
         for (let j = 0; j < count; j++) {
             let cat;
             if (primaryCatSlug && j < Math.ceil(count * 0.6)) {
-                cat = (_r = catBySlug[primaryCatSlug]) !== null && _r !== void 0 ? _r : rand(categories);
+                cat = catBySlug[primaryCatSlug] ?? rand(categories);
             }
             else {
                 cat = rand(categories);
@@ -709,7 +949,13 @@ async function main() {
                     sku, vatPercent: vatPct, stockAvailability: rand(STOCK_STATUSES),
                     requestQuoteOnly, specsJson: specs,
                     images: {
-                        create: { url: productImg(imgSeed), alt: titleEn, isPrimary: true, sortOrder: 0 },
+                        create: (() => {
+                            const [primary, detail] = getProductImages(titleEn, cat.slug);
+                            return [
+                                { url: primary, alt: titleEn, isPrimary: true, sortOrder: 0 },
+                                { url: detail, alt: `${titleEn} detail`, isPrimary: false, sortOrder: 1 },
+                            ];
+                        })(),
                     },
                 },
             });
@@ -719,13 +965,13 @@ async function main() {
         }
     }
     console.log(`  + ${listingCount} listings`);
-    // ── 6. RFQs (250 total) ────────────────────────────────────────────────────
+    // ── 6. RFQs (400 total) ────────────────────────────────────────────────────
     console.log('  Creating RFQs...');
     const rfqs = [];
-    for (let i = 0; i < 250; i++) {
+    for (let i = 0; i < 400; i++) {
         const buyer = rand(buyerCompanies);
         const cat = rand(categories);
-        const isOpen = i < 100; // first 100 OPEN, rest mixed
+        const isOpen = i < 150; // first 150 OPEN, rest mixed
         const budgetBase = randPrice(10000, 500000);
         const budgetMin = Math.round(budgetBase * 0.7);
         const budgetMax = Math.round(budgetBase * 1.3);
@@ -820,9 +1066,9 @@ async function main() {
             },
         }));
     }
-    // Backfill deals from any quote to reach 150
+    // Backfill deals from any quote to reach 200
     for (const q of quotes) {
-        if (deals.length >= 150)
+        if (deals.length >= 200)
             break;
         if (usedQuoteIds.has(q.id))
             continue;
@@ -863,6 +1109,32 @@ async function main() {
             ratingCount++;
         }
     }
+    // Backfill ratings to reach 300+ — rate on DELIVERED deals too
+    const deliveredDeals = deals.filter((d) => d.status === client_1.DealStatus.DELIVERED);
+    const usedRatingDealIds = new Set(completedDeals.map((d) => d.id));
+    for (const deal of deliveredDeals) {
+        if (ratingCount >= 320)
+            break;
+        if (usedRatingDealIds.has(deal.id))
+            continue;
+        usedRatingDealIds.add(deal.id);
+        await prisma.rating.create({
+            data: {
+                dealId: deal.id, raterId: deal.buyerId, ratedId: deal.supplierId,
+                score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+            },
+        });
+        ratingCount++;
+        if (Math.random() < 0.7) {
+            await prisma.rating.create({
+                data: {
+                    dealId: deal.id, raterId: deal.supplierId, ratedId: deal.buyerId,
+                    score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+                },
+            });
+            ratingCount++;
+        }
+    }
     console.log(`  + ${ratingCount} ratings`);
     // ── 10. Conversations & Messages ──────────────────────────────────────────
     console.log('  Creating conversations and messages...');
@@ -875,7 +1147,7 @@ async function main() {
         if (convPairs.has(key))
             continue;
         convPairs.add(key);
-        const rfq = rfqs.find((r) => { var _a; return r.id === ((_a = quotes.find((q) => q.id === deal.quoteId)) === null || _a === void 0 ? void 0 : _a.rfqId); });
+        const rfq = rfqs.find((r) => r.id === quotes.find((q) => q.id === deal.quoteId)?.rfqId);
         const subject = rfq ? `مراسلة بشأن: ${rfq.title}` : `مراسلة بشأن صفقة رقم ${convCount + 1}`;
         const buyer = buyerCompanies.find((b) => b.id === deal.buyerId);
         const supplier = verifiedSuppliers.find((s) => s.id === deal.supplierId);
@@ -954,19 +1226,25 @@ async function main() {
         score += Math.min(listingCountForSup, 10);
         await prisma.company.update({
             where: { id: sup.id },
-            data: { supplierScore: Math.round(score), scoreUpdatedAt: new Date() },
+            data: {
+                supplierScore: Math.round(score),
+                avgRating: avgRating > 0 ? Math.round(avgRating * 10) / 10 : null,
+                scoreUpdatedAt: new Date(),
+            },
         });
     }
     console.log('  + supplier scores computed');
     // ── Summary ───────────────────────────────────────────────────────────────
-    console.log('\nSeed complete!');
+    console.log('\nMwazn v3 seed complete!');
     console.log('-'.repeat(60));
     console.log('Demo Credentials:');
-    console.log(`  Admin     -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);
-    console.log(`  Buyer     -> admin@buyer1.sa  /  ${SEED_BUY_PASSWORD}`);
+    console.log(`  Admin      -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);
+    console.log(`  Buyer      -> admin@buyer1.sa  /  ${SEED_BUY_PASSWORD}`);
     console.log(`  Supplier (PRO+Verified)  -> admin@supplier1.sa  /  ${SEED_SUP_PASSWORD}`);
     console.log(`  Supplier (FREE+Verified) -> admin@supplier3.sa  /  ${SEED_SUP_PASSWORD}`);
     console.log(`  Supplier (Unverified)    -> admin@supplier9.sa  /  ${SEED_SUP_PASSWORD}`);
+    console.log(`  Freelancer -> freelancer@demo.sa  /  Freelancer@1234`);
+    console.log(`  Customer   -> customer@demo.sa    /  Customer@1234`);
     console.log('-'.repeat(60));
     console.log('Showroom URLs:');
     console.log('  http://localhost:3000/en/suppliers/demo-1  (Gulf Industrial)');

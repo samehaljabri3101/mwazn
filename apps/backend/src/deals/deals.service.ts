@@ -37,11 +37,13 @@ export class DealsService {
       else where.supplierId = user?.companyId;
     }
 
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.deal.findMany({
         where,
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         orderBy: { createdAt: 'desc' },
         include: {
           quote: { include: { rfq: true } },
@@ -53,7 +55,7 @@ export class DealsService {
       this.prisma.deal.count({ where }),
     ]);
 
-    return paginate(items, total, query.page ?? 1, query.limit ?? 20);
+    return paginate(items, total, _page, _limit);
   }
 
   async findOne(id: string, userId: string) {

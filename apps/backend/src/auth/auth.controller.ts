@@ -22,6 +22,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RegisterSupplierDto } from './dto/register-supplier.dto';
 import { RegisterBuyerDto } from './dto/register-buyer.dto';
 import { RegisterFreelancerDto } from './dto/register-freelancer.dto';
+import { RegisterCustomerDto } from './dto/register-customer.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
@@ -68,11 +69,19 @@ export class AuthController {
   }
 
   @Post('register/freelancer')
-  @ApiOperation({ summary: 'Register an individual freelancer using National ID / Iqama' })
-  @ApiResponse({ status: 201, description: 'Returns tokens + user + profile (verificationStatus: PENDING)' })
+  @ApiOperation({ summary: 'Register an individual freelancer (auto-verified, can sell and buy)' })
+  @ApiResponse({ status: 201, description: 'Returns tokens + user + profile (verificationStatus: VERIFIED)' })
   @ApiResponse({ status: 409, description: 'Email or National ID already registered' })
   registerFreelancer(@Body() dto: RegisterFreelancerDto) {
     return this.authService.registerFreelancer(dto);
+  }
+
+  @Post('register/customer')
+  @ApiOperation({ summary: 'Register an individual customer (auto-verified, can only buy)' })
+  @ApiResponse({ status: 201, description: 'Returns tokens + user + company (verificationStatus: VERIFIED)' })
+  @ApiResponse({ status: 409, description: 'Email already registered' })
+  registerCustomer(@Body() dto: RegisterCustomerDto) {
+    return this.authService.registerCustomer(dto);
   }
 
   @Post('login')

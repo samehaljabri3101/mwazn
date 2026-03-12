@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
-export class ScoringService {
+export class ScoringService implements OnApplicationBootstrap {
   private readonly logger = new Logger(ScoringService.name);
 
   constructor(private readonly prisma: PrismaService) {}
@@ -64,12 +64,35 @@ export class ScoringService {
       activeListings: company.listings.length,
     });
 
+    const roundedAvg = company.ratingsReceived.length > 0
+      ? Math.round(avgRating * 10) / 10
+      : null;
+
     await this.prisma.company.update({
       where: { id: companyId },
-      data: { supplierScore: score, scoreUpdatedAt: new Date() },
+      data: { supplierScore: score, avgRating: roundedAvg, scoreUpdatedAt: new Date() },
     });
 
     return score;
+  }
+
+  /**
+   * On startup: backfill avgRating for any suppliers where it is still null.
+   * Idempotent — once all suppliers have avgRating set this is a no-op.
+   */
+  async onApplicationBootstrap(): Promise<void> {
+    const needsBackfill = await this.prisma.company.findMany({
+      where: { type: 'SUPPLIER', isActive: true, avgRating: null },
+      select: { id: true },
+    });
+
+    if (needsBackfill.length === 0) return;
+
+    this.logger.log(`Backfilling scores for ${needsBackfill.length} suppliers…`);
+    for (const s of needsBackfill) {
+      await this.updateScoreForCompany(s.id);
+    }
+    this.logger.log(`Score backfill complete.`);
   }
 
   /** Daily cron at 2 AM: recompute all supplier scores */

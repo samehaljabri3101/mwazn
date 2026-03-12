@@ -119,7 +119,7 @@ export default function SupplierDealDetailPage() {
   const startConversation = async () => {
     if (!deal?.buyerId) return;
     try {
-      const res = await api.post('/conversations/start', { participantCompanyId: deal.buyerId });
+      const res = await api.post('/conversations/start', { targetCompanyId: deal.buyerId });
       router.push(`/${locale}/dashboard/messages/${res.data.data.id}`);
     } catch { /* silent */ }
   };

@@ -108,7 +108,7 @@ export default function SupplierDealsPage() {
 
   const startConversation = async (buyerId: string) => {
     try {
-      const res = await api.post('/conversations/start', { participantCompanyId: buyerId });
+      const res = await api.post('/conversations/start', { targetCompanyId: buyerId });
       router.push(`/${locale}/dashboard/messages/${res.data.data.id}`);
     } catch { /* silent */ }
   };

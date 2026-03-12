@@ -301,16 +301,16 @@ export default function ProfilePage() {
                 </span>
               </div>
               <div>
-                <p className="text-xs text-slate-500 mb-1">{ar ? 'حالة التوثيق' : 'Verification'}</p>
+                <p className="text-xs text-slate-500 mb-1">{ar ? 'حالة السجل التجاري' : 'CR Verification'}</p>
                 {company.verificationStatus === 'VERIFIED' ? (
                   <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
                     <CheckCircle2 className="h-3 w-3" />
-                    {ar ? 'موثق' : 'Verified'}
+                    {ar ? 'سجل تجاري موثّق' : 'CR Verified'}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
                     <Clock className="h-3 w-3" />
-                    {ar ? 'قيد المراجعة' : 'Pending'}
+                    {ar ? 'قيد مراجعة السجل التجاري' : 'CR Doc Under Review'}
                   </span>
                 )}
               </div>

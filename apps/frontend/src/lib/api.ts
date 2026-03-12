@@ -41,7 +41,8 @@ api.interceptors.response.use(
         localStorage.removeItem('mwazn_refresh_token');
         localStorage.removeItem('mwazn_user');
         localStorage.removeItem('mwazn_company');
-        window.location.href = '/en/auth/login';
+        const _locale = window.location.pathname.split('/')[1] || 'en';
+        window.location.href = `/${_locale}/auth/login`;
       }
     }
     return Promise.reject(error);

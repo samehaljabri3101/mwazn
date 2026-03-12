@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Navbar } from '@/components/layout/Navbar';
 import api from '@/lib/api';
@@ -11,7 +12,7 @@ import { Building2, Package, Search, Tag } from 'lucide-react';
 type TabType = 'all' | 'suppliers' | 'products' | 'categories';
 
 interface SearchResult {
-  suppliers?: Array<{ id: string; nameAr: string; nameEn: string; city?: string; verificationStatus?: string }>;
+  suppliers?: Array<{ id: string; slug?: string; nameAr: string; nameEn: string; city?: string; verificationStatus?: string; isFreelancer?: boolean }>;
   listings?: Array<{ id: string; slug?: string; titleAr: string; titleEn: string; price?: number; currency: string; supplier?: { nameAr: string; nameEn: string } }>;
   categories?: Array<{ id: string; slug: string; nameAr: string; nameEn: string; _count?: { listings: number } }>;
 }
@@ -26,8 +27,9 @@ const TABS: { key: TabType; en: string; ar: string }[] = [
 export default function SearchPage() {
   const locale = useLocale();
   const ar = locale === 'ar';
+  const searchParams = useSearchParams();
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(searchParams.get('q') ?? '');
   const [tab, setTab] = useState<TabType>('all');
   const [results, setResults] = useState<SearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -127,7 +129,7 @@ export default function SearchPage() {
                   {results.suppliers.map((s) => (
                     <Link
                       key={s.id}
-                      href={`/${locale}/suppliers/${s.id}`}
+                      href={`/${locale}/suppliers/${s.slug ?? s.id}`}
                       className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 hover:border-brand-200 hover:bg-brand-50/30 transition-all"
                     >
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 font-bold text-brand-700">
@@ -137,9 +139,12 @@ export default function SearchPage() {
                         <p className="font-medium text-slate-800 truncate">{ar ? s.nameAr : s.nameEn}</p>
                         {s.city && <p className="text-xs text-slate-400">{s.city}</p>}
                       </div>
-                      {s.verificationStatus === 'VERIFIED' && (
-                        <span className="text-xs text-green-600 font-medium shrink-0">{ar ? 'موثق' : 'Verified'}</span>
-                      )}
+                      {s.isFreelancer
+                        ? <span className="text-xs text-blue-700 font-medium shrink-0">{ar ? 'بائع مستقل' : 'Independent Seller'}</span>
+                        : s.verificationStatus === 'VERIFIED'
+                          ? <span className="text-xs text-emerald-700 font-medium shrink-0">{ar ? 'سجل تجاري موثّق' : 'CR Verified'}</span>
+                          : null
+                      }
                     </Link>
                   ))}
                 </div>

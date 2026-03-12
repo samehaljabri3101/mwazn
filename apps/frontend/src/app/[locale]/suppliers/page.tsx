@@ -143,7 +143,7 @@ export default async function SuppliersPage() {
                       {sup.verificationStatus === 'VERIFIED' && (
                         <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                           <Shield className="h-2.5 w-2.5" />
-                          {ar ? 'موثق' : 'CR Verified'}
+                          {ar ? 'سجل تجاري موثّق' : 'CR Verified'}
                         </span>
                       )}
                     </div>

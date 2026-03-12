@@ -53,7 +53,7 @@ export class CompaniesService {
       include: {
         users: { select: { id: true, fullName: true, email: true, role: true } },
         categories: true,
-        _count: { select: { listings: true, rfqs: true, quotesSubmitted: true } },
+        _count: { select: { listings: true, rfqs: true, quotesSubmitted: true, dealsAsBuyer: true, dealsAsSupplier: true, ratingsReceived: true } },
       },
     });
     if (!company) throw new NotFoundException('Company not found');

@@ -13,11 +13,13 @@ export class ConversationsService {
   async findMine(userId: string, query: PaginationDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.conversation.findMany({
         where: { participants: { some: { id: user?.companyId } } },
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         orderBy: { updatedAt: 'desc' },
         include: {
           participants: { select: { id: true, nameAr: true, nameEn: true, logoUrl: true } },
@@ -29,7 +31,7 @@ export class ConversationsService {
       }),
     ]);
 
-    return paginate(items, total, query.page ?? 1, query.limit ?? 20);
+    return paginate(items, total, _page, _limit);
   }
 
   async findOrCreate(userId: string, targetCompanyId: string, subject?: string) {
@@ -68,11 +70,13 @@ export class ConversationsService {
       data: { isRead: true },
     });
 
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.message.findMany({
         where: { conversationId },
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         orderBy: { createdAt: 'desc' },
         include: {
           sender: { select: { id: true, fullName: true, avatarUrl: true, companyId: true } },
@@ -82,7 +86,7 @@ export class ConversationsService {
       this.prisma.message.count({ where: { conversationId } }),
     ]);
 
-    return paginate(items.reverse(), total, query.page ?? 1, query.limit ?? 20);
+    return paginate(items.reverse(), total, _page, _limit);
   }
 
   async sendMessage(conversationId: string, userId: string, body: string) {

@@ -27,7 +27,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
       <Navbar />
       <div className="flex">
         <Sidebar />
-        <main className="flex-1 overflow-auto p-6 max-w-[1200px]">{children}</main>
+        <main className="flex-1 overflow-auto p-6 xl:p-8 min-w-0">{children}</main>
       </div>
     </div>
   );

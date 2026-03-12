@@ -5,11 +5,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScoringService } from '../scoring/scoring.service';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class RatingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scoring: ScoringService,
+  ) {}
 
   async create(dealId: string, score: number, comment: string | undefined, userId: string) {
     const user = await this.prisma.user.findUnique({
@@ -44,7 +48,7 @@ export class RatingsService {
     // Buyer rates supplier, supplier rates buyer
     const ratedId = isBuyer ? deal.supplierId : deal.buyerId;
 
-    return this.prisma.rating.create({
+    const rating = await this.prisma.rating.create({
       data: {
         dealId,
         score,
@@ -57,15 +61,24 @@ export class RatingsService {
         rated: { select: { nameAr: true, nameEn: true } },
       },
     });
+
+    // Recompute composite platformScore + avgRating for the rated supplier
+    if (isBuyer) {
+      await this.scoring.updateScoreForCompany(ratedId);
+    }
+
+    return rating;
   }
 
   async findBySupplier(supplierId: string, query: PaginationDto) {
     const where = { ratedId: supplierId };
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.rating.findMany({
         where,
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         orderBy: { createdAt: 'desc' },
         include: { rater: { select: { nameAr: true, nameEn: true } } },
       }),
@@ -73,16 +86,18 @@ export class RatingsService {
     ]);
 
     const avg = items.length > 0 ? items.reduce((s, r) => s + r.score, 0) / items.length : null;
-    return { ...paginate(items, total, query.page ?? 1, query.limit ?? 20), averageScore: avg };
+    return { ...paginate(items, total, _page, _limit), averageScore: avg };
   }
 
   async findForBuyer(buyerId: string, query: PaginationDto) {
     const where = { ratedId: buyerId };
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
     const [items, total] = await Promise.all([
       this.prisma.rating.findMany({
         where,
-        skip: query.skip,
-        take: query.limit,
+        skip: (_page - 1) * _limit,
+        take: _limit,
         orderBy: { createdAt: 'desc' },
         include: { rater: { select: { nameAr: true, nameEn: true } } },
       }),
@@ -90,6 +105,6 @@ export class RatingsService {
     ]);
 
     const avg = items.length > 0 ? items.reduce((s, r) => s + r.score, 0) / items.length : null;
-    return { ...paginate(items, total, query.page ?? 1, query.limit ?? 20), averageScore: avg };
+    return { ...paginate(items, total, _page, _limit), averageScore: avg };
   }
 }
