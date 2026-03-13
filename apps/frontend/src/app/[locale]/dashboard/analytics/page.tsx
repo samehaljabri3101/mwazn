@@ -8,6 +8,16 @@ import api from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
+  isSellerRole as checkSellerRole,
+  isBuyerRole as checkBuyerRole,
+  isAdminRole,
+  isFreelancerRole as checkFreelancerRole,
+  isCustomerRole as checkCustomerRole,
+  isBusinessRole,
+  getAnalyticsTitle,
+  getAnalyticsSubtitle,
+} from '@/lib/roles';
+import {
   TrendingUp, Package, Star, DollarSign, FileText, CheckCircle2,
   XCircle, Trophy, BarChart2, Eye, Zap, Download, ShieldCheck,
   PlusCircle, Search, ArrowRight,
@@ -119,14 +129,13 @@ export default function AnalyticsPage() {
   const locale = useLocale();
   const { user, company } = useAuth();
   const ar = locale === 'ar';
-  const isAdmin = user?.role === 'PLATFORM_ADMIN';
-
-  const isSellerRole     = user?.role === 'SUPPLIER_ADMIN' || user?.role === 'FREELANCER';
-  const isBuyerRole      = user?.role === 'BUYER_ADMIN'    || user?.role === 'CUSTOMER';
-  const isFreelancerRole = user?.role === 'FREELANCER';
-  const isCustomerRole   = user?.role === 'CUSTOMER';
-  // Export CSV only for paid-plan business accounts
-  const isPro = (user?.role === 'SUPPLIER_ADMIN' || user?.role === 'BUYER_ADMIN') && company?.plan === 'PRO';
+  const isAdmin          = isAdminRole(user?.role);
+  const isSellerRole     = checkSellerRole(user?.role);
+  const isBuyerRole      = checkBuyerRole(user?.role);
+  const isFreelancerRole = checkFreelancerRole(user?.role);
+  const isCustomerRole   = checkCustomerRole(user?.role);
+  // Export CSV only for paid-plan business (CR-backed) accounts
+  const isPro = isBusinessRole(user?.role) && company?.plan === 'PRO';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -157,24 +166,8 @@ export default function AnalyticsPage() {
     setExporting(false);
   };
 
-  // Role-aware title / subtitle
-  const title = ar
-    ? isFreelancerRole ? 'إحصائيات البيع'
-      : isCustomerRole ? 'نشاطي'
-      : 'التحليلات'
-    : isFreelancerRole ? 'Seller Analytics'
-      : isCustomerRole ? 'My Activity'
-      : 'Analytics';
-
-  const subtitle = ar
-    ? isFreelancerRole ? 'أداء مبيعاتك عبر المنتجات والعروض والصفقات'
-      : isCustomerRole ? 'نشاط شرائك عبر الطلبات والعروض والصفقات'
-      : isSellerRole ? 'مؤشرات أداء نشاطك التجاري'
-      : 'مؤشرات أداء المشتريات'
-    : isFreelancerRole ? 'Your sales performance across listings, quotes, and deals'
-      : isCustomerRole ? 'Your buying activity across requests, quotes, and orders'
-      : isSellerRole ? 'Business performance insights'
-      : 'Procurement performance insights';
+  const title    = getAnalyticsTitle(user?.role, ar);
+  const subtitle = getAnalyticsSubtitle(user?.role, ar);
 
   return (
     <DashboardLayout>

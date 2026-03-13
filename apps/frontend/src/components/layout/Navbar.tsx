@@ -10,6 +10,7 @@ import { SearchModal } from '@/components/ui/SearchModal';
 import { Globe, Menu, X, ChevronDown, User, LayoutDashboard, LogOut, FileText, Plus, Search } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { getRoleDashboardPath } from '@/lib/roles';
 
 interface NavbarProps {
   transparent?: boolean;
@@ -59,9 +60,7 @@ export function Navbar({ transparent = false }: NavbarProps) {
     ? `/${locale}/dashboard/buyer/rfqs/new`
     : `/${locale}/auth/login`;
 
-  const dashboardPath = user?.role === 'PLATFORM_ADMIN'
-    ? `/${locale}/dashboard/admin`
-    : `/${locale}/dashboard`;
+  const dashboardPath = getRoleDashboardPath(user?.role, locale);
 
   const navLink = (href: string, label: string) => {
     const isActive = pathname === href || pathname.startsWith(href + '/');
