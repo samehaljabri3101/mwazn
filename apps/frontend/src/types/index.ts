@@ -1,16 +1,47 @@
-export type Role = 'BUYER_ADMIN' | 'SUPPLIER_ADMIN' | 'PLATFORM_ADMIN' | 'FREELANCER' | 'CUSTOMER';
-export type CompanyType = 'BUYER' | 'SUPPLIER';
-export type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
-export type SubscriptionPlan = 'FREE' | 'PRO';
-export type ListingStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED';
-export type RFQStatus = 'OPEN' | 'CLOSED' | 'AWARDED' | 'CANCELLED';
-export type QuoteStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'WITHDRAWN';
-export type DealStatus = 'AWARDED' | 'IN_PROGRESS' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
-export type StockAvailability = 'IN_STOCK' | 'OUT_OF_STOCK' | 'LIMITED';
-export type MessageType = 'GENERAL' | 'CLARIFICATION' | 'NEGOTIATION' | 'TECHNICAL' | 'COMMERCIAL';
-export type MessagePriority = 'NORMAL' | 'URGENT';
-export type RFQVisibility = 'PUBLIC' | 'INVITE_ONLY';
-export type RFQProjectType = 'PRODUCT' | 'SERVICE' | 'MANUFACTURING' | 'CONSULTANCY';
+/**
+ * Frontend types — API entity interfaces for the Mwazn marketplace.
+ *
+ * Platform primitive types (roles, statuses, enums) are imported from the
+ * shared contract layer and re-exported so all existing `@/types` consumers
+ * continue to work without changes.
+ *
+ * Contract layer: packages/contracts/src/index.ts
+ */
+
+// ─── Re-export all platform primitives from the contract layer ────────────────
+export type {
+  Role,
+  CompanyType,
+  VerificationStatus,
+  SubscriptionPlan,
+  ListingStatus,
+  StockAvailability,
+  RFQStatus,
+  QuoteStatus,
+  DealStatus,
+  InvoiceStatus,
+  MessageType,
+  MessagePriority,
+  RFQVisibility,
+  RFQProjectType,
+  DocumentType,
+  VerificationSource,
+  GovernmentIdType,
+  ApiEnvelope,
+  PaginationMeta,
+  PaginatedEnvelope,
+  // Legacy aliases
+  ApiResponse,
+  PaginatedResponse,
+} from '@mwazn/contracts';
+
+export { SELLER_ROLES, BUYER_ROLES, PLAN_ROLES } from '@mwazn/contracts';
+
+// ─── Frontend entity interfaces ───────────────────────────────────────────────
+// These represent API response shapes for frontend consumption.
+// They are frontend-specific — the backend uses Prisma-generated types.
+
+import type { Role, CompanyType, VerificationStatus, SubscriptionPlan, ListingStatus, StockAvailability, RFQStatus, QuoteStatus, DealStatus, MessageType, MessagePriority, RFQVisibility, RFQProjectType, PaginationMeta } from '@mwazn/contracts';
 
 export interface User {
   id: string;
@@ -244,24 +275,6 @@ export interface Conversation {
   participants: Pick<Company, 'id' | 'nameAr' | 'nameEn' | 'logoUrl'>[];
   messages?: Message[];
   updatedAt: string;
-}
-
-export interface PaginatedResponse<T> {
-  items: T[];
-  meta: {
-    total: number;
-    page: number;
-    limit: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPrevPage: boolean;
-  };
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data: T;
-  timestamp: string;
 }
 
 export interface AuthState {

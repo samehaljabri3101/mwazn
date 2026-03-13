@@ -24,6 +24,11 @@ const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.API_INTERNAL_URL;
 const apiHostname = apiUrl ? hostnameFromUrl(apiUrl) : null;
 
 const nextConfig = {
+  // Allow imports from packages/ directory outside this app's root (monorepo contracts layer)
+  experimental: {
+    externalDir: true,
+  },
+
   images: {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
