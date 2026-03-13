@@ -32,9 +32,10 @@ interface RFQItem {
 }
 
 const MOD_META: Record<string, { bg: string; text: string }> = {
-  FLAGGED:  { bg: 'bg-amber-100', text: 'text-amber-700' },
-  REMOVED:  { bg: 'bg-red-100',   text: 'text-red-700' },
-  REJECTED: { bg: 'bg-rose-100',  text: 'text-rose-700' },
+  ACTIVE:   { bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  FLAGGED:  { bg: 'bg-amber-100',   text: 'text-amber-700' },
+  REMOVED:  { bg: 'bg-red-100',     text: 'text-red-700' },
+  REJECTED: { bg: 'bg-rose-100',    text: 'text-rose-700' },
 };
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
@@ -224,11 +225,15 @@ export default function AdminRFQsPage() {
                     </p>
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
                       <StatusBadge status={rfq.status} ar={ar} />
-                      {rfq.moderationStatus && rfq.moderationStatus !== 'ACTIVE' && MOD_META[rfq.moderationStatus] && (
-                        <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${MOD_META[rfq.moderationStatus].bg} ${MOD_META[rfq.moderationStatus].text}`}>
-                          {rfq.moderationStatus}
-                        </span>
-                      )}
+                      {(() => {
+                        const ms = rfq.moderationStatus ?? 'ACTIVE';
+                        const m = MOD_META[ms] ?? { bg: 'bg-slate-100', text: 'text-slate-500' };
+                        return (
+                          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${m.bg} ${m.text}`}>
+                            {ms}
+                          </span>
+                        );
+                      })()}
                       <span className="text-[10px] text-slate-400">
                         {new Date(rfq.createdAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>

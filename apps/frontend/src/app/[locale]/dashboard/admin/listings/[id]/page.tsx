@@ -212,7 +212,6 @@ export default function AdminListingDetailPage({ params }: { params: { id: strin
                   <h3 className="font-semibold text-slate-800">{ar ? 'تفاصيل الإشراف' : 'Moderation Details'}</h3>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
-                  <InfoField label={ar ? 'حالة الإشراف' : 'Moderation Status'} value={listing.moderationStatus} />
                   {listing.moderationSource && <InfoField label={ar ? 'المصدر' : 'Source'} value={listing.moderationSource} />}
                   {listing.moderationReason && <InfoField label={ar ? 'السبب' : 'Reason'} value={listing.moderationReason} />}
                   {listing.moderatedAt && <InfoField label={ar ? 'تاريخ الإشراف' : 'Moderated At'} value={fmtDate(listing.moderatedAt)} />}
