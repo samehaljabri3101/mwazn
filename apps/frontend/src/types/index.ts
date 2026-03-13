@@ -33,15 +33,15 @@ export type {
   // Legacy aliases
   ApiResponse,
   PaginatedResponse,
-} from '@mwazn/contracts';
+} from '@/lib/contracts';
 
-export { SELLER_ROLES, BUYER_ROLES, PLAN_ROLES } from '@mwazn/contracts';
+export { SELLER_ROLES, BUYER_ROLES, PLAN_ROLES } from '@/lib/contracts';
 
 // ─── Frontend entity interfaces ───────────────────────────────────────────────
 // These represent API response shapes for frontend consumption.
 // They are frontend-specific — the backend uses Prisma-generated types.
 
-import type { Role, CompanyType, VerificationStatus, SubscriptionPlan, ListingStatus, StockAvailability, RFQStatus, QuoteStatus, DealStatus, MessageType, MessagePriority, RFQVisibility, RFQProjectType, PaginationMeta } from '@mwazn/contracts';
+import type { Role, CompanyType, VerificationStatus, SubscriptionPlan, ListingStatus, StockAvailability, RFQStatus, QuoteStatus, DealStatus, MessageType, MessagePriority, RFQVisibility, RFQProjectType, PaginationMeta } from '@/lib/contracts';
 
 export interface User {
   id: string;

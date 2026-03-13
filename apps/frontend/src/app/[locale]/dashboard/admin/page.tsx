@@ -449,7 +449,9 @@ export default function AdminDashboardPage() {
                   icon={<Clock className="h-5 w-5" />}
                   label={ar ? 'بانتظار التوثيق' : 'Pending Review'}
                   value={data.companies.pending}
-                  sub={ar ? 'يتطلب مراجعة عاجلة' : 'Requires urgent review'}
+                  sub={ar
+                    ? `${(data.companies as any).rejected ?? 0} مرفوض · يتطلب مراجعة`
+                    : `${(data.companies as any).rejected ?? 0} rejected · needs review`}
                   color="amber"
                   href={`${base}/admin/companies?type=SUPPLIER&status=PENDING`}
                   badge={data.companies.pending > 0 ? (ar ? 'عاجل' : 'Urgent') : undefined}
@@ -493,8 +495,8 @@ export default function AdminDashboardPage() {
                   label={ar ? 'الصفقات' : 'Deals'}
                   value={data.deals.total}
                   sub={ar
-                    ? `${data.deals.completed} مكتملة · ${data.deals.active} نشطة`
-                    : `${data.deals.completed} completed · ${data.deals.active} active`}
+                    ? `${data.deals.completed} مكتملة · ${data.deals.active} نشطة · ${(data.deals as any).cancelled ?? 0} ملغاة`
+                    : `${data.deals.completed} completed · ${data.deals.active} active · ${(data.deals as any).cancelled ?? 0} cancelled`}
                   color="teal"
                   href={`${base}/admin/deals`}
                   badge={ar ? 'عرض الكل' : 'View all'}
@@ -514,29 +516,29 @@ export default function AdminDashboardPage() {
             {/* ── Commercial Intelligence ──────────────────────────────────── */}
             {data.financial && (
               <div>
-                <SectionHeader title={ar ? 'المؤشرات التجارية (بيانات تجريبية)' : 'Commercial Intelligence (Demo Data)'} />
+                <SectionHeader title={ar ? 'المؤشرات التجارية' : 'Commercial Intelligence'} />
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   <MetricCard
                     icon={<TrendingUp className="h-5 w-5" />}
-                    label={ar ? 'حجم التداول التجريبي (GMV)' : 'Demo Marketplace Volume (GMV)'}
+                    label={ar ? 'حجم السوق الإجمالي (GMV)' : 'Gross Marketplace Volume (GMV)'}
                     value={`${(data.financial.gmv / 1_000_000).toFixed(1)}M SAR`}
-                    sub={ar ? 'قيمة الصفقات المكتملة — منصة تجريبية' : 'Completed deal value — demo marketplace'}
+                    sub={ar ? 'مجموع قيمة الصفقات المكتملة' : 'Sum of all completed deal values'}
                     color="green"
                   />
                   <MetricCard
                     icon={<Briefcase className="h-5 w-5" />}
                     label={ar ? 'خط أنابيب الصفقات النشطة' : 'Active Deal Pipeline'}
                     value={`${(data.financial.pipeline / 1_000_000).toFixed(1)}M SAR`}
-                    sub={ar ? 'صفقات مُرساة وقيد التنفيذ — بيانات تجريبية' : 'Awarded + in-progress — demo data'}
+                    sub={ar ? 'صفقات مُرساة وقيد التنفيذ' : 'Awarded + in-progress deals'}
                     color="blue"
                   />
                   <MetricCard
                     icon={<CreditCard className="h-5 w-5" />}
-                    label={ar ? 'الإيراد الشهري المتوقع (تقدير)' : 'Projected Monthly Revenue'}
+                    label={ar ? 'الإيراد الشهري المتوقع' : 'Estimated Monthly Revenue'}
                     value={`${data.financial.estimatedMonthlyRevenue.toLocaleString()} SAR`}
                     sub={ar
-                      ? `${data.companies.pro} مورّد PRO × 299 SAR — تقدير`
-                      : `${data.companies.pro} PRO suppliers × 299 SAR — projected`}
+                      ? `${data.companies.pro} مورّد PRO × 299 SAR`
+                      : `${data.companies.pro} PRO suppliers × 299 SAR`}
                     color="purple"
                     href={`${base}/admin/companies?plan=PRO`}
                   />

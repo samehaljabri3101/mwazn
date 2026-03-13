@@ -31,7 +31,6 @@ export default function ConversationPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const typingRef = useRef<NodeJS.Timeout | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const socketRef = useRef<any>(null);
   const socketConnected = useRef(false);
 

@@ -31,11 +31,6 @@ export default function SupplierListingsPage() {
   const { user, company } = useAuth();
   const ar = locale === 'ar';
 
-  // Guard: only seller roles can manage products
-  if (user && !canManageProducts(user.role)) {
-    return null; // router redirect handled by DashboardLayout / middleware
-  }
-
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -51,7 +46,12 @@ export default function SupplierListingsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchListings(); }, []);
+  useEffect(() => { fetchListings(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Guard: only seller roles can manage products
+  if (user && !canManageProducts(user.role)) {
+    return null; // router redirect handled by DashboardLayout / middleware
+  }
 
   const toggleStatus = async (listing: Listing) => {
     const newStatus = listing.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';

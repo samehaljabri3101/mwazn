@@ -18,6 +18,7 @@ export class AdminService {
       totalCompanies,
       verifiedSuppliers,
       pendingSuppliers,
+      rejectedSuppliers,
       totalBuyers,
       totalRFQs,
       openRFQs,
@@ -25,6 +26,7 @@ export class AdminService {
       totalDeals,
       activeDeals,
       completedDeals,
+      cancelledDeals,
       totalListings,
       totalRatings,
       proSuppliers,
@@ -34,6 +36,7 @@ export class AdminService {
       this.prisma.company.count(),
       this.prisma.company.count({ where: { type: CompanyType.SUPPLIER, verificationStatus: VerificationStatus.VERIFIED } }),
       this.prisma.company.count({ where: { type: CompanyType.SUPPLIER, verificationStatus: VerificationStatus.PENDING } }),
+      this.prisma.company.count({ where: { type: CompanyType.SUPPLIER, verificationStatus: VerificationStatus.REJECTED } }),
       this.prisma.company.count({ where: { type: CompanyType.BUYER } }),
       this.prisma.rFQ.count(),
       this.prisma.rFQ.count({ where: { status: RFQStatus.OPEN } }),
@@ -41,6 +44,7 @@ export class AdminService {
       this.prisma.deal.count(),
       this.prisma.deal.count({ where: { status: { in: [DealStatus.AWARDED, DealStatus.IN_PROGRESS, DealStatus.DELIVERED] } } }),
       this.prisma.deal.count({ where: { status: DealStatus.COMPLETED } }),
+      this.prisma.deal.count({ where: { status: DealStatus.CANCELLED } }),
       this.prisma.listing.count({ where: { status: 'ACTIVE' } }),
       this.prisma.rating.count(),
       this.prisma.company.count({ where: { type: CompanyType.SUPPLIER, plan: SubscriptionPlan.PRO } }),
@@ -49,7 +53,7 @@ export class AdminService {
     ]);
 
     const recentAuditLogs = await this.prisma.auditLog.findMany({
-      take: 10,
+      take: 15,
       orderBy: { createdAt: 'desc' },
       include: { user: { select: { fullName: true, email: true } } },
     });
@@ -57,10 +61,10 @@ export class AdminService {
     const toNum = (d: any) => d ? parseFloat(String(d)) : 0;
 
     return {
-      companies: { total: totalCompanies, buyers: totalBuyers, suppliers: totalCompanies - totalBuyers, verified: verifiedSuppliers, pending: pendingSuppliers, pro: proSuppliers },
+      companies: { total: totalCompanies, buyers: totalBuyers, suppliers: totalCompanies - totalBuyers, verified: verifiedSuppliers, pending: pendingSuppliers, rejected: rejectedSuppliers, pro: proSuppliers },
       rfqs: { total: totalRFQs, open: openRFQs },
       quotes: { total: totalQuotes },
-      deals: { total: totalDeals, active: activeDeals, completed: completedDeals },
+      deals: { total: totalDeals, active: activeDeals, completed: completedDeals, cancelled: cancelledDeals },
       listings: { active: totalListings },
       ratings: { total: totalRatings },
       financial: {

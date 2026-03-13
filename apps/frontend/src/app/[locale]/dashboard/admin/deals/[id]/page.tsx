@@ -329,7 +329,7 @@ export default function AdminDealDetailPage({ params }: { params: { id: string }
                           ))}
                           <span className="text-xs font-bold text-amber-600 ms-1">{r.score}/5</span>
                         </div>
-                        {r.comment && <p className="text-xs text-slate-500 mt-1 italic">"{r.comment}"</p>}
+                        {r.comment && <p className="text-xs text-slate-500 mt-1 italic">&quot;{r.comment}&quot;</p>}
                       </div>
                       <p className="text-[10px] text-slate-400 shrink-0">
                         {new Date(r.createdAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA', { month: 'short', day: 'numeric' })}

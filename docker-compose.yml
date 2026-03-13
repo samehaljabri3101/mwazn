@@ -7,11 +7,17 @@
 #
 # Before any production deployment you MUST:
 #   1. Replace POSTGRES_PASSWORD with a strong random value
-#   2. Replace JWT_ACCESS_SECRET / JWT_REFRESH_SECRET with output of:
-#        openssl rand -hex 32
-#   3. Replace all SEED_*_PASSWORD values
+#   2. Replace JWT_ACCESS_SECRET / JWT_REFRESH_SECRET with:
+#        openssl rand -hex 32   (run twice, use different values)
+#   3. Replace all SEED_*_PASSWORD values and rotate them
 #   4. Use Docker secrets, Vault, or environment injection —
 #      do NOT commit real credentials to version control.
+#   5. Set FRONTEND_URL to your actual domain
+#   6. Set NEXT_PUBLIC_API_URL / API_INTERNAL_URL to your API hostname
+#   7. Remove or restrict the DB port mapping (5433:5432) in production —
+#      database should not be publicly accessible.
+#   8. Configure SMTP_* env vars for transactional email
+#   9. Configure STRIPE_SECRET_KEY for payment processing
 # ============================================================
 
 services:
@@ -23,7 +29,7 @@ services:
       POSTGRES_PASSWORD: mwazn   # ⚠️ demo-only — replace before production
       POSTGRES_DB: mwazn
     ports:
-      - '5433:5432'
+      - '127.0.0.1:5433:5432'   # ⚠️ Bound to localhost only — remove in production or use network-level controls
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:

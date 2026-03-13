@@ -566,7 +566,7 @@ export function CompanyDetail({
                   )}
                   {(company as any).verificationNotes && (
                     <p className="text-xs text-slate-500 mt-1 italic">
-                      "{(company as any).verificationNotes}"
+                      &quot;{(company as any).verificationNotes}&quot;
                     </p>
                   )}
                 </div>

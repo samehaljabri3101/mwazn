@@ -621,6 +621,27 @@ const RFQ_TITLES_AR = [
     'توريد لوازم مطبخ تجاري',
     'طلب توريد مضخات صناعية',
     'توريد أدوات وعدد يدوية',
+    // Extended pool — reduces title repetition at 400 RFQs
+    'توريد معدات تبريد وتكييف للمستشفى',
+    'طلب خدمات صيانة وتشغيل المرافق',
+    'توريد وتركيب أنظمة الطاقة الشمسية',
+    'طلب توريد مواد العزل الحراري والصوتي',
+    'توريد معدات الحريق والسلامة',
+    'طلب خدمات النقل واللوجستيات',
+    'توريد منظومة كاميرات المراقبة',
+    'طلب توريد ألياف ومواد إنشاء متقدمة',
+    'توريد مواد ومستلزمات التعبئة والتغليف',
+    'طلب توريد أثاث وتجهيزات الفنادق',
+    'توريد خطوط إنتاج للمصانع الغذائية',
+    'طلب خدمات التدريب والتأهيل المهني',
+    'توريد معدات مختبرات البحث والتطوير',
+    'طلب توريد أنظمة إدارة المباني',
+    'توريد مستلزمات التشغيل اليومية للمستشفيات',
+    'طلب خدمات الأمن الإلكتروني وحماية البيانات',
+    'توريد معدات الطباعة والنشر',
+    'طلب توريد أسطول المركبات التجارية',
+    'توريد معدات وآلات البناء الثقيلة',
+    'طلب خدمات الاستشارات الهندسية والتصميم',
 ];
 const RFQ_TITLES_EN = [
     'Request for Office Furniture Supply',
@@ -643,12 +664,36 @@ const RFQ_TITLES_EN = [
     'Packaging Materials for Factory',
     'IT Infrastructure Setup',
     'Heavy Machinery Procurement',
+    // Extended pool — reduces title repetition at 400 RFQs
+    'Hospital Refrigeration and Cold Chain Equipment',
+    'Facility Management and Maintenance Services',
+    'Fire Suppression and Safety Systems Supply',
+    'Thermal and Acoustic Insulation Materials',
+    'CCTV and Surveillance System Installation',
+    'Compressed Natural Gas Equipment Supply',
+    'Steel Structural Components for New Plant',
+    'Commercial Kitchen Hood and Ventilation Systems',
+    'Hotel Furnishing and Interior Fit-Out',
+    'ERP System Implementation Services',
+    'Pharmaceutical Storage and Dispensing Equipment',
+    'Robotic Process Automation Consultancy',
+    'Printing and Publishing Equipment Supply',
+    'Annual Cleaning Services Framework Contract',
+    'Fleet Management Software and Telematics',
+    'Renewable Energy Feasibility Study',
+    'Data Center Infrastructure Supply and Setup',
+    'Water Treatment Plant Components',
+    'Waste Management and Recycling Services',
+    'Training and Certification Services Contract',
 ];
 const STOCK_STATUSES = ['IN_STOCK', 'IN_STOCK', 'IN_STOCK', 'LIMITED', 'OUT_OF_STOCK'];
 const QUOTE_PAYMENT_TERMS = ['Net 30', 'Net 60', 'Cash on Delivery', '50% Advance', 'Letter of Credit'];
 const DEAL_STATUSES_WEIGHTED = [
-    client_1.DealStatus.AWARDED, client_1.DealStatus.IN_PROGRESS, client_1.DealStatus.DELIVERED,
+    client_1.DealStatus.AWARDED, client_1.DealStatus.AWARDED,
+    client_1.DealStatus.IN_PROGRESS,
+    client_1.DealStatus.DELIVERED,
     client_1.DealStatus.COMPLETED, client_1.DealStatus.COMPLETED, client_1.DealStatus.COMPLETED,
+    client_1.DealStatus.CANCELLED,
 ];
 const QUOTE_NOTES = [
     'يشمل العرض التوصيل والتركيب',
@@ -670,7 +715,7 @@ const DEAL_NOTES = [
     'الدفع عند التسليم مع فاتورة ضريبية',
     'Delivery scheduled within agreed timeframe',
 ];
-const RATING_COMMENTS = [
+const RATING_COMMENTS_POSITIVE = [
     'خدمة ممتازة وتسليم في الوقت المحدد',
     'Great quality products, highly recommended',
     'موردون محترفون وسريعو الاستجابة',
@@ -679,13 +724,56 @@ const RATING_COMMENTS = [
     'Excellent communication throughout the process',
     'ستتعامل معهم مرة أخرى بالتأكيد',
     'Delivered on time and within budget',
-    'جيد بشكل عام لكن التواصل كان بطيئاً',
-    'Good supplier, minor delays but resolved quickly',
     'خدمة ما بعد البيع ممتازة',
     'Outstanding technical support',
     'سعر تنافسي جداً مع جودة عالية',
     'Will definitely use again for future orders',
+    'التعامل كان احترافياً من البداية للنهاية',
+    'Exceeded expectations on quality and delivery',
 ];
+const RATING_COMMENTS_NEUTRAL = [
+    'جيد بشكل عام لكن التواصل كان بطيئاً',
+    'Good supplier, minor delays but resolved quickly',
+    'الجودة مقبولة لكن التغليف كان ضعيفاً',
+    'Product quality was acceptable, delivery was late',
+    'خدمة عادية، لم تتجاوز التوقعات',
+    'Average experience, nothing exceptional',
+    'تأخر التسليم يوماً واحداً عن الموعد المتفق',
+    'Documentation could be more detailed',
+];
+const RATING_COMMENTS_NEGATIVE = [
+    'جودة المنتج أقل من المواصفات المتفق عليها',
+    'Significant delay in delivery without prior notice',
+    'التواصل كان صعباً وغير فعّال',
+    'Product did not match the agreed specifications',
+    'تأخر التسليم بشكل كبير وأثر على المشروع',
+    'Customer support was unresponsive after sale',
+];
+/** Realistic score distribution: 5%×1, 10%×2, 20%×3, 35%×4, 30%×5 */
+function randRealisticScore() {
+    const r = Math.random();
+    if (r < 0.05)
+        return 1;
+    if (r < 0.15)
+        return 2;
+    if (r < 0.35)
+        return 3;
+    if (r < 0.70)
+        return 4;
+    return 5;
+}
+function randRatingComment(score) {
+    if (score >= 4)
+        return rand(RATING_COMMENTS_POSITIVE);
+    if (score === 3)
+        return rand(RATING_COMMENTS_NEUTRAL);
+    return rand(RATING_COMMENTS_NEGATIVE);
+}
+/** Returns a correlated { score, comment } pair for realistic rating data */
+function randRating() {
+    const score = randRealisticScore();
+    return { score, comment: randRatingComment(score) };
+}
 const MSG_BODIES = [
     'مرحباً، هل يمكنكم توضيح مواصفات المنتج؟',
     'Hello, can you provide more details about delivery timelines?',
@@ -850,6 +938,7 @@ async function main() {
         buyerCompanies.push(company);
     }
     console.log(`  + ${buyerCompanies.length} buyer companies`);
+    const verifiedSuppliers = supplierCompanies.filter((s) => s.verificationStatus === client_1.VerificationStatus.VERIFIED);
     // ── 4b. Demo individual accounts (Freelancer + Customer) ─────────────────
     console.log('  Creating demo individual accounts...');
     const freelancerCat = catBySlug['technology-electronics'] ?? categories[0];
@@ -868,13 +957,14 @@ async function main() {
                     email: 'freelancer@demo.sa',
                     passwordHash: hash('Freelancer@1234'),
                     fullName: 'Faisal Al-Harbi',
-                    role: 'FREELANCER',
+                    role: client_1.Role.FREELANCER,
                 },
             },
             categories: { connect: [{ id: freelancerCat.id }] },
         },
     });
     supplierCompanies.push(freelancerCompany);
+    verifiedSuppliers.push(freelancerCompany);
     await prisma.company.create({
         data: {
             nameAr: 'سارة القحطاني', nameEn: 'Sara Al-Qahtani',
@@ -889,13 +979,12 @@ async function main() {
                     email: 'customer@demo.sa',
                     passwordHash: hash('Customer@1234'),
                     fullName: 'Sara Al-Qahtani',
-                    role: 'CUSTOMER',
+                    role: client_1.Role.CUSTOMER,
                 },
             },
         },
     });
     console.log('  + freelancer@demo.sa + customer@demo.sa created');
-    const verifiedSuppliers = supplierCompanies.filter((s) => s.verificationStatus === client_1.VerificationStatus.VERIFIED);
     // ── 5. Listings (~7 per verified supplier = 840+) ─────────────────────────
     console.log('  Creating listings...');
     let listingCount = 0;
@@ -1094,7 +1183,7 @@ async function main() {
         await prisma.rating.create({
             data: {
                 dealId: deal.id, raterId: deal.buyerId, ratedId: deal.supplierId,
-                score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+                ...randRating(),
             },
         });
         ratingCount++;
@@ -1103,7 +1192,7 @@ async function main() {
             await prisma.rating.create({
                 data: {
                     dealId: deal.id, raterId: deal.supplierId, ratedId: deal.buyerId,
-                    score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+                    ...randRating(),
                 },
             });
             ratingCount++;
@@ -1121,7 +1210,7 @@ async function main() {
         await prisma.rating.create({
             data: {
                 dealId: deal.id, raterId: deal.buyerId, ratedId: deal.supplierId,
-                score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+                ...randRating(),
             },
         });
         ratingCount++;
@@ -1129,7 +1218,7 @@ async function main() {
             await prisma.rating.create({
                 data: {
                     dealId: deal.id, raterId: deal.supplierId, ratedId: deal.buyerId,
-                    score: randInt(3, 5), comment: rand(RATING_COMMENTS),
+                    ...randRating(),
                 },
             });
             ratingCount++;

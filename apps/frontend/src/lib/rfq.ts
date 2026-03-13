@@ -6,7 +6,7 @@
  *
  * Source of truth for status type values: @mwazn/contracts
  */
-import type { RFQStatus, QuoteStatus, DealStatus } from '@mwazn/contracts';
+import type { RFQStatus, QuoteStatus, DealStatus } from '@/lib/contracts';
 
 // ─── RFQ Status ───────────────────────────────────────────────────────────────
 
