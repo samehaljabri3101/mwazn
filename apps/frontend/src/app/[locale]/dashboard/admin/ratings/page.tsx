@@ -207,8 +207,8 @@ export default function AdminRatingsPage() {
               <div className="space-y-3">
                 {disputed.map((r) => {
                   const isPending = r.disputeStatus === 'PENDING_REVIEW';
-                  const isResolved = r.disputeStatus === 'RESOLVED';
-                  const statusColor = isPending ? 'bg-amber-50 border-amber-200' : isResolved ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200';
+                  const isAccepted = r.disputeStatus === 'ACCEPTED';
+                  const statusColor = isPending ? 'bg-amber-50 border-amber-200' : isAccepted ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200';
                   return (
                     <div key={r.id} className={`card border ${statusColor}`}>
                       <div className="flex items-start justify-between gap-4">
@@ -217,10 +217,13 @@ export default function AdminRatingsPage() {
                             <span className="text-amber-400 text-sm">{'★'.repeat(r.score)}{'☆'.repeat(5 - r.score)}</span>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                               isPending ? 'bg-amber-100 text-amber-700' :
-                              isResolved ? 'bg-emerald-100 text-emerald-700' :
+                              isAccepted ? 'bg-emerald-100 text-emerald-700' :
                               'bg-slate-100 text-slate-600'
                             }`}>
-                              {r.disputeStatus ?? 'DISPUTED'}
+                              {r.disputeStatus === 'ACCEPTED' ? (ar ? 'مقبول' : 'ACCEPTED') :
+                               r.disputeStatus === 'REJECTED' ? (ar ? 'مرفوض' : 'REJECTED') :
+                               r.disputeStatus === 'PENDING_REVIEW' ? (ar ? 'قيد المراجعة' : 'PENDING REVIEW') :
+                               (r.disputeStatus ?? 'DISPUTED')}
                             </span>
                           </div>
                           <p className="text-xs text-slate-500 mb-1">

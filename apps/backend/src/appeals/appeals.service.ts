@@ -7,6 +7,7 @@ import {
 import { AppealStatus, AppealTargetType, ModerationStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 import { CreateAppealDto } from './dto/create-appeal.dto';
 import { AdminRespondAppealDto } from './dto/admin-respond-appeal.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
@@ -16,6 +17,7 @@ export class AppealsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly email: EmailService,
   ) {}
 
   async create(dto: CreateAppealDto, userId: string) {
@@ -214,6 +216,18 @@ export class AppealsService {
       after: { targetType: appeal.targetType, targetId: appeal.targetId },
     });
 
+    // Notify appellant by email
+    const appellant = await this.prisma.user.findUnique({
+      where: { id: appeal.appellantUserId },
+      select: { email: true },
+    });
+    if (appellant) {
+      const targetTitle = appeal.targetType === AppealTargetType.RFQ
+        ? (await this.prisma.rFQ.findUnique({ where: { id: appeal.targetId }, select: { title: true } }))?.title ?? 'Your content'
+        : (await this.prisma.listing.findUnique({ where: { id: appeal.targetId }, select: { titleEn: true } }))?.titleEn ?? 'Your content';
+      this.email.sendAppealUpdate(appellant.email, targetTitle, 'ACCEPTED', dto.adminResponse).catch(() => {});
+    }
+
     return updated;
   }
 
@@ -238,6 +252,18 @@ export class AppealsService {
       userId: adminUserId,
       after: { targetType: appeal.targetType, targetId: appeal.targetId },
     });
+
+    // Notify appellant by email
+    const appellant = await this.prisma.user.findUnique({
+      where: { id: appeal.appellantUserId },
+      select: { email: true },
+    });
+    if (appellant) {
+      const targetTitle = appeal.targetType === AppealTargetType.RFQ
+        ? (await this.prisma.rFQ.findUnique({ where: { id: appeal.targetId }, select: { title: true } }))?.title ?? 'Your content'
+        : (await this.prisma.listing.findUnique({ where: { id: appeal.targetId }, select: { titleEn: true } }))?.titleEn ?? 'Your content';
+      this.email.sendAppealUpdate(appellant.email, targetTitle, 'REJECTED', dto.adminResponse).catch(() => {});
+    }
 
     return updated;
   }

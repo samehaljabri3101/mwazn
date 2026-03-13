@@ -310,20 +310,28 @@ export default function AdminDashboardPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [flaggedCount, setFlaggedCount] = useState(0);
   const [openAppealsCount, setOpenAppealsCount] = useState(0);
+  const [searchAnalytics, setSearchAnalytics] = useState<{
+    totalSearches: number;
+    topTerms: { term: string; count: number }[];
+    byType: Record<string, number>;
+    zeroResultQueries: string[];
+  } | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, pendingRes, moderationRes, appealsRes] = await Promise.all([
+      const [statsRes, pendingRes, moderationRes, appealsRes, analyticsRes] = await Promise.all([
         api.get('/admin/dashboard'),
         api.get('/admin/pending-verifications'),
         api.get('/admin/moderation', { params: { limit: 1 } }).catch(() => null),
         api.get('/admin/appeals', { params: { limit: 1, status: 'OPEN' } }).catch(() => null),
+        api.get('/search/analytics', { params: { days: 30 } }).catch(() => null),
       ]);
       setData(statsRes.data.data);
       setPending(pendingRes.data.data?.items || pendingRes.data.data || []);
       if (moderationRes) setFlaggedCount(moderationRes.data.data?.meta?.total ?? 0);
       if (appealsRes) setOpenAppealsCount(appealsRes.data.data?.meta?.total ?? 0);
+      if (analyticsRes) setSearchAnalytics(analyticsRes.data.data ?? analyticsRes.data);
     } catch { /* silent */ }
     setLoading(false);
   };
@@ -654,6 +662,64 @@ export default function AdminDashboardPage() {
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Search Insights ──────────────────────────────────────────── */}
+            {searchAnalytics && (
+              <div>
+                <SectionHeader title={ar ? 'تحليلات البحث (30 يوم)' : 'Search Insights (30 days)'} />
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Top terms */}
+                  <div className="card col-span-1">
+                    <p className="text-xs font-semibold text-slate-500 mb-3">
+                      {ar ? `أبرز المصطلحات (${searchAnalytics.totalSearches} بحث)` : `Top Terms (${searchAnalytics.totalSearches} searches)`}
+                    </p>
+                    {searchAnalytics.topTerms.length === 0 ? (
+                      <p className="text-xs text-slate-400">{ar ? 'لا توجد بيانات بعد' : 'No data yet'}</p>
+                    ) : (
+                      <ol className="space-y-1.5">
+                        {searchAnalytics.topTerms.slice(0, 8).map((t, i) => (
+                          <li key={t.term} className="flex items-center gap-2 text-xs">
+                            <span className="w-4 text-right text-slate-400 font-mono">{i + 1}.</span>
+                            <span className="flex-1 font-medium text-slate-700 truncate">{t.term}</span>
+                            <span className="shrink-0 text-slate-400">{t.count}×</span>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                  {/* By type */}
+                  <div className="card">
+                    <p className="text-xs font-semibold text-slate-500 mb-3">{ar ? 'حسب النوع' : 'By Type'}</p>
+                    <div className="space-y-2">
+                      {Object.entries(searchAnalytics.byType).map(([type, count]) => (
+                        <div key={type} className="flex items-center gap-2 text-xs">
+                          <span className="flex-1 text-slate-600 capitalize">{type}</span>
+                          <span className="font-semibold text-slate-800 tabular-nums">{count}</span>
+                        </div>
+                      ))}
+                      {Object.keys(searchAnalytics.byType).length === 0 && (
+                        <p className="text-xs text-slate-400">{ar ? 'لا توجد بيانات' : 'No data'}</p>
+                      )}
+                    </div>
+                  </div>
+                  {/* Zero-result queries */}
+                  <div className="card">
+                    <p className="text-xs font-semibold text-rose-500 mb-3">
+                      {ar ? 'بحث بدون نتائج' : 'Zero-Result Queries'}
+                    </p>
+                    {searchAnalytics.zeroResultQueries.length === 0 ? (
+                      <p className="text-xs text-emerald-600">{ar ? 'لا يوجد — ممتاز!' : 'None — great!'}</p>
+                    ) : (
+                      <ul className="space-y-1">
+                        {searchAnalytics.zeroResultQueries.slice(0, 8).map((q) => (
+                          <li key={q} className="text-xs text-slate-600 truncate">&ldquo;{q}&rdquo;</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

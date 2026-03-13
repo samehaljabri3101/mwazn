@@ -72,6 +72,9 @@ services:
       JWT_REFRESH_SECRET: mwazn_jwt_refresh_secret_docker_2026
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
+      # Email — defaults to 'log' mode (emails printed to console, no SMTP needed for demo)
+      # To enable real delivery: set EMAIL_MODE=smtp + SMTP_HOST/PORT/USER/PASS/FROM
+      EMAIL_MODE: log
       SEED_ADMIN_EMAIL: admin@mwazn.sa
       SEED_ADMIN_PASSWORD: Admin@1234    # ⚠️ demo-only — replace before production
       SEED_SUP_PASSWORD: Supplier@1234   # ⚠️ demo-only

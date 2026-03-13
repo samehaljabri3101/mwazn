@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { AppealStatus, CompanyType, DealStatus, ModerationSource, ModerationStatus, RFQStatus, SubscriptionPlan, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 import { AppealsService } from '../appeals/appeals.service';
 import { AdminRespondAppealDto } from '../appeals/dto/admin-respond-appeal.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
@@ -13,6 +14,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly email: EmailService,
     private readonly appealsService: AppealsService,
   ) {}
 
@@ -154,6 +156,17 @@ export class AdminService {
       after: { moderationStatus: statusMap[action], reason },
     });
 
+    // Notify RFQ owner by email on flag/remove
+    if (action === 'flag' || action === 'remove') {
+      const ownerUsers = await this.prisma.user.findMany({
+        where: { companyId: rfq.buyerId },
+        select: { email: true },
+      });
+      for (const u of ownerUsers) {
+        this.email.sendModerationAction(u.email, rfq.title, action === 'flag' ? 'flagged' : 'removed', reason).catch(() => {});
+      }
+    }
+
     return updated;
   }
 
@@ -182,6 +195,17 @@ export class AdminService {
       userId: adminUserId,
       after: { moderationStatus: statusMap[action], reason },
     });
+
+    // Notify listing owner by email on flag/remove
+    if (action === 'flag' || action === 'remove') {
+      const ownerUsers = await this.prisma.user.findMany({
+        where: { companyId: listing.supplierId },
+        select: { email: true },
+      });
+      for (const u of ownerUsers) {
+        this.email.sendModerationAction(u.email, listing.titleEn, action === 'flag' ? 'flagged' : 'removed', reason).catch(() => {});
+      }
+    }
 
     return updated;
   }

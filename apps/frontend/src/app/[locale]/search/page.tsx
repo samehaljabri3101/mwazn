@@ -42,30 +42,71 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Client-side filters (applied after results are fetched)
   const [trustTierFilter, setTrustTierFilter] = useState('');
   const [minPriceFilter, setMinPriceFilter] = useState('');
   const [maxPriceFilter, setMaxPriceFilter] = useState('');
 
-  const doSearch = async (q: string, type: TabType) => {
+  // doSearch: routes to the appropriate server-side endpoint per tab so filters
+  // are applied server-side before ranking, not in-memory on the client.
+  const doSearch = async (
+    q: string, type: TabType,
+    trustTier: string, minPrice: string, maxPrice: string,
+  ) => {
     if (!q.trim()) { setResults(null); return; }
     setLoading(true);
     try {
-      const res = await api.get('/search', { params: { q: q.trim(), type: type === 'all' ? undefined : type } });
-      setResults(res.data.data ?? res.data);
+      let data: SearchResult;
+      if (type === 'suppliers') {
+        // Server-side: trustTier filter applied after ranking in searchSuppliers()
+        const res = await api.get('/suppliers/search', {
+          params: { q: q.trim(), ...(trustTier ? { trustTier } : {}), limit: 20 },
+        });
+        const items = (res.data.data ?? res.data)?.items ?? [];
+        data = { suppliers: items, listings: undefined, categories: undefined };
+      } else if (type === 'products') {
+        // Server-side: price filter applied as DB WHERE, trustTier applied post-rank
+        const res = await api.get('/listings/search', {
+          params: {
+            q: q.trim(),
+            ...(minPrice ? { minPrice: Number(minPrice) } : {}),
+            ...(maxPrice ? { maxPrice: Number(maxPrice) } : {}),
+            ...(trustTier ? { trustTier } : {}),
+            limit: 20,
+          },
+        });
+        const items = (res.data.data ?? res.data)?.items ?? [];
+        data = { suppliers: undefined, listings: items, categories: undefined };
+      } else {
+        // Global search for 'all' and 'categories' tabs
+        const res = await api.get('/search', { params: { q: q.trim(), type: type === 'all' ? undefined : type } });
+        const raw = res.data.data ?? res.data;
+        // Normalize: global search returns { companies, listings, categories }
+        data = {
+          suppliers: raw.companies ?? raw.suppliers,
+          listings: raw.listings,
+          categories: raw.categories,
+        };
+      }
+      setResults(data);
     } catch { setResults(null); }
     setLoading(false);
   };
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => doSearch(query, tab), 400);
+    debounceRef.current = setTimeout(
+      () => doSearch(query, tab, trustTierFilter, minPriceFilter, maxPriceFilter),
+      400,
+    );
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, tab]);
+  }, [query, tab, trustTierFilter, minPriceFilter, maxPriceFilter]);
 
-  // Apply client-side filters to results
+  // For the 'all' tab, client-side filtering is applied on the global search results
+  // (which are already small: max 8 suppliers + 10 listings + 6 categories).
+  // For supplier/product tabs, filtering is now fully server-side.
   const filteredResults = useMemo(() => {
     if (!results) return results;
+    if (tab !== 'all') return results; // server already filtered
     const suppliers = trustTierFilter
       ? (results.suppliers ?? []).filter((s) => (s as any).trustTier === trustTierFilter)
       : results.suppliers;
@@ -79,7 +120,7 @@ export default function SearchPage() {
         })
       : results.listings;
     return { ...results, suppliers, listings };
-  }, [results, trustTierFilter, minPriceFilter, maxPriceFilter]);
+  }, [results, tab, trustTierFilter, minPriceFilter, maxPriceFilter]);
 
   const hasResults = filteredResults && (
     (filteredResults.suppliers?.length ?? 0) +

@@ -146,9 +146,9 @@ export class RatingsService {
     if (!rating) throw new NotFoundException('Rating not found');
     if (!rating.isDisputed) throw new BadRequestException('Rating is not disputed');
 
-    // ACCEPT → dispute upheld, rating excluded from score (RESOLVED)
+    // ACCEPT → dispute upheld, rating excluded from score (ACCEPTED)
     // REJECT → dispute denied, rating included back in score (REJECTED)
-    const disputeStatus = action === 'ACCEPT' ? 'RESOLVED' : 'REJECTED';
+    const disputeStatus = action === 'ACCEPT' ? 'ACCEPTED' : 'REJECTED';
 
     const updated = await this.prisma.rating.update({
       where: { id: ratingId },
