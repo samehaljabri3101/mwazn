@@ -77,6 +77,7 @@ export default function AdminRFQsPage() {
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [modFilter, setModFilter] = useState('');
   const [page, setPage] = useState(1);
   const [modActionLoading, setModActionLoading] = useState<string | null>(null);
   const limit = 30;
@@ -90,6 +91,7 @@ export default function AdminRFQsPage() {
           page, limit,
           ...(search ? { search } : {}),
           ...(statusFilter ? { status: statusFilter } : {}),
+          ...(modFilter ? { moderationStatus: modFilter } : {}),
         },
       });
       const data = res.data?.data ?? res.data;
@@ -99,12 +101,12 @@ export default function AdminRFQsPage() {
       setError(true);
     }
     setLoading(false);
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, modFilter]);
 
   useEffect(() => { fetchRfqs(); }, [fetchRfqs]);
 
   // Reset page on filter change
-  useEffect(() => { setPage(1); }, [search, statusFilter]);
+  useEffect(() => { setPage(1); }, [search, statusFilter, modFilter]);
 
   const moderateRFQ = async (id: string, action: 'remove' | 'restore' | 'flag', e: React.MouseEvent) => {
     e.preventDefault();
@@ -161,6 +163,16 @@ export default function AdminRFQsPage() {
             <option value="AWARDED">{ar ? 'مُرسى' : 'Awarded'}</option>
             <option value="CLOSED">{ar ? 'مغلق' : 'Closed'}</option>
             <option value="CANCELLED">{ar ? 'ملغى' : 'Cancelled'}</option>
+          </select>
+          <select
+            value={modFilter}
+            onChange={(e) => setModFilter(e.target.value)}
+            className="input-base w-40"
+          >
+            <option value="">{ar ? 'كل الإشراف' : 'All Moderation'}</option>
+            <option value="ACTIVE">{ar ? 'نشط' : 'Active'}</option>
+            <option value="FLAGGED">{ar ? 'مُعلَّم' : 'Flagged'}</option>
+            <option value="REMOVED">{ar ? 'محذوف' : 'Removed'}</option>
           </select>
         </div>
 

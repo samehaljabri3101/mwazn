@@ -24,7 +24,7 @@ export class RFQsService {
     private readonly moderation: ModerationService,
   ) {}
 
-  async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string; adminOverride?: boolean }) {
+  async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string; adminOverride?: boolean; moderationStatus?: string }) {
     const where: any = {};
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.status) where.status = query.status;
@@ -40,6 +40,10 @@ export class RFQsService {
     if (!query.buyerId && !query.adminOverride) {
       where.visibility = 'PUBLIC';
       where.moderationStatus = ModerationStatus.ACTIVE;
+    }
+    // Admin can filter by moderationStatus explicitly
+    if (query.adminOverride && query.moderationStatus) {
+      where.moderationStatus = query.moderationStatus;
     }
 
     const _page = Number(query.page) || 1;

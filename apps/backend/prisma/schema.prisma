@@ -425,6 +425,12 @@ model Deal {
   currency    String     @default("SAR")
   notes       String?    @db.Text
 
+  // Fulfillment / shipping
+  trackingNumber String?
+  carrierName    String?
+  shippedAt      DateTime?
+  deliveredAt    DateTime?
+
   quote    Quote   @relation(fields: [quoteId], references: [id])
   quoteId  String  @unique
 

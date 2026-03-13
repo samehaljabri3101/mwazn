@@ -11,6 +11,8 @@ import { PaginationDto } from '../common/dto/pagination.dto';
 class UpdateDealStatusDto {
   @ApiProperty({ enum: DealStatus }) @IsEnum(DealStatus) status: DealStatus;
   @ApiPropertyOptional() @IsOptional() @IsString() notes?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() trackingNumber?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() carrierName?: string;
 }
 
 @ApiTags('Deals')
@@ -40,6 +42,6 @@ export class DealsController {
     @Body() dto: UpdateDealStatusDto,
     @CurrentUser('id') userId: string,
   ) {
-    return this.dealsService.updateStatus(id, dto.status, userId, dto.notes);
+    return this.dealsService.updateStatus(id, dto.status, userId, dto.notes, dto.trackingNumber, dto.carrierName);
   }
 }

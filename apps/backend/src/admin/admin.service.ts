@@ -232,4 +232,37 @@ export class AdminService {
   rejectAppeal(id: string, dto: AdminRespondAppealDto, adminUserId: string) {
     return this.appealsService.adminReject(id, dto, adminUserId);
   }
+
+  // ─── Admin Listings ────────────────────────────────────────────────────────
+
+  async getAdminListings(query: PaginationDto & { search?: string; moderationStatus?: string }) {
+    const _page = Number(query.page) || 1;
+    const _limit = Math.min(Number(query.limit) || 30, 100);
+
+    const where: Record<string, unknown> = {};
+    if (query.moderationStatus) where.moderationStatus = query.moderationStatus;
+    if (query.search) {
+      where.OR = [
+        { titleEn: { contains: query.search, mode: 'insensitive' } },
+        { titleAr: { contains: query.search } },
+      ];
+    }
+
+    const [items, total] = await Promise.all([
+      this.prisma.listing.findMany({
+        where,
+        skip: (_page - 1) * _limit,
+        take: _limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          supplier: { select: { id: true, nameAr: true, nameEn: true } },
+          category: { select: { nameAr: true, nameEn: true } },
+          images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+        },
+      }),
+      this.prisma.listing.count({ where }),
+    ]);
+
+    return paginate(items, total, _page, _limit);
+  }
 }

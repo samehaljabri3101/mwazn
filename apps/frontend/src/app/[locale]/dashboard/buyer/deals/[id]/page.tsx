@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Deal } from '@/types';
 import {
   ChevronLeft, DollarSign, Download, Star, MessageSquare,
-  CheckCircle2, ChevronDown, ChevronUp,
+  CheckCircle2, ChevronDown, ChevronUp, Truck,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -353,6 +353,42 @@ export default function BuyerDealDetailPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Shipping / tracking */}
+        {(deal.trackingNumber || deal.carrierName || deal.shippedAt || deal.deliveredAt) && (
+          <div className="card">
+            <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <Truck className="h-4 w-4 text-slate-500" />
+              {ar ? 'معلومات الشحن' : 'Shipping Information'}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              {deal.trackingNumber && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'رقم الشحن' : 'Tracking Number'}</p>
+                  <p className="font-medium text-slate-800 font-mono">{deal.trackingNumber}</p>
+                </div>
+              )}
+              {deal.carrierName && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'شركة الشحن' : 'Carrier'}</p>
+                  <p className="font-medium text-slate-800">{deal.carrierName}</p>
+                </div>
+              )}
+              {deal.shippedAt && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'تاريخ الشحن' : 'Shipped At'}</p>
+                  <p className="font-medium text-slate-800">{new Date(deal.shippedAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA')}</p>
+                </div>
+              )}
+              {deal.deliveredAt && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'تاريخ التسليم' : 'Delivered At'}</p>
+                  <p className="font-medium text-slate-800">{new Date(deal.deliveredAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA')}</p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

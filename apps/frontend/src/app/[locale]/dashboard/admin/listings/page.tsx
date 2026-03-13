@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useLocale } from 'next-intl';
-import { Package, Search, Flag, Trash2, RotateCcw, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { Package, Search, Flag, Trash2, RotateCcw, RefreshCw, Eye } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Skeleton } from '@/components/ui/Skeleton';
 import api from '@/lib/api';
@@ -40,10 +41,12 @@ function ModerationBadge({ status }: { status: string }) {
 export default function AdminListingsPage() {
   const locale = useLocale();
   const ar = locale === 'ar';
+  const base = `/${locale}/dashboard`;
 
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [modFilter, setModFilter] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [reasonInput, setReasonInput] = useState('');
@@ -51,13 +54,13 @@ export default function AdminListingsPage() {
   const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get('/listings', {
-        params: { limit: 50, search: search || undefined, adminView: true },
+      const res = await api.get('/admin/listings', {
+        params: { limit: 50, search: search || undefined, moderationStatus: modFilter || undefined },
       });
       setListings(res.data.data?.items ?? res.data.data ?? []);
     } catch { /* silent */ }
     setLoading(false);
-  }, [search]);
+  }, [search, modFilter]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -86,7 +89,7 @@ export default function AdminListingsPage() {
           <p className="text-sm text-slate-500 ms-12">{ar ? 'إدارة منتجات جميع الموردين' : 'Manage listings across all suppliers'}</p>
         </div>
 
-        {/* Search + Refresh */}
+        {/* Search + Filter + Refresh */}
         <div className="flex gap-3 mb-6">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -98,6 +101,17 @@ export default function AdminListingsPage() {
               className="w-full ps-9 pr-3 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-400"
             />
           </div>
+          <select
+            value={modFilter}
+            onChange={(e) => setModFilter(e.target.value)}
+            className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400 bg-white"
+          >
+            <option value="">{ar ? 'كل حالات الإشراف' : 'All moderation'}</option>
+            <option value="ACTIVE">{ar ? 'نشط' : 'Active'}</option>
+            <option value="FLAGGED">{ar ? 'مُعلَّم' : 'Flagged'}</option>
+            <option value="REMOVED">{ar ? 'محذوف' : 'Removed'}</option>
+            <option value="REJECTED">{ar ? 'مرفوض' : 'Rejected'}</option>
+          </select>
           <button onClick={fetch} className="p-2 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-700 hover:bg-slate-50">
             <RefreshCw className="h-4 w-4" />
           </button>
@@ -122,6 +136,7 @@ export default function AdminListingsPage() {
                   <th className="text-start px-4 py-3 font-medium text-slate-500">{ar ? 'الإشراف' : 'Moderation'}</th>
                   <th className="text-start px-4 py-3 font-medium text-slate-500">{ar ? 'السعر' : 'Price'}</th>
                   <th className="text-end px-4 py-3 font-medium text-slate-500">{ar ? 'إجراءات' : 'Actions'}</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -146,6 +161,15 @@ export default function AdminListingsPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {listing.price ? `${listing.price.toLocaleString()} ${listing.currency}` : '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`${base}/admin/listings/${listing.id}`}
+                        className="inline-flex items-center gap-1 text-xs text-brand-600 hover:text-brand-800 hover:underline"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        {ar ? 'عرض' : 'View'}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">

@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { Deal } from '@/types';
 import {
   ChevronLeft, DollarSign, Star, MessageSquare,
-  CheckCircle2, ChevronDown, ChevronUp,
+  CheckCircle2, ChevronDown, ChevronUp, Truck,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -96,6 +96,9 @@ export default function SupplierDealDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [boqExpanded, setBoqExpanded] = useState(false);
+  const [trackingInput, setTrackingInput] = useState('');
+  const [carrierInput, setCarrierInput] = useState('');
+  const [showTrackingForm, setShowTrackingForm] = useState(false);
 
   const fetchDeal = async () => {
     try {
@@ -107,13 +110,20 @@ export default function SupplierDealDetailPage() {
 
   useEffect(() => { fetchDeal(); }, [id]);
 
-  const updateStatus = async (status: string) => {
+  const updateStatus = async (status: string, trackingNumber?: string, carrierName?: string) => {
     setActionLoading(true);
     try {
-      await api.patch(`/deals/${id}/status`, { status });
+      await api.patch(`/deals/${id}/status`, {
+        status,
+        ...(trackingNumber ? { trackingNumber } : {}),
+        ...(carrierName ? { carrierName } : {}),
+      });
       await fetchDeal();
     } catch { /* silent */ }
     setActionLoading(false);
+    setShowTrackingForm(false);
+    setTrackingInput('');
+    setCarrierInput('');
   };
 
   const startConversation = async () => {
@@ -345,6 +355,42 @@ export default function SupplierDealDetailPage() {
           </div>
         )}
 
+        {/* Shipping / tracking */}
+        {(deal.trackingNumber || deal.carrierName || deal.shippedAt || deal.deliveredAt) && (
+          <div className="card">
+            <h2 className="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <Truck className="h-4 w-4 text-slate-500" />
+              {ar ? 'معلومات الشحن' : 'Shipping Information'}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              {deal.trackingNumber && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'رقم الشحن' : 'Tracking Number'}</p>
+                  <p className="font-medium text-slate-800 font-mono">{deal.trackingNumber}</p>
+                </div>
+              )}
+              {deal.carrierName && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'شركة الشحن' : 'Carrier'}</p>
+                  <p className="font-medium text-slate-800">{deal.carrierName}</p>
+                </div>
+              )}
+              {deal.shippedAt && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'تاريخ الشحن' : 'Shipped At'}</p>
+                  <p className="font-medium text-slate-800">{new Date(deal.shippedAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA')}</p>
+                </div>
+              )}
+              {deal.deliveredAt && (
+                <div>
+                  <p className="text-slate-500 text-xs">{ar ? 'تاريخ التسليم' : 'Delivered At'}</p>
+                  <p className="font-medium text-slate-800">{new Date(deal.deliveredAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA')}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Ratings display */}
         {deal.ratings && deal.ratings.length > 0 && (
           <div className="card">
@@ -363,15 +409,65 @@ export default function SupplierDealDetailPage() {
         )}
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-3">
-          {nextStatus && (
-            <Button
-              loading={actionLoading}
-              icon={<CheckCircle2 className="h-4 w-4" />}
-              onClick={() => updateStatus(nextStatus)}
-            >
-              {ar ? NEXT_LABEL[deal.status].ar : NEXT_LABEL[deal.status].en}
-            </Button>
+        <div className="space-y-3">
+          {/* Tracking form — shown when marking DELIVERED */}
+          {nextStatus === 'DELIVERED' && showTrackingForm && (
+            <div className="card border border-slate-200 bg-slate-50/50">
+              <p className="text-sm font-semibold text-slate-700 mb-3">{ar ? 'معلومات الشحن (اختياري)' : 'Shipping Information (optional)'}</p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">{ar ? 'رقم الشحن' : 'Tracking Number'}</label>
+                  <input
+                    type="text"
+                    value={trackingInput}
+                    onChange={(e) => setTrackingInput(e.target.value)}
+                    placeholder={ar ? 'مثال: 1Z999AA10123456784' : 'e.g. 1Z999AA10123456784'}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">{ar ? 'شركة الشحن' : 'Carrier Name'}</label>
+                  <input
+                    type="text"
+                    value={carrierInput}
+                    onChange={(e) => setCarrierInput(e.target.value)}
+                    placeholder={ar ? 'مثال: أرامكس، DHL' : 'e.g. Aramex, DHL'}
+                    className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-400"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  loading={actionLoading}
+                  icon={<Truck className="h-4 w-4" />}
+                  onClick={() => updateStatus('DELIVERED', trackingInput || undefined, carrierInput || undefined)}
+                >
+                  {ar ? 'تأكيد الشحن' : 'Confirm Shipped'}
+                </Button>
+                <Button variant="secondary" onClick={() => setShowTrackingForm(false)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+          {nextStatus && !showTrackingForm && (
+            nextStatus === 'DELIVERED' ? (
+              <Button
+                loading={actionLoading}
+                icon={<Truck className="h-4 w-4" />}
+                onClick={() => setShowTrackingForm(true)}
+              >
+                {ar ? NEXT_LABEL[deal.status].ar : NEXT_LABEL[deal.status].en}
+              </Button>
+            ) : (
+              <Button
+                loading={actionLoading}
+                icon={<CheckCircle2 className="h-4 w-4" />}
+                onClick={() => updateStatus(nextStatus)}
+              >
+                {ar ? NEXT_LABEL[deal.status].ar : NEXT_LABEL[deal.status].en}
+              </Button>
+            )
           )}
 
           {canRate && (
@@ -392,6 +488,8 @@ export default function SupplierDealDetailPage() {
             {ar ? 'تواصل مع المشتري' : 'Chat with Buyer'}
           </Button>
         </div>
+      </div>
+
       </div>
     </DashboardLayout>
   );

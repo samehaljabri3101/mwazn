@@ -247,6 +247,11 @@ export interface Deal {
   quoteId: string;
   buyerId: string;
   supplierId: string;
+  // Fulfillment / shipping
+  trackingNumber?: string | null;
+  carrierName?: string | null;
+  shippedAt?: string | null;
+  deliveredAt?: string | null;
   quote?: Quote & { rfq?: RFQ };
   buyer?: Pick<Company, 'id' | 'nameAr' | 'nameEn'>;
   supplier?: Pick<Company, 'id' | 'nameAr' | 'nameEn'>;

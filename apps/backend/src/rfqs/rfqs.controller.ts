@@ -34,8 +34,9 @@ export class RFQsController {
   @ApiQuery({ name: 'categoryId', required: false })
   @ApiQuery({ name: 'status', enum: RFQStatus, required: false })
   @ApiQuery({ name: 'search', required: false })
+  @ApiQuery({ name: 'moderationStatus', required: false })
   findAll(
-    @Query() query: PaginationDto & { categoryId?: string; status?: RFQStatus; search?: string },
+    @Query() query: PaginationDto & { categoryId?: string; status?: RFQStatus; search?: string; moderationStatus?: string },
     @CurrentUser() user?: any,
   ) {
     return this.rfqsService.findAll(Object.assign(query, { adminOverride: user?.role === 'PLATFORM_ADMIN' }));

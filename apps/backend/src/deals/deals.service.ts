@@ -82,7 +82,7 @@ export class DealsService {
     return deal;
   }
 
-  async updateStatus(id: string, status: DealStatus, userId: string, notes?: string) {
+  async updateStatus(id: string, status: DealStatus, userId: string, notes?: string, trackingNumber?: string, carrierName?: string) {
     const deal = await this.prisma.deal.findUnique({
       where: { id },
       include: {
@@ -106,9 +106,19 @@ export class DealsService {
       throw new BadRequestException(`Cannot transition from ${deal.status} to ${status}`);
     }
 
+    const shippingData: Record<string, unknown> = {};
+    if (status === DealStatus.DELIVERED) {
+      shippingData.shippedAt = new Date();
+      if (trackingNumber) shippingData.trackingNumber = trackingNumber;
+      if (carrierName) shippingData.carrierName = carrierName;
+    }
+    if (status === DealStatus.COMPLETED) {
+      shippingData.deliveredAt = new Date();
+    }
+
     const updated = await this.prisma.deal.update({
       where: { id },
-      data: { status, notes: notes ?? deal.notes },
+      data: { status, notes: notes ?? deal.notes, ...shippingData },
     });
 
     const statusMapEn: Record<string, string> = {

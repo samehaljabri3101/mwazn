@@ -58,6 +58,14 @@ export class AdminController {
     return this.adminService.setPlan(companyId, dto.plan, adminUserId);
   }
 
+  // ─── Admin Listings ────────────────────────────────────────────────────────
+
+  @Get('listings')
+  @ApiOperation({ summary: 'List all listings (admin view, all moderation statuses)' })
+  getAdminListings(@Query() query: PaginationDto & { search?: string; moderationStatus?: string }) {
+    return this.adminService.getAdminListings(query);
+  }
+
   // ─── Content Moderation — RFQs ────────────────────────────────────────────
 
   @Patch('rfqs/:id/remove')
