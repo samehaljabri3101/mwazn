@@ -77,8 +77,9 @@ services:
       EMAIL_MODE: log
       SEED_ADMIN_EMAIL: admin@mwazn.sa
       SEED_ADMIN_PASSWORD: Admin@1234    # ⚠️ demo-only — replace before production
-      SEED_SUP_PASSWORD: Supplier@1234   # ⚠️ demo-only
-      SEED_BUY_PASSWORD: Buyer@1234      # ⚠️ demo-only
+      SEED_SUP_PASSWORD: Supplier@1234   # ⚠️ demo-only (bulk suppliers)
+      SEED_BUY_PASSWORD: Buyer@1234      # ⚠️ demo-only (bulk buyers)
+      SEED_DEMO_PASSWORD: demo123        # Unified password for the 4 named demo accounts in login UI
     depends_on:
       db:
         condition: service_healthy

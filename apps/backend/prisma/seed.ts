@@ -822,6 +822,8 @@ const SEED_ADMIN_EMAIL    = process.env.SEED_ADMIN_EMAIL    || 'admin@mwazn.sa';
 const SEED_ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD || 'Admin@1234';
 const SEED_SUP_PASSWORD   = process.env.SEED_SUP_PASSWORD   || 'Supplier@1234';
 const SEED_BUY_PASSWORD   = process.env.SEED_BUY_PASSWORD   || 'Buyer@1234';
+// Unified demo password for the 4 named demo accounts shown in the login UI
+const SEED_DEMO_PASSWORD  = process.env.SEED_DEMO_PASSWORD  || 'demo123';
 
 // ── Main Seed ─────────────────────────────────────────────────────────────────
 async function main() {
@@ -874,7 +876,7 @@ async function main() {
       crNumber: '0000000001', type: CompanyType.BUYER,
       verificationStatus: VerificationStatus.VERIFIED, plan: SubscriptionPlan.PRO, city: 'Riyadh',
       users: {
-        create: { email: SEED_ADMIN_EMAIL, passwordHash: hash(SEED_ADMIN_PASSWORD), fullName: 'Platform Admin', role: Role.PLATFORM_ADMIN },
+        create: { email: SEED_ADMIN_EMAIL, passwordHash: hash(SEED_DEMO_PASSWORD), fullName: 'Platform Admin', role: Role.PLATFORM_ADMIN },
       },
     },
   });
@@ -965,7 +967,8 @@ async function main() {
         plan: SubscriptionPlan.FREE, city: rand(SAUDI_CITIES),
         phone: `+9665${randInt(10000000, 99999999)}`,
         users: {
-          create: { email, passwordHash: hash(SEED_BUY_PASSWORD), fullName: `مدير ${b.nameAr}`.slice(0, 50), role: Role.BUYER_ADMIN },
+          // buyer1 (i===0) is the featured Business demo account — uses unified demo password
+          create: { email, passwordHash: hash(i === 0 ? SEED_DEMO_PASSWORD : SEED_BUY_PASSWORD), fullName: `مدير ${b.nameAr}`.slice(0, 50), role: Role.BUYER_ADMIN },
         },
       },
       include: { users: true },
@@ -992,7 +995,7 @@ async function main() {
       users: {
         create: {
           email: 'freelancer@demo.sa',
-          passwordHash: hash('Freelancer@1234'),
+          passwordHash: hash(SEED_DEMO_PASSWORD),
           fullName: 'Faisal Al-Harbi',
           role: Role.FREELANCER,
         },
@@ -1015,7 +1018,7 @@ async function main() {
       users: {
         create: {
           email: 'customer@demo.sa',
-          passwordHash: hash('Customer@1234'),
+          passwordHash: hash(SEED_DEMO_PASSWORD),
           fullName: 'Sara Al-Qahtani',
           role: Role.CUSTOMER,
         },
@@ -1378,13 +1381,12 @@ async function main() {
   console.log('\nMwazn v3 seed complete!');
   console.log('-'.repeat(60));
   console.log('Demo Credentials:');
-  console.log(`  Admin      -> ${SEED_ADMIN_EMAIL}  /  ${SEED_ADMIN_PASSWORD}`);
-  console.log(`  Buyer      -> admin@buyer1.sa  /  ${SEED_BUY_PASSWORD}`);
-  console.log(`  Supplier (PRO+Verified)  -> admin@supplier1.sa  /  ${SEED_SUP_PASSWORD}`);
-  console.log(`  Supplier (FREE+Verified) -> admin@supplier3.sa  /  ${SEED_SUP_PASSWORD}`);
-  console.log(`  Supplier (Unverified)    -> admin@supplier9.sa  /  ${SEED_SUP_PASSWORD}`);
-  console.log(`  Freelancer -> freelancer@demo.sa  /  Freelancer@1234`);
-  console.log(`  Customer   -> customer@demo.sa    /  Customer@1234`);
+  console.log(`  [Demo accounts — all use password: ${SEED_DEMO_PASSWORD}]`);
+  console.log(`  Admin     -> ${SEED_ADMIN_EMAIL}`);
+  console.log(`  Business  -> admin@buyer1.sa`);
+  console.log(`  Freelancer-> freelancer@demo.sa`);
+  console.log(`  Customer  -> customer@demo.sa`);
+  console.log(`  [Other bulk accounts use: Supplier@1234 / Buyer@1234]`);
   console.log('-'.repeat(60));
   console.log('Showroom URLs:');
   console.log('  http://localhost:3000/en/suppliers/demo-1  (Gulf Industrial)');

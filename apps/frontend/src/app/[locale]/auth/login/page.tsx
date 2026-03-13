@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { Eye, EyeOff, Shield } from 'lucide-react';
+import { Eye, EyeOff, Shield, Building2, User, Briefcase } from 'lucide-react';
 
 export default function LoginPage() {
   const locale = useLocale();
@@ -158,29 +158,58 @@ export default function LoginPage() {
 
           {/* Demo credentials */}
           <div className="mt-8 rounded-xl bg-brand-50 border border-brand-100 p-4">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-1">
               <Shield className="h-4 w-4 text-brand-700" />
               <p className="text-xs font-semibold text-brand-700">
-                {ar ? 'حسابات تجريبية — انقر للدخول' : 'Demo Accounts — click to auto-fill'}
+                {ar ? 'جرّب موازن فوراً بحسابات تجريبية' : 'Try Mwazn instantly using demo accounts'}
               </p>
             </div>
+            <p className="text-[11px] text-slate-400 mb-3 ps-6">
+              {ar ? 'كلمة المرور لجميع الحسابات: demo123' : 'Demo password for all accounts: demo123'}
+            </p>
             <div className="space-y-1.5">
-              {[
-                { role: ar ? 'مشترٍ' : 'Buyer', email: 'admin@buyer1.sa', password: 'Buyer@1234' },
-                { role: ar ? 'مورّد' : 'Supplier', email: 'admin@supplier1.sa', password: 'Supplier@1234' },
-                { role: ar ? 'إداري' : 'Admin', email: 'admin@mwazn.sa', password: 'Admin@1234' },
-                { role: ar ? 'بائع مستقل' : 'Freelancer', email: 'freelancer@demo.sa', password: 'Freelancer@1234' },
-                { role: ar ? 'مستخدم' : 'Customer', email: 'customer@demo.sa', password: 'Customer@1234' },
-              ].map((cred) => (
+              {([
+                {
+                  icon: <Building2 className="h-3.5 w-3.5 shrink-0 text-brand-600" />,
+                  role: ar ? 'حساب شركة' : 'Business',
+                  email: 'admin@buyer1.sa',
+                  password: 'demo123',
+                  desc: ar ? 'انشر طلبات الأسعار، استقبل العروض، أدر المنتجات' : 'Post RFQs, receive quotes, manage products as a company',
+                },
+                {
+                  icon: <User className="h-3.5 w-3.5 shrink-0 text-slate-500" />,
+                  role: ar ? 'مستهلك' : 'Customer',
+                  email: 'customer@demo.sa',
+                  password: 'demo123',
+                  desc: ar ? 'مشترٍ فردي بدون سجل تجاري' : 'Individual buyer without commercial registration',
+                },
+                {
+                  icon: <Briefcase className="h-3.5 w-3.5 shrink-0 text-amber-600" />,
+                  role: ar ? 'بائع مستقل' : 'Freelancer',
+                  email: 'freelancer@demo.sa',
+                  password: 'demo123',
+                  desc: ar ? 'قدّم خدمات وأجب على الفرص بدون سجل تجاري' : 'Offer services and respond to service opportunities',
+                },
+                {
+                  icon: <Shield className="h-3.5 w-3.5 shrink-0 text-red-500" />,
+                  role: ar ? 'مدير المنصة' : 'Admin',
+                  email: 'admin@mwazn.sa',
+                  password: 'demo123',
+                  desc: ar ? 'لوحة تحكم مدير المنصة' : 'Platform administrator dashboard',
+                },
+              ] as Array<{ icon: React.ReactNode; role: string; email: string; password: string; desc: string }>).map((cred) => (
                 <button
                   key={cred.email}
                   type="button"
                   onClick={() => { setEmail(cred.email); setPassword(cred.password); }}
                   className="w-full text-start rounded-lg bg-white border border-brand-100 hover:border-brand-300 hover:bg-brand-50/50 px-3 py-2 transition-colors"
                 >
-                  <span className="text-xs font-semibold text-brand-700">{cred.role}</span>
-                  <span className="mx-1.5 text-slate-300">·</span>
-                  <span className="text-xs text-slate-500 font-mono">{cred.email}</span>
+                  <div className="flex items-center gap-2">
+                    {cred.icon}
+                    <span className="text-xs font-semibold text-brand-700">{cred.role}</span>
+                    <span className="text-xs text-slate-400 font-mono">{cred.email}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-0.5 ps-5 leading-relaxed">{cred.desc}</p>
                 </button>
               ))}
             </div>

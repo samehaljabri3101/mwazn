@@ -66,8 +66,9 @@ export function getRoleDashboardPath(role?: Role | null, locale = 'en'): string 
  */
 export function getRoleLabel(role?: Role | null, ar = false): string {
   switch (role) {
-    case 'SUPPLIER_ADMIN': return ar ? 'حساب مورّد' : 'Supplier Account';
-    case 'BUYER_ADMIN':    return ar ? 'حساب مشترٍ' : 'Buyer Account';
+    // Both CR-backed roles are unified under the "Business" account model
+    case 'SUPPLIER_ADMIN': return ar ? 'حساب شركة' : 'Business Account';
+    case 'BUYER_ADMIN':    return ar ? 'حساب شركة' : 'Business Account';
     case 'PLATFORM_ADMIN': return ar ? 'مدير المنصة' : 'Platform Admin';
     case 'FREELANCER':     return ar ? 'بائع مستقل'  : 'Independent Seller';
     case 'CUSTOMER':       return ar ? 'مشترٍ فردي'  : 'Individual Buyer';

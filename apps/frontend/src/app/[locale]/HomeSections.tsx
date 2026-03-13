@@ -533,15 +533,15 @@ function SiteFooter({ ar, locale }: { ar: boolean; locale: string }) {
             <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'المنصة' : 'Platform'}</h4>
             <ul className="space-y-2.5 text-sm">
               <li><Link href={`/${locale}/suppliers`} className="hover:text-white transition-colors">{ar ? 'الموردون' : 'Suppliers'}</Link></li>
-              <li><Link href={`/${locale}/auth/register?type=BUYER`} className="hover:text-white transition-colors">{ar ? 'أنشر طلب عرض' : 'Post RFQ'}</Link></li>
-              <li><Link href={`/${locale}/auth/register?type=SUPPLIER`} className="hover:text-white transition-colors">{ar ? 'انضم كمورّد' : 'Join as Supplier'}</Link></li>
+              <li><Link href={`/${locale}/auth/register?type=BUSINESS`} className="hover:text-white transition-colors">{ar ? 'أنشر طلب عرض' : 'Post RFQ'}</Link></li>
+              <li><Link href={`/${locale}/auth/register?type=BUSINESS`} className="hover:text-white transition-colors">{ar ? 'انضم كمورّد' : 'Join as Supplier'}</Link></li>
               <li><Link href={`/${locale}#why`} className="hover:text-white transition-colors">{ar ? 'لماذا موازن' : 'Why Mwazn'}</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'للمشترين' : 'For Buyers'}</h4>
+            <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'للشركات' : 'For Business'}</h4>
             <ul className="space-y-2.5 text-sm">
-              <li><Link href={`/${locale}/auth/register?type=BUYER`} className="hover:text-white transition-colors">{ar ? 'إنشاء حساب' : 'Create Account'}</Link></li>
+              <li><Link href={`/${locale}/auth/register?type=BUSINESS`} className="hover:text-white transition-colors">{ar ? 'إنشاء حساب' : 'Create Account'}</Link></li>
               <li><Link href={`/${locale}/auth/login`} className="hover:text-white transition-colors">{ar ? 'تسجيل الدخول' : 'Login'}</Link></li>
               <li><Link href={`/${locale}#why`} className="hover:text-white transition-colors">{ar ? 'المزايا' : 'Features'}</Link></li>
             </ul>
@@ -549,7 +549,7 @@ function SiteFooter({ ar, locale }: { ar: boolean; locale: string }) {
           <div>
             <h4 className="text-sm font-semibold text-white mb-4">{ar ? 'للموردين' : 'For Suppliers'}</h4>
             <ul className="space-y-2.5 text-sm">
-              <li><Link href={`/${locale}/auth/register?type=SUPPLIER`} className="hover:text-white transition-colors">{ar ? 'التسجيل كمورّد' : 'Register as Supplier'}</Link></li>
+              <li><Link href={`/${locale}/auth/register?type=BUSINESS`} className="hover:text-white transition-colors">{ar ? 'التسجيل كمورّد' : 'Register as Supplier'}</Link></li>
               <li><Link href={`/${locale}/dashboard/subscription`} className="hover:text-white transition-colors">{ar ? 'خطة PRO' : 'PRO Plan'}</Link></li>
             </ul>
           </div>
@@ -824,14 +824,14 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
           {/* Public CTAs */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-14">
             <Link
-              href={`/${locale}/auth/register?type=BUYER`}
+              href={`/${locale}/auth/register?type=BUSINESS`}
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-7 py-3.5 text-sm font-semibold text-brand-800 shadow-lift hover:bg-slate-50 transition-all hover:-translate-y-0.5"
             >
               <FileText className="h-4 w-4" />
               {ar ? 'ابدأ طلب عرض سعر — مجاناً' : 'Post an RFQ — Free'}
             </Link>
             <Link
-              href={`/${locale}/auth/register?type=SUPPLIER`}
+              href={`/${locale}/auth/register?type=BUSINESS`}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-sm font-semibold text-white hover:bg-white/20 transition-all hover:-translate-y-0.5 backdrop-blur"
             >
               <Building2 className="h-4 w-4" />
@@ -979,7 +979,7 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
           </div>
           <div className="mt-12 text-center">
             <Link
-              href={`/${locale}/auth/register?type=BUYER`}
+              href={`/${locale}/auth/register?type=BUSINESS`}
               className="inline-flex items-center gap-2 rounded-xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-800 transition-all"
             >
               {ar ? 'انشر أول طلب مجاناً' : 'Post your first RFQ — Free'}
@@ -1082,7 +1082,7 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
                 </h2>
               </div>
               <Link
-                href={`/${locale}/auth/register?type=SUPPLIER`}
+                href={`/${locale}/auth/register?type=BUSINESS`}
                 className="hidden items-center gap-1.5 text-sm font-semibold text-brand-700 transition-colors hover:text-brand-800 sm:inline-flex"
               >
                 {ar ? 'قدّم عرضك' : 'Submit a Quote'}
@@ -1140,7 +1140,7 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
                         <span className="text-xs text-slate-400">{ar ? 'الميزانية غير محددة' : 'Budget undisclosed'}</span>
                       )}
                       <Link
-                        href={`/${locale}/auth/register?type=SUPPLIER`}
+                        href={`/${locale}/auth/register?type=BUSINESS`}
                         className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-800 transition-colors"
                       >
                         {ar ? 'قدّم عرضاً' : 'Submit Quote'}
@@ -1153,14 +1153,14 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
             </div>
             <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href={`/${locale}/auth/register?type=SUPPLIER`}
+                href={`/${locale}/auth/register?type=BUSINESS`}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-700 px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-brand-800"
               >
                 <Building2 className="h-4 w-4" />
                 {ar ? 'سجّل وقدّم عروضك' : 'Register & Start Quoting'}
               </Link>
               <Link
-                href={`/${locale}/auth/register?type=BUYER`}
+                href={`/${locale}/auth/register?type=BUSINESS`}
                 className="inline-flex items-center justify-center gap-2 rounded-xl border border-brand-200 px-6 py-3 text-sm font-semibold text-brand-700 transition-all hover:bg-brand-50"
               >
                 <FileText className="h-4 w-4" />
@@ -1205,7 +1205,7 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
                   <ShoppingBag className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/60 uppercase tracking-wide font-semibold">{ar ? 'للمشترين' : 'For Buyers'}</p>
+                  <p className="text-xs text-white/60 uppercase tracking-wide font-semibold">{ar ? 'للشركات' : 'For Business'}</p>
                   <p className="text-sm font-bold text-white">{ar ? 'اشترِ بذكاء' : 'Source Smarter'}</p>
                 </div>
               </div>
@@ -1226,11 +1226,11 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
                 ))}
               </ul>
               <Link
-                href={`/${locale}/auth/register?type=BUYER`}
+                href={`/${locale}/auth/register?type=BUSINESS`}
                 className="flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-brand-700 transition-all hover:-translate-y-0.5 hover:bg-slate-50 w-full"
               >
                 <ShoppingBag className="h-4 w-4" />
-                {ar ? 'سجّل كمشترٍ — مجاناً' : 'Register as Buyer — Free'}
+                {ar ? 'أنشئ حساباً مجانياً' : 'Create Free Account'}
               </Link>
             </div>
             {/* Supplier CTA */}
@@ -1261,7 +1261,7 @@ export function HomeSections({ stats, suppliers, products, showrooms, rfqs }: Pr
                 ))}
               </ul>
               <Link
-                href={`/${locale}/auth/register?type=SUPPLIER`}
+                href={`/${locale}/auth/register?type=BUSINESS`}
                 className="flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/15 px-6 py-3 font-semibold text-white backdrop-blur transition-all hover:-translate-y-0.5 hover:bg-white/25 w-full"
               >
                 <Building2 className="h-4 w-4" />
