@@ -89,7 +89,7 @@ export class RatingsService {
     return { ...paginate(items, total, _page, _limit), averageScore: avg };
   }
 
-  async flagDisputed(ratingId: string, userId: string): Promise<any> {
+  async flagDisputed(ratingId: string, userId: string, reason?: string): Promise<any> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new ForbiddenException('User not found');
 
@@ -107,8 +107,58 @@ export class RatingsService {
 
     return this.prisma.rating.update({
       where: { id: ratingId },
-      data: { isDisputed: true, disputedAt: new Date() },
+      data: {
+        isDisputed: true,
+        disputedAt: new Date(),
+        disputeReason: reason ?? null,
+        disputeStatus: 'PENDING_REVIEW',
+      },
     });
+  }
+
+  // ── Admin: list all disputed ratings ─────────────────────────────────────────
+
+  async getDisputedRatings(query: PaginationDto): Promise<any> {
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
+    const where = { isDisputed: true };
+    const [items, total] = await Promise.all([
+      this.prisma.rating.findMany({
+        where,
+        skip: (_page - 1) * _limit,
+        take: _limit,
+        orderBy: { disputedAt: 'desc' },
+        include: {
+          rater:  { select: { nameAr: true, nameEn: true } },
+          rated:  { select: { nameAr: true, nameEn: true } },
+          deal:   { select: { id: true } },
+        },
+      }),
+      this.prisma.rating.count({ where }),
+    ]);
+    return { ...paginate(items, total, _page, _limit) };
+  }
+
+  // ── Admin: resolve a disputed rating ─────────────────────────────────────────
+
+  async adminResolveDispute(ratingId: string, action: 'ACCEPT' | 'REJECT'): Promise<any> {
+    const rating = await this.prisma.rating.findUnique({ where: { id: ratingId } });
+    if (!rating) throw new NotFoundException('Rating not found');
+    if (!rating.isDisputed) throw new BadRequestException('Rating is not disputed');
+
+    // ACCEPT → dispute upheld, rating excluded from score (RESOLVED)
+    // REJECT → dispute denied, rating included back in score (REJECTED)
+    const disputeStatus = action === 'ACCEPT' ? 'RESOLVED' : 'REJECTED';
+
+    const updated = await this.prisma.rating.update({
+      where: { id: ratingId },
+      data: { disputeStatus },
+    });
+
+    // Recompute supplier score since dispute resolution changes which ratings count
+    await this.scoring.updateScoreForCompany(rating.ratedId);
+
+    return updated;
   }
 
   async findForBuyer(buyerId: string, query: PaginationDto) {

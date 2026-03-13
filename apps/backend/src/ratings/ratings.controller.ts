@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { RatingsService } from './ratings.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -11,6 +11,16 @@ class CreateRatingDto {
   @ApiProperty() @IsString() dealId: string;
   @ApiProperty({ minimum: 1, maximum: 5 }) @Type(() => Number) @IsInt() @Min(1) @Max(5) score: number;
   @ApiPropertyOptional() @IsOptional() @IsString() comment?: string;
+}
+
+class DisputeRatingDto {
+  @ApiPropertyOptional({ description: 'Reason for disputing the rating' })
+  @IsOptional() @IsString() @MaxLength(500) reason?: string;
+}
+
+class ResolveDisputeDto {
+  @ApiProperty({ enum: ['ACCEPT', 'REJECT'] })
+  @IsEnum(['ACCEPT', 'REJECT']) action: 'ACCEPT' | 'REJECT';
 }
 
 @ApiTags('Ratings')
@@ -40,7 +50,23 @@ export class RatingsController {
 
   @Patch(':id/dispute')
   @ApiOperation({ summary: 'Flag a received rating as disputed (supplier only)' })
-  flagDisputed(@Param('id') id: string, @CurrentUser('id') userId: string) {
-    return this.ratingsService.flagDisputed(id, userId);
+  flagDisputed(
+    @Param('id') id: string,
+    @CurrentUser('id') userId: string,
+    @Body() dto: DisputeRatingDto,
+  ) {
+    return this.ratingsService.flagDisputed(id, userId, dto.reason);
+  }
+
+  @Get('disputed')
+  @ApiOperation({ summary: 'List all disputed ratings (admin only — use via admin controller)' })
+  getDisputed(@Query() query: PaginationDto) {
+    return this.ratingsService.getDisputedRatings(query);
+  }
+
+  @Patch(':id/resolve-dispute')
+  @ApiOperation({ summary: 'Admin: resolve a disputed rating (ACCEPT upholds dispute, REJECT denies it)' })
+  resolveDispute(@Param('id') id: string, @Body() dto: ResolveDisputeDto) {
+    return this.ratingsService.adminResolveDispute(id, dto.action);
   }
 }

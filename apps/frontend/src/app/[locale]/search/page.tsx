@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -8,6 +8,13 @@ import { Navbar } from '@/components/layout/Navbar';
 import api from '@/lib/api';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Building2, Package, Search, Tag } from 'lucide-react';
+
+const TRUST_TIERS = [
+  { value: '', en: 'All tiers', ar: 'كل المستويات' },
+  { value: 'TOP_SUPPLIER', en: 'Top Supplier', ar: 'مورد متميز' },
+  { value: 'TRUSTED', en: 'Trusted', ar: 'موثوق' },
+  { value: 'VERIFIED', en: 'Verified', ar: 'موثق' },
+];
 
 type TabType = 'all' | 'suppliers' | 'products' | 'categories';
 
@@ -35,6 +42,11 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Client-side filters (applied after results are fetched)
+  const [trustTierFilter, setTrustTierFilter] = useState('');
+  const [minPriceFilter, setMinPriceFilter] = useState('');
+  const [maxPriceFilter, setMaxPriceFilter] = useState('');
+
   const doSearch = async (q: string, type: TabType) => {
     if (!q.trim()) { setResults(null); return; }
     setLoading(true);
@@ -51,10 +63,28 @@ export default function SearchPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, tab]);
 
-  const hasResults = results && (
-    (results.suppliers?.length ?? 0) +
-    (results.listings?.length ?? 0) +
-    (results.categories?.length ?? 0)
+  // Apply client-side filters to results
+  const filteredResults = useMemo(() => {
+    if (!results) return results;
+    const suppliers = trustTierFilter
+      ? (results.suppliers ?? []).filter((s) => (s as any).trustTier === trustTierFilter)
+      : results.suppliers;
+    const minP = minPriceFilter ? Number(minPriceFilter) : null;
+    const maxP = maxPriceFilter ? Number(maxPriceFilter) : null;
+    const listings = (minP || maxP)
+      ? (results.listings ?? []).filter((l) => {
+          if (minP && (l.price ?? 0) < minP) return false;
+          if (maxP && (l.price ?? Infinity) > maxP) return false;
+          return true;
+        })
+      : results.listings;
+    return { ...results, suppliers, listings };
+  }, [results, trustTierFilter, minPriceFilter, maxPriceFilter]);
+
+  const hasResults = filteredResults && (
+    (filteredResults.suppliers?.length ?? 0) +
+    (filteredResults.listings?.length ?? 0) +
+    (filteredResults.categories?.length ?? 0)
   ) > 0;
 
   return (
@@ -91,6 +121,37 @@ export default function SearchPage() {
           ))}
         </div>
 
+        {/* Filter bar — contextual per tab */}
+        {results && (tab === 'all' || tab === 'suppliers') && (
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <select
+              value={trustTierFilter}
+              onChange={(e) => setTrustTierFilter(e.target.value)}
+              className="input-base py-1.5 text-sm w-auto min-w-32"
+            >
+              {TRUST_TIERS.map((t) => (
+                <option key={t.value} value={t.value}>{ar ? t.ar : t.en}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        {results && (tab === 'all' || tab === 'products') && (
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <input
+              type="number" min="0" placeholder={ar ? 'سعر من' : 'Min price'}
+              value={minPriceFilter} onChange={(e) => setMinPriceFilter(e.target.value)}
+              className="input-base py-1.5 text-sm w-28"
+            />
+            <span className="text-slate-400 text-sm">–</span>
+            <input
+              type="number" min="0" placeholder={ar ? 'سعر إلى' : 'Max price'}
+              value={maxPriceFilter} onChange={(e) => setMaxPriceFilter(e.target.value)}
+              className="input-base py-1.5 text-sm w-28"
+            />
+            <span className="text-xs text-slate-400">SAR</span>
+          </div>
+        )}
+
         {/* Loading */}
         {loading && (
           <div className="space-y-3">
@@ -99,7 +160,7 @@ export default function SearchPage() {
         )}
 
         {/* Empty state */}
-        {!loading && query && !hasResults && (
+        {!loading && query && results && !hasResults && (
           <div className="text-center py-20">
             <Search className="h-12 w-12 text-slate-300 mx-auto mb-4" />
             <p className="font-medium text-slate-600">{ar ? 'لا توجد نتائج' : 'No results found'}</p>
@@ -119,14 +180,14 @@ export default function SearchPage() {
         {!loading && hasResults && (
           <div className="space-y-8">
             {/* Suppliers */}
-            {(tab === 'all' || tab === 'suppliers') && results?.suppliers && results.suppliers.length > 0 && (
+            {(tab === 'all' || tab === 'suppliers') && filteredResults?.suppliers && filteredResults.suppliers.length > 0 && (
               <section>
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
                   <Building2 className="h-4 w-4 text-slate-400" />
-                  {ar ? `الموردون (${results.suppliers.length})` : `Suppliers (${results.suppliers.length})`}
+                  {ar ? `الموردون (${filteredResults.suppliers.length})` : `Suppliers (${filteredResults.suppliers.length})`}
                 </h2>
                 <div className="space-y-2">
-                  {results.suppliers.map((s) => (
+                  {filteredResults.suppliers.map((s) => (
                     <Link
                       key={s.id}
                       href={`/${locale}/suppliers/${s.slug ?? s.id}`}
@@ -152,14 +213,14 @@ export default function SearchPage() {
             )}
 
             {/* Products */}
-            {(tab === 'all' || tab === 'products') && results?.listings && results.listings.length > 0 && (
+            {(tab === 'all' || tab === 'products') && filteredResults?.listings && filteredResults.listings.length > 0 && (
               <section>
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
                   <Package className="h-4 w-4 text-slate-400" />
-                  {ar ? `المنتجات (${results.listings.length})` : `Products (${results.listings.length})`}
+                  {ar ? `المنتجات (${filteredResults.listings.length})` : `Products (${filteredResults.listings.length})`}
                 </h2>
                 <div className="space-y-2">
-                  {results.listings.map((l) => (
+                  {filteredResults.listings.map((l) => (
                     <Link
                       key={l.id}
                       href={`/${locale}/products/${l.slug || l.id}`}
@@ -186,14 +247,14 @@ export default function SearchPage() {
             )}
 
             {/* Categories */}
-            {(tab === 'all' || tab === 'categories') && results?.categories && results.categories.length > 0 && (
+            {(tab === 'all' || tab === 'categories') && filteredResults?.categories && filteredResults.categories.length > 0 && (
               <section>
                 <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-3">
                   <Tag className="h-4 w-4 text-slate-400" />
-                  {ar ? `الفئات (${results.categories.length})` : `Categories (${results.categories.length})`}
+                  {ar ? `الفئات (${filteredResults.categories.length})` : `Categories (${filteredResults.categories.length})`}
                 </h2>
                 <div className="space-y-2">
-                  {results.categories.map((c) => (
+                  {filteredResults.categories.map((c) => (
                     <Link
                       key={c.id}
                       href={`/${locale}/products?category=${c.slug}`}

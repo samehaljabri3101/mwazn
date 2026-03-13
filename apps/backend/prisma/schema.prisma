@@ -458,11 +458,14 @@ model Deal {
 }
 
 model Rating {
-  id         String  @id @default(cuid())
-  score      Int
-  comment    String? @db.Text
-  isDisputed Boolean @default(false)
-  disputedAt DateTime?
+  id            String   @id @default(cuid())
+  score         Int
+  comment       String?  @db.Text
+  isDisputed    Boolean  @default(false)
+  disputedAt    DateTime?
+  disputeReason String?  @db.Text
+  // disputeStatus: null=not disputed, PENDING_REVIEW=awaiting admin, RESOLVED=admin accepted dispute, REJECTED=admin rejected dispute
+  disputeStatus String?
 
   deal   Deal   @relation(fields: [dealId], references: [id])
   dealId String

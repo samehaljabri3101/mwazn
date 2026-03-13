@@ -39,7 +39,14 @@ export class ScoringService implements OnApplicationBootstrap {
     const company = await this.prisma.company.findUnique({
       where: { id: companyId },
       include: {
-        ratingsReceived: { select: { score: true } },
+        // Exclude ratings under active dispute review or where dispute was accepted (RESOLVED)
+        // PENDING_REVIEW → temporarily excluded during admin review
+        // RESOLVED → admin accepted the dispute → rating excluded permanently
+        // REJECTED → admin rejected the dispute → rating stands (included)
+        ratingsReceived: {
+          where: { OR: [{ disputeStatus: null }, { disputeStatus: 'REJECTED' }] },
+          select: { score: true },
+        },
         dealsAsSupplier: { select: { status: true } },
         listings: { where: { status: 'ACTIVE' }, select: { id: true } },
       },

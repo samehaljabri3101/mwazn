@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useLocale } from 'next-intl';
 import Link from 'next/link';
 import {
-  Star, Search, ArrowLeft, Building2, ShieldCheck, MapPin, BarChart3,
+  Star, Search, ArrowLeft, Building2, ShieldCheck, MapPin, BarChart3, AlertTriangle, CheckCircle2, XCircle,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -55,6 +55,18 @@ function PlatformScoreBar({ score }: { score: number }) {
   );
 }
 
+interface DisputedRating {
+  id: string;
+  score: number;
+  comment?: string;
+  disputeReason?: string;
+  disputeStatus?: string;
+  disputedAt?: string;
+  rater?: { nameEn: string; nameAr: string };
+  rated?: { nameEn: string; nameAr: string };
+  deal?: { id: string };
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AdminRatingsPage() {
@@ -62,11 +74,16 @@ export default function AdminRatingsPage() {
   const ar = locale === 'ar';
   const base = `/${locale}/dashboard`;
 
+  const [tab, setTab] = useState<'suppliers' | 'disputed'>('suppliers');
   const [suppliers, setSuppliers] = useState<SupplierRating[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState<'score_desc' | 'score_asc' | 'rating_desc' | 'name'>('rating_desc');
+
+  const [disputed, setDisputed] = useState<DisputedRating[]>([]);
+  const [disputedLoading, setDisputedLoading] = useState(false);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
 
   const fetchSuppliers = useCallback(async () => {
     setLoading(true);
@@ -84,7 +101,26 @@ export default function AdminRatingsPage() {
     setLoading(false);
   }, []);
 
+  const fetchDisputed = useCallback(async () => {
+    setDisputedLoading(true);
+    try {
+      const res = await api.get('/admin/ratings/disputed', { params: { limit: 50 } });
+      setDisputed(res.data?.items ?? res.data?.data?.items ?? []);
+    } catch { /* silent */ }
+    setDisputedLoading(false);
+  }, []);
+
+  const resolveDispute = async (ratingId: string, action: 'ACCEPT' | 'REJECT') => {
+    setResolvingId(ratingId);
+    try {
+      await api.patch(`/admin/ratings/${ratingId}/resolve-dispute`, { action });
+      await fetchDisputed();
+    } catch { /* silent */ }
+    setResolvingId(null);
+  };
+
   useEffect(() => { fetchSuppliers(); }, [fetchSuppliers]);
+  useEffect(() => { if (tab === 'disputed') fetchDisputed(); }, [tab, fetchDisputed]);
 
   // Filter + sort
   let filtered = suppliers.filter((s) => {
@@ -134,8 +170,102 @@ export default function AdminRatingsPage() {
           </div>
         </div>
 
+        {/* Tabs */}
+        <div className="flex gap-1 border-b border-slate-200">
+          {[
+            { key: 'suppliers', en: 'Supplier Ratings', ar: 'تقييمات الموردين' },
+            { key: 'disputed', en: `Disputed${disputed.length > 0 ? ` (${disputed.length})` : ''}`, ar: `المتنازع عليها${disputed.length > 0 ? ` (${disputed.length})` : ''}` },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key as any)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                tab === t.key ? 'border-brand-700 text-brand-700' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              {ar ? t.ar : t.en}
+              {t.key === 'disputed' && disputed.filter(d => d.disputeStatus === 'PENDING_REVIEW').length > 0 && (
+                <span className="ms-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white">
+                  {disputed.filter(d => d.disputeStatus === 'PENDING_REVIEW').length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Disputed Ratings Tab ──────────────────────────────────────── */}
+        {tab === 'disputed' && (
+          <div>
+            {disputedLoading ? (
+              <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
+            ) : disputed.length === 0 ? (
+              <div className="card py-16 text-center">
+                <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto mb-3" />
+                <p className="font-semibold text-slate-600">{ar ? 'لا توجد تقييمات متنازع عليها' : 'No disputed ratings'}</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {disputed.map((r) => {
+                  const isPending = r.disputeStatus === 'PENDING_REVIEW';
+                  const isResolved = r.disputeStatus === 'RESOLVED';
+                  const statusColor = isPending ? 'bg-amber-50 border-amber-200' : isResolved ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-200';
+                  return (
+                    <div key={r.id} className={`card border ${statusColor}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-amber-400 text-sm">{'★'.repeat(r.score)}{'☆'.repeat(5 - r.score)}</span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isPending ? 'bg-amber-100 text-amber-700' :
+                              isResolved ? 'bg-emerald-100 text-emerald-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              {r.disputeStatus ?? 'DISPUTED'}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mb-1">
+                            {ar ? 'من:' : 'From:'} <strong>{ar ? r.rater?.nameAr : r.rater?.nameEn}</strong>
+                            {' → '}{ar ? 'إلى:' : 'To:'} <strong>{ar ? r.rated?.nameAr : r.rated?.nameEn}</strong>
+                          </p>
+                          {r.comment && <p className="text-xs text-slate-600 mb-1">&ldquo;{r.comment}&rdquo;</p>}
+                          {r.disputeReason && (
+                            <div className="mt-2 rounded-lg bg-rose-50 border border-rose-100 px-3 py-2">
+                              <p className="text-[11px] font-semibold text-rose-700 mb-0.5">{ar ? 'سبب الاعتراض:' : 'Dispute reason:'}</p>
+                              <p className="text-xs text-rose-600">{r.disputeReason}</p>
+                            </div>
+                          )}
+                        </div>
+                        {isPending && (
+                          <div className="flex flex-col gap-2 shrink-0">
+                            <button
+                              disabled={resolvingId === r.id}
+                              onClick={() => resolveDispute(r.id, 'ACCEPT')}
+                              className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 disabled:opacity-50"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              {ar ? 'قبول الاعتراض' : 'Accept'}
+                            </button>
+                            <button
+                              disabled={resolvingId === r.id}
+                              onClick={() => resolveDispute(r.id, 'REJECT')}
+                              className="flex items-center gap-1.5 text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg hover:bg-rose-100 disabled:opacity-50"
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              {ar ? 'رفض الاعتراض' : 'Reject'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Legend */}
-        <div className="flex flex-wrap gap-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+        <div className={`flex flex-wrap gap-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 ${tab !== 'suppliers' ? 'hidden' : ''}`}>
           <div className="flex items-center gap-2">
             <Star className="h-4 w-4 text-amber-400 fill-amber-400 shrink-0" />
             <p className="text-xs text-slate-600">
@@ -154,8 +284,8 @@ export default function AdminRatingsPage() {
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3">
+        {/* Filters (suppliers tab only) */}
+        <div className={`flex flex-wrap gap-3 ${tab !== 'suppliers' ? 'hidden' : ''}`}>
           <div className="relative flex-1 min-w-48">
             <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
             <input
@@ -177,8 +307,8 @@ export default function AdminRatingsPage() {
           </select>
         </div>
 
-        {/* Table */}
-        {loading ? (
+        {/* Table (suppliers tab only) */}
+        {tab === 'suppliers' && (loading ? (
           <div className="space-y-3">
             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-16 w-full" />)}
           </div>
@@ -268,7 +398,7 @@ export default function AdminRatingsPage() {
               ))}
             </div>
           </div>
-        )}
+        ))}
 
       </div>
     </DashboardLayout>

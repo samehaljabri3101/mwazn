@@ -96,6 +96,8 @@ export default function SupplierDealDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [showRating, setShowRating] = useState(false);
   const [disputingRatingId, setDisputingRatingId] = useState<string | null>(null);
+  const [disputeReason, setDisputeReason] = useState('');
+  const [showDisputeModal, setShowDisputeModal] = useState<string | null>(null); // ratingId
   const [boqExpanded, setBoqExpanded] = useState(false);
   const [trackingInput, setTrackingInput] = useState('');
   const [carrierInput, setCarrierInput] = useState('');
@@ -130,7 +132,9 @@ export default function SupplierDealDetailPage() {
   const disputeRating = async (ratingId: string) => {
     setDisputingRatingId(ratingId);
     try {
-      await api.patch(`/ratings/${ratingId}/dispute`);
+      await api.patch(`/ratings/${ratingId}/dispute`, { reason: disputeReason || undefined });
+      setShowDisputeModal(null);
+      setDisputeReason('');
       await fetchDeal();
     } catch { /* silent */ }
     setDisputingRatingId(null);
@@ -180,6 +184,33 @@ export default function SupplierDealDetailPage() {
           onClose={() => setShowRating(false)}
           onDone={() => { setShowRating(false); fetchDeal(); }}
         />
+      )}
+
+      {/* Dispute modal */}
+      {showDisputeModal && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowDisputeModal(null)}>
+          <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-bold text-slate-800 mb-1">{ar ? 'الاعتراض على التقييم' : 'Dispute Rating'}</h3>
+            <p className="text-sm text-slate-500 mb-4">{ar ? 'سيتم مراجعة اعتراضك من قبل فريق الإشراف' : 'Your dispute will be reviewed by the moderation team'}</p>
+            <textarea
+              value={disputeReason}
+              onChange={(e) => setDisputeReason(e.target.value)}
+              rows={3}
+              placeholder={ar ? 'اذكر سبب الاعتراض...' : 'Explain why you are disputing this rating...'}
+              className="input-base resize-none mb-4 w-full"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowDisputeModal(null)}>{ar ? 'إلغاء' : 'Cancel'}</Button>
+              <Button
+                loading={disputingRatingId === showDisputeModal}
+                onClick={() => disputeRating(showDisputeModal)}
+                className="bg-rose-600 hover:bg-rose-700"
+              >
+                {ar ? 'إرسال الاعتراض' : 'Submit Dispute'}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="space-y-6 max-w-3xl">
@@ -426,11 +457,10 @@ export default function SupplierDealDetailPage() {
                     </div>
                     {isReceived && !r.isDisputed && (
                       <button
-                        disabled={disputingRatingId === r.id}
-                        onClick={() => disputeRating(r.id)}
-                        className="shrink-0 text-xs text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1 hover:border-rose-300 hover:text-rose-600 transition-colors disabled:opacity-50"
+                        onClick={() => { setShowDisputeModal(r.id); setDisputeReason(''); }}
+                        className="shrink-0 text-xs text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1 hover:border-rose-300 hover:text-rose-600 transition-colors"
                       >
-                        {disputingRatingId === r.id ? '...' : (ar ? 'اعتراض' : 'Dispute')}
+                        {ar ? 'اعتراض' : 'Dispute'}
                       </button>
                     )}
                   </div>

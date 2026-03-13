@@ -3,12 +3,14 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty } from '@nestjs/swagg
 import { AppealStatus, Role, SubscriptionPlan } from '@prisma/client';
 import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { AdminService } from './admin.service';
+import { RatingsService } from '../ratings/ratings.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { AdminRespondAppealDto } from '../appeals/dto/admin-respond-appeal.dto';
+import { PaginationDto as _PaginationDto } from '../common/dto/pagination.dto';
 
 class SetPlanDto {
   @ApiProperty({ enum: SubscriptionPlan }) @IsEnum(SubscriptionPlan) plan: SubscriptionPlan;
@@ -22,13 +24,21 @@ class ModerationActionDto {
   reason?: string;
 }
 
+class ResolveDisputeAdminDto {
+  @ApiProperty({ enum: ['ACCEPT', 'REJECT'] })
+  @IsEnum(['ACCEPT', 'REJECT']) action: 'ACCEPT' | 'REJECT';
+}
+
 @ApiTags('Admin')
 @ApiBearerAuth('access-token')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(Role.PLATFORM_ADMIN)
 @Controller('admin')
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly ratingsService: RatingsService,
+  ) {}
 
   @Get('dashboard')
   @ApiOperation({ summary: 'Platform dashboard statistics' })
@@ -181,5 +191,19 @@ export class AdminController {
     @CurrentUser('id') adminUserId: string,
   ) {
     return this.adminService.rejectAppeal(id, dto, adminUserId);
+  }
+
+  // ─── Disputed Ratings ─────────────────────────────────────────────────────
+
+  @Get('ratings/disputed')
+  @ApiOperation({ summary: 'List all disputed ratings pending admin review' })
+  getDisputedRatings(@Query() query: _PaginationDto) {
+    return this.ratingsService.getDisputedRatings(query);
+  }
+
+  @Patch('ratings/:id/resolve-dispute')
+  @ApiOperation({ summary: 'Resolve a disputed rating — ACCEPT upholds the dispute (excludes from score), REJECT denies it (score restored)' })
+  resolveRatingDispute(@Param('id') id: string, @Body() dto: ResolveDisputeAdminDto) {
+    return this.ratingsService.adminResolveDispute(id, dto.action);
   }
 }

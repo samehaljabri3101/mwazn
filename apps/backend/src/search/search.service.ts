@@ -85,7 +85,7 @@ export class SearchService {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const [products, suppliers, categories] = await Promise.all([
+    const [rawProducts, rawSuppliers, rawCategories] = await Promise.all([
       this.prisma.listing.findMany({
         where: {
           status: 'ACTIVE', moderationStatus: 'ACTIVE',
@@ -123,6 +123,11 @@ export class SearchService {
       }),
     ]);
 
+    // Annotate each item with its type for frontend typeahead rendering
+    const products = rawProducts.map((p) => ({ ...p, type: 'product' as const }));
+    const suppliers = rawSuppliers.map((s) => ({ ...s, type: 'supplier' as const }));
+    const categories = rawCategories.map((c) => ({ ...c, type: 'category' as const }));
+
     const result = { products, suppliers, categories };
     await this.cache.set(cacheKey, result, 15_000); // 15s for typeahead freshness
     return result;
@@ -140,11 +145,15 @@ export class SearchService {
     });
 
     const termCounts: Record<string, number> = {};
+    const typeCounts: Record<string, number> = {};
     const zeroResultTerms: Set<string> = new Set();
+
     for (const e of events) {
       const m = e.meta as any;
       if (!m?.term) continue;
       termCounts[m.term] = (termCounts[m.term] ?? 0) + 1;
+      const t = m.type ?? 'all';
+      typeCounts[t] = (typeCounts[t] ?? 0) + 1;
       if (m.zeroResults) zeroResultTerms.add(m.term);
     }
 
@@ -156,12 +165,17 @@ export class SearchService {
     return {
       totalSearches: events.length,
       topTerms,
+      byType: typeCounts,          // breakdown: all/suppliers/products/listings/categories
       zeroResultQueries: Array.from(zeroResultTerms).slice(0, 20),
       period: `${days}d`,
     };
   }
 
   // ── Global search ────────────────────────────────────────────────────────────
+  // Relevance safeguard: Prisma WHERE clauses filter results by text match FIRST.
+  // Only textually-matching records enter the ranking pool, so TRUST_BOOST never
+  // causes irrelevant (non-matching) results to outrank relevant ones.
+  // Within the matching pool, TRUST_BOOST provides quality ordering.
 
   async search(q: string, type?: string) {
     const term = q?.trim() ?? '';
@@ -293,20 +307,22 @@ export class SearchService {
       ];
     }
 
-    const [items, total] = await Promise.all([
+    // Fetch up to 300 matching records for in-memory ranking.
+    // This ensures page 1 always has the highest-ranked results globally,
+    // not just the highest-ranked within the first DB page.
+    const [rawItems, total] = await Promise.all([
       this.prisma.company.findMany({
         where,
         include: {
           ratingsReceived: { select: { score: true } },
           _count: { select: { listings: true, dealsAsSupplier: true, quotesSubmitted: true } },
         },
-        skip,
-        take: limit,
+        take: 300,
       }),
       this.prisma.company.count({ where }),
     ]);
 
-    const enriched = items
+    const enriched = rawItems
       .map((c) => {
         const { ratingsReceived, ...rest } = c;
         const totalRatings = ratingsReceived.length;
@@ -319,12 +335,14 @@ export class SearchService {
         return { ...rest, averageRating, totalRatings, trustTier: tier, rankScore };
       })
       .filter((c) => !minRating || c.averageRating >= minRating)
-      .filter((c) => !trustTier || c.trustTier === trustTier);
+      .filter((c) => !trustTier || c.trustTier === trustTier)
+      .sort((a, b) => b.rankScore - a.rankScore);
 
-    enriched.sort((a, b) => b.rankScore - a.rankScore);
+    // Paginate in-memory after ranking
+    const pagedItems = enriched.slice(skip, skip + limit);
     if (q) this.trackSearch(q, 'suppliers', enriched.length);
 
-    return { items: enriched, total, page, limit, pages: Math.ceil(total / limit) };
+    return { items: pagedItems, total: enriched.length, page, limit, pages: Math.ceil(enriched.length / limit) };
   }
 
   // ── Advanced listing search ──────────────────────────────────────────────────
@@ -351,7 +369,8 @@ export class SearchService {
     if (minPrice !== undefined) where.price = { ...(where.price ?? {}), gte: minPrice };
     if (maxPrice !== undefined) where.price = { ...(where.price ?? {}), lte: maxPrice };
 
-    const [items, total] = await Promise.all([
+    // Fetch up to 300 matching records for in-memory ranking (fixes pagination ordering).
+    const [rawItems, total] = await Promise.all([
       this.prisma.listing.findMany({
         where,
         include: {
@@ -366,13 +385,12 @@ export class SearchService {
           images: { where: { isPrimary: true }, take: 1 },
           _count: { select: { quotes: true } },
         },
-        skip,
-        take: limit,
+        take: 300,
       }),
       this.prisma.listing.count({ where }),
     ]);
 
-    const ranked = items
+    const ranked = rawItems
       .map((l) => {
         const tier = getTrustTier(l.supplier as any);
         return { ...l, trustTier: tier, rankScore: this.computeListingRankScore(l) };
@@ -380,9 +398,11 @@ export class SearchService {
       .filter((l) => !trustTier || l.trustTier === trustTier)
       .sort((a, b) => b.rankScore - a.rankScore);
 
+    // Paginate in-memory after ranking
+    const pagedItems = ranked.slice(skip, skip + limit);
     if (q) this.trackSearch(q, 'listings', ranked.length);
 
-    return { items: ranked, total, page, limit, pages: Math.ceil(total / limit) };
+    return { items: pagedItems, total: ranked.length, page, limit, pages: Math.ceil(ranked.length / limit) };
   }
 
   // ── Marketplace stats / homepage ─────────────────────────────────────────────
