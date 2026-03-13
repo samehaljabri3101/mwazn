@@ -29,6 +29,8 @@ import { MaroofModule } from './maroof/maroof.module';
 import { BillingModule } from './billing/billing.module';
 import { VerificationModule } from './verification/verification.module';
 import { ScoringModule } from './scoring/scoring.module';
+import { ModerationModule } from './moderation/moderation.module';
+import { AppealsModule } from './appeals/appeals.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -66,6 +68,8 @@ import { ScoringModule } from './scoring/scoring.module';
     BillingModule,
     VerificationModule,
     ScoringModule,
+    ModerationModule,
+    AppealsModule,
     AuthModule,
     UsersModule,
     CompaniesModule,

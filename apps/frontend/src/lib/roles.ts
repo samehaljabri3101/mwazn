@@ -7,7 +7,7 @@
  *
  * Source of truth for role groupings: packages/contracts/src/index.ts
  */
-import type { Role } from '@/lib/contracts';
+import type { Role } from '@mwazn/contracts';
 
 // ─── Role group predicates ────────────────────────────────────────────────────
 

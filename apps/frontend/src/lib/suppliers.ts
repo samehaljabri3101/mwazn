@@ -7,7 +7,7 @@
  *
  * Source of truth for type values: @mwazn/contracts
  */
-import type { Role, SubscriptionPlan } from '@/lib/contracts';
+import type { Role, SubscriptionPlan } from '@mwazn/contracts';
 
 // ─── Supplier Score (0–100) ───────────────────────────────────────────────────
 

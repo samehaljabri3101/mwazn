@@ -17,6 +17,8 @@ import {
   Zap,
   BarChart2,
   Upload,
+  Shield,
+  Flag,
 } from 'lucide-react';
 
 interface NavItem {
@@ -42,6 +44,7 @@ export function Sidebar() {
     // Buyer
     { href: `${base}/buyer/rfqs`,        label: role === 'CUSTOMER' ? (locale === 'ar' ? 'طلباتي' : 'My Requests') : t('rfqs'), icon: <FileText className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'CUSTOMER'] },
     { href: `${base}/buyer/deals`,       label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['BUYER_ADMIN', 'CUSTOMER'] },
+    { href: `${base}/buyer/appeals`,     label: locale === 'ar' ? 'اعتراضاتي' : 'My Appeals', icon: <Flag className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'CUSTOMER'] },
 
     // Supplier / Freelancer
     { href: `${base}/supplier/listings`, label: t('listings'),  icon: <Package className="h-4 w-4" />,    roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
@@ -49,6 +52,7 @@ export function Sidebar() {
     { href: `${base}/supplier/quotes`,   label: t('quotes'),    icon: <ScrollText className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/deals`,    label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/listings/import`, label: locale === 'ar' ? 'استيراد المنتجات' : 'Bulk Import', icon: <Upload className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/appeals`,  label: locale === 'ar' ? 'اعتراضاتي' : 'My Appeals', icon: <Flag className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
 
     // Common
     { href: `${base}/messages`,      label: t('messages'),  icon: <MessageSquare className="h-4 w-4" /> },
@@ -58,8 +62,11 @@ export function Sidebar() {
     { href: `${base}/subscription`,  label: locale === 'ar' ? 'الاشتراك' : 'Subscription', icon: <Zap className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN'] },
 
     // Admin
-    { href: `${base}/admin`,             label: 'Dashboard',    icon: <ShieldCheck className="h-4 w-4" />, roles: ['PLATFORM_ADMIN'] },
-    { href: `${base}/admin/companies`,   label: t('companies'), icon: <Users className="h-4 w-4" />,       roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin`,             label: 'Dashboard',      icon: <ShieldCheck className="h-4 w-4" />, roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin/companies`,   label: t('companies'),   icon: <Users className="h-4 w-4" />,       roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin/listings`,    label: locale === 'ar' ? 'المنتجات' : 'Listings',    icon: <Package className="h-4 w-4" />,    roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin/moderation`,  label: locale === 'ar' ? 'الإشراف' : 'Moderation',   icon: <Shield className="h-4 w-4" />,     roles: ['PLATFORM_ADMIN'] },
+    { href: `${base}/admin/appeals`,     label: locale === 'ar' ? 'الاعتراضات' : 'Appeals',   icon: <Flag className="h-4 w-4" />,       roles: ['PLATFORM_ADMIN'] },
   ];
 
   const visibleItems = allItems.filter(

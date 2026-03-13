@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { RFQ, PaginatedResponse } from '@/types';
-import { FileText, Plus, Calendar, Tag, DollarSign, ChevronRight, Search } from 'lucide-react';
+import { FileText, Plus, Calendar, Tag, DollarSign, ChevronRight, Search, Flag, AlertTriangle, X } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<string, 'green' | 'blue' | 'amber' | 'red' | 'gray'> = {
@@ -36,6 +36,9 @@ export default function BuyerRFQsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [total, setTotal] = useState(0);
+  const [appealModal, setAppealModal] = useState<{ targetId: string; type: 'RFQ' } | null>(null);
+  const [appealReason, setAppealReason] = useState('');
+  const [appealLoading, setAppealLoading] = useState(false);
 
   const fetchRFQs = async () => {
     setLoading(true);
@@ -50,7 +53,22 @@ export default function BuyerRFQsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchRFQs(); }, [search, statusFilter]);
+  useEffect(() => { fetchRFQs(); }, [search, statusFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const submitAppeal = async () => {
+    if (!appealModal || !appealReason.trim()) return;
+    setAppealLoading(true);
+    try {
+      await api.post('/appeals', {
+        targetType: 'RFQ',
+        targetId: appealModal.targetId,
+        reason: appealReason.trim(),
+      });
+      setAppealModal(null);
+      setAppealReason('');
+    } catch { /* silent */ }
+    setAppealLoading(false);
+  };
 
   return (
     <DashboardLayout>
@@ -111,58 +129,122 @@ export default function BuyerRFQsPage() {
           />
         ) : (
           <div className="space-y-3">
-            {rfqs.map((rfq) => (
-              <Link
-                key={rfq.id}
-                href={`/${locale}/dashboard/buyer/rfqs/${rfq.id}`}
-                className="card card-hover flex flex-col sm:flex-row sm:items-center gap-4 group"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
-                      <FileText className="h-4 w-4" />
+            {rfqs.map((rfq) => {
+              const isFlagged = rfq.moderationStatus && rfq.moderationStatus !== 'ACTIVE';
+              return (
+                <div key={rfq.id} className="card flex flex-col gap-0">
+                  <Link
+                    href={`/${locale}/dashboard/buyer/rfqs/${rfq.id}`}
+                    className="flex flex-col sm:flex-row sm:items-center gap-4 group"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 truncate group-hover:text-brand-700 transition-colors">
+                            {rfq.title}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5 truncate">{rfq.description}</p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 truncate group-hover:text-brand-700 transition-colors">
-                        {rfq.title}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-0.5 truncate">{rfq.description}</p>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500">
-                  {rfq.category && (
-                    <span className="flex items-center gap-1">
-                      <Tag className="h-3.5 w-3.5" />
-                      {ar ? rfq.category.nameAr : rfq.category.nameEn}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500">
+                      {rfq.category && (
+                        <span className="flex items-center gap-1">
+                          <Tag className="h-3.5 w-3.5" />
+                          {ar ? rfq.category.nameAr : rfq.category.nameEn}
+                        </span>
+                      )}
+                      {rfq.budget && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="h-3.5 w-3.5" />
+                          {rfq.budget.toLocaleString()} SAR
+                        </span>
+                      )}
+                      {rfq.deadline && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {format(new Date(rfq.deadline), 'dd MMM yyyy')}
+                        </span>
+                      )}
+                      <span className="text-slate-400">
+                        {ar ? `${rfq._count?.quotes ?? 0} عرض` : `${rfq._count?.quotes ?? 0} quotes`}
+                      </span>
+                      <Badge variant={STATUS_COLORS[rfq.status]}>
+                        {ar ? STATUS_LABELS[rfq.status]?.ar : STATUS_LABELS[rfq.status]?.en}
+                      </Badge>
+                      {isFlagged && (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${rfq.moderationStatus === 'FLAGGED' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                          <AlertTriangle className="h-2.5 w-2.5" />
+                          {rfq.moderationStatus}
+                        </span>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-slate-300 rtl-mirror" />
+                    </div>
+                  </Link>
+
+                  {isFlagged && (
+                    <div className="flex items-center justify-between pt-2 mt-2 border-t border-amber-100">
+                      <p className="text-[11px] text-amber-600 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        {rfq.moderationReason ?? (ar ? 'تم تقييد هذا الطلب بواسطة الإشراف' : 'This RFQ has been restricted by moderation')}
+                      </p>
+                      <button
+                        onClick={() => setAppealModal({ targetId: rfq.id, type: 'RFQ' })}
+                        className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
+                      >
+                        <Flag className="h-3.5 w-3.5" />
+                        {ar ? 'اعتراض' : 'Appeal'}
+                      </button>
+                    </div>
                   )}
-                  {rfq.budget && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="h-3.5 w-3.5" />
-                      {rfq.budget.toLocaleString()} SAR
-                    </span>
-                  )}
-                  {rfq.deadline && (
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3.5 w-3.5" />
-                      {format(new Date(rfq.deadline), 'dd MMM yyyy')}
-                    </span>
-                  )}
-                  <span className="text-slate-400">
-                    {ar ? `${rfq._count?.quotes ?? 0} عرض` : `${rfq._count?.quotes ?? 0} quotes`}
-                  </span>
-                  <Badge variant={STATUS_COLORS[rfq.status]}>
-                    {ar ? STATUS_LABELS[rfq.status]?.ar : STATUS_LABELS[rfq.status]?.en}
-                  </Badge>
-                  <ChevronRight className="h-4 w-4 text-slate-300 rtl-mirror" />
                 </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+
+      {/* Appeal Modal */}
+      {appealModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-slate-900">{ar ? 'تقديم اعتراض' : 'Submit Appeal'}</h2>
+              <button onClick={() => { setAppealModal(null); setAppealReason(''); }} className="rounded-lg p-1 text-slate-400 hover:text-slate-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-3">
+              {ar
+                ? 'اشرح سبب اعتراضك على قرار الإشراف على هذا الطلب.'
+                : 'Explain why you believe the moderation decision on this RFQ should be reconsidered.'}
+            </p>
+            <textarea
+              value={appealReason}
+              onChange={(e) => setAppealReason(e.target.value)}
+              rows={4}
+              placeholder={ar ? 'سبب الاعتراض...' : 'Reason for appeal...'}
+              className="input-base w-full resize-none"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" onClick={() => { setAppealModal(null); setAppealReason(''); }}>
+                {ar ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button
+                loading={appealLoading}
+                disabled={!appealReason.trim()}
+                onClick={submitAppeal}
+              >
+                {ar ? 'إرسال الاعتراض' : 'Submit Appeal'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

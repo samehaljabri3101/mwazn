@@ -80,6 +80,31 @@ enum DocumentType {
   MAROOF
 }
 
+enum ModerationStatus {
+  ACTIVE
+  FLAGGED
+  REMOVED
+  REJECTED
+}
+
+enum ModerationSource {
+  SYSTEM
+  ADMIN
+}
+
+enum AppealTargetType {
+  RFQ
+  LISTING
+}
+
+enum AppealStatus {
+  OPEN
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+  CLOSED
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 model User {
@@ -94,10 +119,12 @@ model User {
   company   Company @relation(fields: [companyId], references: [id])
   companyId String
 
-  refreshTokens RefreshToken[]
-  sentMessages  Message[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
+  refreshTokens       RefreshToken[]
+  sentMessages        Message[]
+  auditLogs           AuditLog[]
+  notifications       Notification[]
+  appealsAsAppellant  ModerationAppeal[] @relation("AppealAppellant")
+  appealsAsReviewer   ModerationAppeal[] @relation("AppealReviewer")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -249,6 +276,13 @@ model Listing {
   status        ListingStatus @default(ACTIVE)
   viewCount     Int           @default(0)
 
+  // ── Moderation ─────────────────────────────────────────────────────────────
+  moderationStatus  ModerationStatus  @default(ACTIVE)
+  moderationReason  String?
+  moderatedById     String?
+  moderatedAt       DateTime?
+  moderationSource  ModerationSource?
+
   supplier   Company  @relation(fields: [supplierId], references: [id])
   supplierId String
 
@@ -265,6 +299,7 @@ model Listing {
   @@index([categoryId])
   @@index([status])
   @@index([slug])
+  @@index([moderationStatus])
 }
 
 model ListingImage {
@@ -304,6 +339,13 @@ model RFQ {
   allowPartialBids Boolean @default(true)
   status      RFQStatus @default(OPEN)
 
+  // ── Moderation ─────────────────────────────────────────────────────────────
+  moderationStatus  ModerationStatus  @default(ACTIVE)
+  moderationReason  String?
+  moderatedById     String?
+  moderatedAt       DateTime?
+  moderationSource  ModerationSource?
+
   buyer      Company @relation(fields: [buyerId], references: [id])
   buyerId    String
 
@@ -321,6 +363,7 @@ model RFQ {
   @@index([buyerId])
   @@index([categoryId])
   @@index([status])
+  @@index([moderationStatus])
 }
 
 model RfqImage {
@@ -560,6 +603,31 @@ model CompanyVerificationDocument {
 
   @@index([companyId])
   @@index([decision])
+}
+
+// ─── Moderation Appeals ───────────────────────────────────────────────────────
+
+model ModerationAppeal {
+  id                       String            @id @default(cuid())
+  targetType               AppealTargetType
+  targetId                 String
+  appellantUserId          String
+  appellantCompanyId       String
+  appealStatus             AppealStatus      @default(OPEN)
+  originalModerationStatus ModerationStatus
+  reason                   String            @db.Text
+  adminResponse            String?           @db.Text
+  reviewedById             String?
+  reviewedAt               DateTime?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+
+  appellantUser  User  @relation("AppealAppellant", fields: [appellantUserId], references: [id])
+  reviewedBy     User? @relation("AppealReviewer",  fields: [reviewedById],  references: [id])
+
+  @@index([appellantUserId])
+  @@index([targetType, targetId])
+  @@index([appealStatus])
 }
 
 // ─── Analytics Events ─────────────────────────────────────────────────────────

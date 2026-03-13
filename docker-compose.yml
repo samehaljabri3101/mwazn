@@ -90,8 +90,8 @@ services:
 
   frontend:
     build:
-      context: ./apps/frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/frontend/Dockerfile
       args:
         # Baked in at build time for client-side bundle.
         # Browser → localhost:3001 (port is mapped); SSR uses API_INTERNAL_URL.

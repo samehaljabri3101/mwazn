@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { canManageProducts } from '@/lib/permissions';
 import {
   Package, Plus, Tag, DollarSign, Archive, Eye, EyeOff,
-  Camera, X, ExternalLink, Clock, Pencil, Upload,
+  Camera, X, ExternalLink, Clock, Pencil, Upload, Flag, AlertTriangle,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, 'green' | 'amber' | 'gray'> = {
@@ -36,6 +36,9 @@ export default function SupplierListingsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [appealModal, setAppealModal] = useState<{ listingId: string; type: 'LISTING' } | null>(null);
+  const [appealReason, setAppealReason] = useState('');
+  const [appealLoading, setAppealLoading] = useState(false);
 
   const fetchListings = async () => {
     setLoading(true);
@@ -91,6 +94,21 @@ export default function SupplierListingsPage() {
     setActionLoading(null);
     setUploadingFor(null);
     e.target.value = '';
+  };
+
+  const submitAppeal = async () => {
+    if (!appealModal || !appealReason.trim()) return;
+    setAppealLoading(true);
+    try {
+      await api.post('/appeals', {
+        targetType: 'LISTING',
+        targetId: appealModal.listingId,
+        reason: appealReason.trim(),
+      });
+      setAppealModal(null);
+      setAppealReason('');
+    } catch { /* silent */ }
+    setAppealLoading(false);
   };
 
   const activeListings = listings.filter((l) => l.status !== 'ARCHIVED');
@@ -181,10 +199,24 @@ export default function SupplierListingsPage() {
                       <h3 className="font-semibold text-slate-800 text-sm line-clamp-2">
                         {ar ? listing.titleAr : listing.titleEn}
                       </h3>
-                      <Badge variant={STATUS_COLORS[listing.status]}>
-                        {ar ? STATUS_LABELS[listing.status]?.ar : STATUS_LABELS[listing.status]?.en}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant={STATUS_COLORS[listing.status]}>
+                          {ar ? STATUS_LABELS[listing.status]?.ar : STATUS_LABELS[listing.status]?.en}
+                        </Badge>
+                        {listing.moderationStatus && listing.moderationStatus !== 'ACTIVE' && (
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${listing.moderationStatus === 'FLAGGED' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
+                            <AlertTriangle className="h-2.5 w-2.5" />
+                            {listing.moderationStatus}
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {listing.moderationReason && (
+                      <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3 shrink-0" />
+                        {listing.moderationReason}
+                      </p>
+                    )}
 
                     {listing.category && (
                       <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
@@ -252,6 +284,17 @@ export default function SupplierListingsPage() {
                     >
                       {ar ? 'أرشفة' : 'Archive'}
                     </Button>
+                    {listing.moderationStatus && listing.moderationStatus !== 'ACTIVE' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        icon={<Flag className="h-3.5 w-3.5 text-amber-500" />}
+                        onClick={() => setAppealModal({ listingId: listing.id, type: 'LISTING' })}
+                        className="text-amber-600 hover:bg-amber-50"
+                      >
+                        {ar ? 'اعتراض' : 'Appeal'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -280,6 +323,44 @@ export default function SupplierListingsPage() {
           </>
         )}
       </div>
+
+      {/* Appeal Modal */}
+      {appealModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-bold text-slate-900">{ar ? 'تقديم اعتراض' : 'Submit Appeal'}</h2>
+              <button onClick={() => { setAppealModal(null); setAppealReason(''); }} className="rounded-lg p-1 text-slate-400 hover:text-slate-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-slate-500 mb-3">
+              {ar
+                ? 'اشرح سبب اعتراضك على قرار الإشراف على هذا المنتج.'
+                : 'Explain why you believe the moderation decision on this listing should be reconsidered.'}
+            </p>
+            <textarea
+              value={appealReason}
+              onChange={(e) => setAppealReason(e.target.value)}
+              rows={4}
+              placeholder={ar ? 'سبب الاعتراض...' : 'Reason for appeal...'}
+              className="input-base w-full resize-none"
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="secondary" onClick={() => { setAppealModal(null); setAppealReason(''); }}>
+                {ar ? 'إلغاء' : 'Cancel'}
+              </Button>
+              <Button
+                loading={appealLoading}
+                disabled={!appealReason.trim()}
+                onClick={submitAppeal}
+              >
+                {ar ? 'إرسال الاعتراض' : 'Submit Appeal'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

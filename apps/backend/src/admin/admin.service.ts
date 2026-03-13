@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { CompanyType, DealStatus, RFQStatus, SubscriptionPlan, VerificationStatus } from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { AppealStatus, CompanyType, DealStatus, ModerationSource, ModerationStatus, RFQStatus, SubscriptionPlan, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { AppealsService } from '../appeals/appeals.service';
+import { AdminRespondAppealDto } from '../appeals/dto/admin-respond-appeal.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 
 const PRO_MONTHLY_PRICE_SAR = 299;
@@ -11,6 +13,7 @@ export class AdminService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly appealsService: AppealsService,
   ) {}
 
   async getDashboardStats() {
@@ -111,5 +114,122 @@ export class AdminService {
       after: { plan },
     });
     return company;
+  }
+
+  // ─── Content Moderation ────────────────────────────────────────────────────
+
+  async moderateRFQ(id: string, action: 'remove' | 'restore' | 'flag', reason: string | undefined, adminUserId: string) {
+    const rfq = await this.prisma.rFQ.findUnique({ where: { id } });
+    if (!rfq) throw new NotFoundException('RFQ not found');
+
+    const statusMap = { remove: ModerationStatus.REMOVED, restore: ModerationStatus.ACTIVE, flag: ModerationStatus.FLAGGED };
+    const actionMap = { remove: 'RFQ_REMOVED_BY_ADMIN', restore: 'RFQ_RESTORED_BY_ADMIN', flag: 'RFQ_FLAGGED_BY_ADMIN' };
+
+    const updated = await this.prisma.rFQ.update({
+      where: { id },
+      data: {
+        moderationStatus: statusMap[action],
+        moderationReason: action === 'restore' ? null : (reason ?? rfq.moderationReason),
+        moderatedById: adminUserId,
+        moderatedAt: new Date(),
+        moderationSource: action === 'restore' ? null : ModerationSource.ADMIN,
+      },
+    });
+
+    await this.audit.log({
+      action: actionMap[action],
+      entity: 'RFQ',
+      entityId: id,
+      userId: adminUserId,
+      after: { moderationStatus: statusMap[action], reason },
+    });
+
+    return updated;
+  }
+
+  async moderateListing(id: string, action: 'remove' | 'restore' | 'flag', reason: string | undefined, adminUserId: string) {
+    const listing = await this.prisma.listing.findUnique({ where: { id } });
+    if (!listing) throw new NotFoundException('Listing not found');
+
+    const statusMap = { remove: ModerationStatus.REMOVED, restore: ModerationStatus.ACTIVE, flag: ModerationStatus.FLAGGED };
+    const actionMap = { remove: 'LISTING_REMOVED_BY_ADMIN', restore: 'LISTING_RESTORED_BY_ADMIN', flag: 'LISTING_FLAGGED_BY_ADMIN' };
+
+    const updated = await this.prisma.listing.update({
+      where: { id },
+      data: {
+        moderationStatus: statusMap[action],
+        moderationReason: action === 'restore' ? null : (reason ?? listing.moderationReason),
+        moderatedById: adminUserId,
+        moderatedAt: new Date(),
+        moderationSource: action === 'restore' ? null : ModerationSource.ADMIN,
+      },
+    });
+
+    await this.audit.log({
+      action: actionMap[action],
+      entity: 'Listing',
+      entityId: id,
+      userId: adminUserId,
+      after: { moderationStatus: statusMap[action], reason },
+    });
+
+    return updated;
+  }
+
+  async getFlaggedContent(query: PaginationDto) {
+    const _page = Number(query.page) || 1;
+    const _limit = Number(query.limit) || 20;
+    const flaggedStatuses = [ModerationStatus.FLAGGED, ModerationStatus.REMOVED];
+
+    const [rfqs, rfqTotal, listings, listingTotal] = await Promise.all([
+      this.prisma.rFQ.findMany({
+        where: { moderationStatus: { in: flaggedStatuses } },
+        skip: 0,
+        take: Math.ceil(_limit / 2),
+        orderBy: { moderatedAt: 'desc' },
+        include: { buyer: { select: { id: true, nameAr: true, nameEn: true } } },
+      }),
+      this.prisma.rFQ.count({ where: { moderationStatus: { in: flaggedStatuses } } }),
+      this.prisma.listing.findMany({
+        where: { moderationStatus: { in: flaggedStatuses } },
+        skip: 0,
+        take: Math.ceil(_limit / 2),
+        orderBy: { moderatedAt: 'desc' },
+        include: { supplier: { select: { id: true, nameAr: true, nameEn: true } } },
+      }),
+      this.prisma.listing.count({ where: { moderationStatus: { in: flaggedStatuses } } }),
+    ]);
+
+    const rfqItems = rfqs.map((r) => ({ ...r, contentType: 'RFQ' as const }));
+    const listingItems = listings.map((l) => ({ ...l, contentType: 'LISTING' as const }));
+    const combined = [...rfqItems, ...listingItems].sort((a, b) => {
+      const aDate = a.moderatedAt ? a.moderatedAt.getTime() : a.createdAt.getTime();
+      const bDate = b.moderatedAt ? b.moderatedAt.getTime() : b.createdAt.getTime();
+      return bDate - aDate;
+    });
+
+    return paginate(combined, rfqTotal + listingTotal, _page, _limit);
+  }
+
+  // ─── Appeal delegation ─────────────────────────────────────────────────────
+
+  getAppeals(query: PaginationDto & { status?: AppealStatus }) {
+    return this.appealsService.adminFindAll(query);
+  }
+
+  getAppeal(id: string, adminUserId: string) {
+    return this.appealsService.findOne(id, adminUserId);
+  }
+
+  respondAppeal(id: string, dto: AdminRespondAppealDto, adminUserId: string) {
+    return this.appealsService.adminRespond(id, dto, adminUserId);
+  }
+
+  acceptAppeal(id: string, dto: AdminRespondAppealDto, adminUserId: string) {
+    return this.appealsService.adminAccept(id, dto, adminUserId);
+  }
+
+  rejectAppeal(id: string, dto: AdminRespondAppealDto, adminUserId: string) {
+    return this.appealsService.adminReject(id, dto, adminUserId);
   }
 }

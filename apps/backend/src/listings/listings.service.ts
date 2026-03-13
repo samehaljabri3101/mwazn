@@ -4,9 +4,10 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { ListingStatus, Role, VerificationStatus } from '@prisma/client';
+import { ListingStatus, ModerationStatus, ModerationSource, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { ModerationService } from '../moderation/moderation.service';
 import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import { SELLER_ROLES } from '../common/constants/platform.constants';
@@ -42,6 +43,7 @@ export class ListingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly moderation: ModerationService,
   ) {
     if (!fs.existsSync(UPLOAD_DIR)) {
       fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -50,12 +52,16 @@ export class ListingsService {
 
   async findAll(query: PaginationDto & {
     categoryId?: string; supplierId?: string; search?: string;
-    minPrice?: number; maxPrice?: number; sort?: string;
+    minPrice?: number; maxPrice?: number; sort?: string; adminView?: boolean;
   }) {
     const where: any = {
       status: ListingStatus.ACTIVE,
       supplier: { verificationStatus: 'VERIFIED' },
     };
+    // Public view: only show ACTIVE moderation status
+    if (!query.adminView && !query.supplierId) {
+      where.moderationStatus = ModerationStatus.ACTIVE;
+    }
     if (query.categoryId) where.categoryId = query.categoryId;
     if (query.supplierId) where.supplierId = query.supplierId;
     if (query.search) {
@@ -158,6 +164,22 @@ export class ListingsService {
       throw new BadRequestException('Your company must be verified to create listings');
     }
 
+    // Content moderation
+    const modResult = this.moderation.moderate({ titleEn: dto.titleEn, titleAr: dto.titleAr, description: dto.descriptionEn });
+    if (modResult.decision === 'BLOCK') {
+      await this.audit.log({
+        action: 'LISTING_BLOCKED_BY_SYSTEM',
+        entity: 'Listing',
+        userId,
+        after: { reasonCode: modResult.reasonCode, matchedTerms: modResult.matchedTerms, companyId: user.companyId },
+      });
+      throw new BadRequestException('Content violates platform guidelines');
+    }
+
+    const moderationStatus = modResult.decision === 'FLAG'
+      ? ModerationStatus.FLAGGED
+      : ModerationStatus.ACTIVE;
+
     const listing = await this.prisma.listing.create({
       data: {
         titleAr: dto.titleAr,
@@ -174,6 +196,9 @@ export class ListingsService {
         certifications: dto.certifications ?? [],
         supplierId: user.companyId,
         categoryId: dto.categoryId,
+        moderationStatus,
+        moderationSource: moderationStatus === ModerationStatus.FLAGGED ? ModerationSource.SYSTEM : undefined,
+        moderationReason: moderationStatus === ModerationStatus.FLAGGED ? modResult.reasonCode : undefined,
       },
       include: { category: true, images: true },
     });
@@ -182,12 +207,19 @@ export class ListingsService {
     const slug = generateSlug(dto.titleEn, listing.id);
     await this.prisma.listing.update({ where: { id: listing.id }, data: { slug } }).catch(() => {});
 
+    const auditAction = moderationStatus === ModerationStatus.FLAGGED ? 'LISTING_FLAGGED_BY_SYSTEM' : 'LISTING_CREATED';
     await this.audit.log({
-      action: 'LISTING_CREATED',
+      action: auditAction,
       entity: 'Listing',
       entityId: listing.id,
       userId,
-      after: { actorRole: user.role, supplierId: user.companyId, titleEn: dto.titleEn, categoryId: dto.categoryId },
+      after: {
+        actorRole: user.role,
+        supplierId: user.companyId,
+        titleEn: dto.titleEn,
+        categoryId: dto.categoryId,
+        ...(moderationStatus === ModerationStatus.FLAGGED && { reasonCode: modResult.reasonCode }),
+      },
     });
 
     return { ...listing, slug };

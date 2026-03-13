@@ -7,7 +7,7 @@ import {
   Building2, FileText, Briefcase, Users, CheckCircle2, XCircle, Clock,
   Star, MessageSquare, ShieldCheck, Zap, AlertTriangle,
   ArrowRight, ChevronRight, Activity, BarChart3, Calendar, MapPin,
-  CreditCard, TrendingUp, Package, ScrollText,
+  CreditCard, TrendingUp, Package, ScrollText, Shield, Flag,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/Button';
@@ -307,16 +307,22 @@ export default function AdminDashboardPage() {
   const [pending, setPending] = useState<PendingSupplier[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [flaggedCount, setFlaggedCount] = useState(0);
+  const [openAppealsCount, setOpenAppealsCount] = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, pendingRes] = await Promise.all([
+      const [statsRes, pendingRes, moderationRes, appealsRes] = await Promise.all([
         api.get('/admin/dashboard'),
         api.get('/admin/pending-verifications'),
+        api.get('/admin/moderation', { params: { limit: 1 } }).catch(() => null),
+        api.get('/admin/appeals', { params: { limit: 1, status: 'OPEN' } }).catch(() => null),
       ]);
       setData(statsRes.data.data);
       setPending(pendingRes.data.data?.items || pendingRes.data.data || []);
+      if (moderationRes) setFlaggedCount(moderationRes.data.data?.meta?.total ?? 0);
+      if (appealsRes) setOpenAppealsCount(appealsRes.data.data?.meta?.total ?? 0);
     } catch { /* silent */ }
     setLoading(false);
   };
@@ -508,6 +514,40 @@ export default function AdminDashboardPage() {
                   sub={ar ? 'إجمالي التقييمات المنشورة' : 'Total ratings submitted'}
                   color="rose"
                   href={`${base}/admin/ratings`}
+                  badge={ar ? 'عرض الكل' : 'View all'}
+                />
+              </div>
+            </div>
+
+            {/* ── Moderation ───────────────────────────────────────────────── */}
+            <div>
+              <SectionHeader title={ar ? 'الإشراف على المحتوى' : 'Content Moderation'} />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <MetricCard
+                  icon={<Shield className="h-5 w-5" />}
+                  label={ar ? 'محتوى مُعلَّق / محذوف' : 'Flagged / Removed Content'}
+                  value={flaggedCount}
+                  sub={ar ? 'طلبات أسعار ومنتجات تحت المراجعة' : 'RFQs & listings under review'}
+                  color="amber"
+                  href={`${base}/admin/moderation`}
+                  badge={flaggedCount > 0 ? (ar ? 'يتطلب مراجعة' : 'Needs review') : undefined}
+                />
+                <MetricCard
+                  icon={<Flag className="h-5 w-5" />}
+                  label={ar ? 'الاعتراضات المفتوحة' : 'Open Appeals'}
+                  value={openAppealsCount}
+                  sub={ar ? 'اعتراضات المستخدمين بانتظار الرد' : 'User appeals awaiting review'}
+                  color="blue"
+                  href={`${base}/admin/appeals`}
+                  badge={openAppealsCount > 0 ? (ar ? 'عاجل' : 'Urgent') : undefined}
+                />
+                <MetricCard
+                  icon={<Package className="h-5 w-5" />}
+                  label={ar ? 'إدارة المنتجات' : 'Manage Listings'}
+                  value={data.listings.active}
+                  sub={ar ? 'جميع منتجات الموردين' : 'All supplier listings'}
+                  color="purple"
+                  href={`${base}/admin/listings`}
                   badge={ar ? 'عرض الكل' : 'View all'}
                 />
               </div>
@@ -718,7 +758,7 @@ export default function AdminDashboardPage() {
             {/* ── Quick Actions ─────────────────────────────────────────────── */}
             <div>
               <SectionHeader title={ar ? 'إجراءات سريعة' : 'Quick Actions'} />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <QuickLink
                   href={`${base}/admin/companies`}
                   icon={<Users className="h-4 w-4" />}
@@ -733,10 +773,30 @@ export default function AdminDashboardPage() {
                   color="amber"
                 />
                 <QuickLink
+                  href={`${base}/admin/moderation`}
+                  icon={<Shield className="h-4 w-4" />}
+                  label={ar ? 'قائمة الإشراف' : 'Moderation Queue'}
+                  badge={flaggedCount}
+                  color="amber"
+                />
+                <QuickLink
+                  href={`${base}/admin/appeals`}
+                  icon={<Flag className="h-4 w-4" />}
+                  label={ar ? 'الاعتراضات المفتوحة' : 'Open Appeals'}
+                  badge={openAppealsCount}
+                  color="brand"
+                />
+                <QuickLink
                   href={`${base}/admin/rfqs`}
                   icon={<FileText className="h-4 w-4" />}
                   label={ar ? 'طلبات الأسعار' : 'Browse RFQs'}
                   color="brand"
+                />
+                <QuickLink
+                  href={`${base}/admin/listings`}
+                  icon={<Package className="h-4 w-4" />}
+                  label={ar ? 'إدارة المنتجات' : 'Manage Listings'}
+                  color="purple"
                 />
                 <QuickLink
                   href={`${base}/admin/deals`}

@@ -27,21 +27,26 @@ export type {
   DocumentType,
   VerificationSource,
   GovernmentIdType,
+  // Moderation
+  ModerationStatus,
+  ModerationSource,
+  AppealTargetType,
+  AppealStatus,
   ApiEnvelope,
   PaginationMeta,
   PaginatedEnvelope,
   // Legacy aliases
   ApiResponse,
   PaginatedResponse,
-} from '@/lib/contracts';
+} from '@mwazn/contracts';
 
-export { SELLER_ROLES, BUYER_ROLES, PLAN_ROLES } from '@/lib/contracts';
+export { SELLER_ROLES, BUYER_ROLES, PLAN_ROLES } from '@mwazn/contracts';
 
 // ─── Frontend entity interfaces ───────────────────────────────────────────────
 // These represent API response shapes for frontend consumption.
 // They are frontend-specific — the backend uses Prisma-generated types.
 
-import type { Role, CompanyType, VerificationStatus, SubscriptionPlan, ListingStatus, StockAvailability, RFQStatus, QuoteStatus, DealStatus, MessageType, MessagePriority, RFQVisibility, RFQProjectType, PaginationMeta } from '@/lib/contracts';
+import type { Role, CompanyType, VerificationStatus, SubscriptionPlan, ListingStatus, StockAvailability, RFQStatus, QuoteStatus, DealStatus, MessageType, MessagePriority, RFQVisibility, RFQProjectType, PaginationMeta, ModerationStatus } from '@mwazn/contracts';
 
 export interface User {
   id: string;
@@ -142,6 +147,8 @@ export interface Listing {
   vatPercent?: number;
   stockAvailability?: StockAvailability;
   status: ListingStatus;
+  moderationStatus?: ModerationStatus;
+  moderationReason?: string;
   viewCount?: number;
   supplierId: string;
   categoryId: string;
@@ -192,6 +199,8 @@ export interface RFQ {
   visibility?: RFQVisibility;
   allowPartialBids?: boolean;
   status: RFQStatus;
+  moderationStatus?: ModerationStatus;
+  moderationReason?: string;
   buyerId: string;
   categoryId: string;
   category?: Category;

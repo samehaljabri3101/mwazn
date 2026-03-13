@@ -6,6 +6,7 @@ import Link from 'next/link';
 import {
   FileText, Search, ChevronRight, Clock, CheckCircle2,
   XCircle, Package, MessageSquare, ArrowLeft, Calendar, Banknote,
+  Flag, Trash2, RotateCcw,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -17,6 +18,7 @@ interface RFQItem {
   id: string;
   title: string;
   status: string;
+  moderationStatus?: string;
   budget?: number;
   budgetMin?: number;
   budgetMax?: number;
@@ -28,6 +30,12 @@ interface RFQItem {
   buyer?: { nameAr: string; nameEn: string; city?: string };
   _count?: { quotes: number };
 }
+
+const MOD_META: Record<string, { bg: string; text: string }> = {
+  FLAGGED:  { bg: 'bg-amber-100', text: 'text-amber-700' },
+  REMOVED:  { bg: 'bg-red-100',   text: 'text-red-700' },
+  REJECTED: { bg: 'bg-rose-100',  text: 'text-rose-700' },
+};
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -70,6 +78,7 @@ export default function AdminRFQsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
+  const [modActionLoading, setModActionLoading] = useState<string | null>(null);
   const limit = 30;
 
   const fetchRfqs = useCallback(async () => {
@@ -96,6 +105,17 @@ export default function AdminRFQsPage() {
 
   // Reset page on filter change
   useEffect(() => { setPage(1); }, [search, statusFilter]);
+
+  const moderateRFQ = async (id: string, action: 'remove' | 'restore' | 'flag', e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setModActionLoading(`${id}-${action}`);
+    try {
+      await api.patch(`/admin/rfqs/${id}/${action}`, {});
+      await fetchRfqs();
+    } catch { /* silent */ }
+    setModActionLoading(null);
+  };
 
   const totalPages = Math.ceil(total / limit);
 
@@ -190,8 +210,13 @@ export default function AdminRFQsPage() {
                     <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-brand-700 transition-colors">
                       {rfq.title}
                     </p>
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-1 flex items-center gap-2 flex-wrap">
                       <StatusBadge status={rfq.status} ar={ar} />
+                      {rfq.moderationStatus && rfq.moderationStatus !== 'ACTIVE' && MOD_META[rfq.moderationStatus] && (
+                        <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${MOD_META[rfq.moderationStatus].bg} ${MOD_META[rfq.moderationStatus].text}`}>
+                          {rfq.moderationStatus}
+                        </span>
+                      )}
                       <span className="text-[10px] text-slate-400">
                         {new Date(rfq.createdAt).toLocaleDateString(ar ? 'ar-SA' : 'en-SA', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </span>
@@ -227,7 +252,39 @@ export default function AdminRFQsPage() {
                     <span className="text-sm font-semibold text-slate-700">{rfq._count?.quotes ?? 0}</span>
                   </div>
 
-                  <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-brand-400 transition-colors shrink-0" />
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    {rfq.moderationStatus && rfq.moderationStatus !== 'ACTIVE' && (
+                      <button
+                        onClick={(e) => moderateRFQ(rfq.id, 'restore', e)}
+                        disabled={!!modActionLoading}
+                        className="p-1 rounded text-green-600 hover:bg-green-50 disabled:opacity-50"
+                        title="Restore"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                      </button>
+                    )}
+                    {rfq.moderationStatus === 'ACTIVE' && (
+                      <button
+                        onClick={(e) => moderateRFQ(rfq.id, 'flag', e)}
+                        disabled={!!modActionLoading}
+                        className="p-1 rounded text-amber-600 hover:bg-amber-50 disabled:opacity-50"
+                        title="Flag"
+                      >
+                        <Flag className="h-3 w-3" />
+                      </button>
+                    )}
+                    {rfq.moderationStatus !== 'REMOVED' && (
+                      <button
+                        onClick={(e) => moderateRFQ(rfq.id, 'remove', e)}
+                        disabled={!!modActionLoading}
+                        className="p-1 rounded text-red-600 hover:bg-red-50 disabled:opacity-50"
+                        title="Remove"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    )}
+                    <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-brand-400 transition-colors shrink-0" />
+                  </div>
                 </Link>
               ))}
             </div>

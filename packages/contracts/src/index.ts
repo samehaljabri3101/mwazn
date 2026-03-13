@@ -164,6 +164,27 @@ export interface PaginatedEnvelope<T> extends ApiEnvelope<T[]> {
   meta: PaginationMeta;
 }
 
+// ─── Moderation ───────────────────────────────────────────────────────────────
+
+/** Content moderation state for RFQs and Listings */
+export type ModerationStatus = 'ACTIVE' | 'FLAGGED' | 'REMOVED' | 'REJECTED';
+
+/** Who triggered the moderation action */
+export type ModerationSource = 'SYSTEM' | 'ADMIN';
+
+/** Which content type an appeal targets */
+export type AppealTargetType = 'RFQ' | 'LISTING';
+
+/** Lifecycle state of a moderation appeal */
+export type AppealStatus =
+  | 'OPEN'
+  | 'UNDER_REVIEW'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'CLOSED';
+
+// ─── API response envelope ────────────────────────────────────────────────────
+
 /**
  * Legacy alias — kept for backward compatibility with existing frontend consumers.
  * Prefer ApiEnvelope<T> in new code.

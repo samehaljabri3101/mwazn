@@ -4,11 +4,12 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { RFQStatus, Role } from '@prisma/client';
+import { ModerationStatus, ModerationSource, RFQStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
+import { ModerationService } from '../moderation/moderation.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import { RFQ_POSTER_ROLES } from '../common/constants/platform.constants';
@@ -20,6 +21,7 @@ export class RFQsService {
     private readonly email: EmailService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
+    private readonly moderation: ModerationService,
   ) {}
 
   async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string; adminOverride?: boolean }) {
@@ -34,9 +36,10 @@ export class RFQsService {
       ];
     }
 
-    // PLATFORM_ADMIN sees all RFQs; all other callers see only PUBLIC unless they are the buyer
+    // PLATFORM_ADMIN sees all RFQs; all other callers see only PUBLIC + ACTIVE moderation
     if (!query.buyerId && !query.adminOverride) {
       where.visibility = 'PUBLIC';
+      where.moderationStatus = ModerationStatus.ACTIVE;
     }
 
     const _page = Number(query.page) || 1;
@@ -86,6 +89,22 @@ export class RFQsService {
       throw new ForbiddenException('Only buyers and freelancers can create RFQs');
     }
 
+    // Content moderation
+    const modResult = this.moderation.moderate({ title: dto.title, description: dto.description });
+    if (modResult.decision === 'BLOCK') {
+      await this.audit.log({
+        action: 'RFQ_BLOCKED_BY_SYSTEM',
+        entity: 'RFQ',
+        userId: user.id,
+        after: { reasonCode: modResult.reasonCode, matchedTerms: modResult.matchedTerms, companyId: user.companyId },
+      });
+      throw new BadRequestException('Content violates platform guidelines');
+    }
+
+    const moderationStatus = modResult.decision === 'FLAG'
+      ? ModerationStatus.FLAGGED
+      : ModerationStatus.ACTIVE;
+
     const rfq = await this.prisma.rFQ.create({
       data: {
         title: dto.title,
@@ -109,16 +128,25 @@ export class RFQsService {
         requiredCertifications: dto.requiredCertifications ?? [],
         visibility: dto.visibility ?? 'PUBLIC',
         allowPartialBids: dto.allowPartialBids ?? true,
+        moderationStatus,
+        moderationSource: moderationStatus === ModerationStatus.FLAGGED ? ModerationSource.SYSTEM : undefined,
+        moderationReason: moderationStatus === ModerationStatus.FLAGGED ? modResult.reasonCode : undefined,
       },
       include: { category: true, buyer: { select: { id: true, nameAr: true, nameEn: true } } },
     });
 
+    const auditAction = moderationStatus === ModerationStatus.FLAGGED ? 'RFQ_FLAGGED_BY_SYSTEM' : 'RFQ_CREATED';
     await this.audit.log({
-      action: 'RFQ_CREATED',
+      action: auditAction,
       entity: 'RFQ',
       entityId: rfq.id,
       userId: user.id,
-      after: { actorRole: user.role, companyId: user.companyId, title: rfq.title },
+      after: {
+        actorRole: user.role,
+        companyId: user.companyId,
+        title: rfq.title,
+        ...(moderationStatus === ModerationStatus.FLAGGED && { reasonCode: modResult.reasonCode }),
+      },
     });
 
     return rfq;

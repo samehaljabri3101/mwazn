@@ -12,7 +12,7 @@
  *
  * Source of truth for role/plan types: @mwazn/contracts
  */
-import type { Role, SubscriptionPlan } from '@/lib/contracts';
+import type { Role, SubscriptionPlan } from '@mwazn/contracts';
 
 // ─── Admin access ─────────────────────────────────────────────────────────────
 

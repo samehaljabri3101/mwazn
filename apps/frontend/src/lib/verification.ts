@@ -7,7 +7,7 @@
  *
  * Source of truth for type values: @mwazn/contracts
  */
-import type { DocumentType, VerificationStatus, VerificationSource } from '@/lib/contracts';
+import type { DocumentType, VerificationStatus, VerificationSource } from '@mwazn/contracts';
 
 // ─── Document Type Labels ─────────────────────────────────────────────────────
 
