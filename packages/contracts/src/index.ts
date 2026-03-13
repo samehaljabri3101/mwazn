@@ -5,19 +5,17 @@
  * used by both the frontend and backend of the Mwazn marketplace.
  *
  * ─── Usage ────────────────────────────────────────────────────────────────────
- * Frontend: imported via the `@mwazn/contracts` TypeScript path alias.
- *           See apps/frontend/tsconfig.json → compilerOptions.paths
+ * This is an npm workspace package (root package.json workspaces: ["packages/*"]).
+ * Run `npm install` at the monorepo root to create the node_modules symlink.
+ *
+ * Frontend: "@mwazn/contracts": "*" in devDependencies + tsconfig.json path alias
+ *           as a fallback for TypeScript resolution without a full npm install.
  *
  * Backend:  Prisma schema enums in apps/backend/prisma/schema.prisma are the
  *           authoritative runtime source for the backend. This file documents
  *           the expected values and serves as the shared reference.
  *           See apps/backend/src/common/constants/platform.constants.ts
  *           for backend-side role groupings that mirror these definitions.
- *
- * ─── Migration path ───────────────────────────────────────────────────────────
- * When npm workspaces are set up at the monorepo root, this package can be
- * published as @mwazn/contracts and imported directly in both apps without
- * the path alias workaround.
  * ─────────────────────────────────────────────────────────────────────────────
  */
 

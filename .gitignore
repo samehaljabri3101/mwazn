@@ -85,7 +85,7 @@ tmp/
 # ─────────────────────────────────────────────────────────────
 # Old flat-structure backend directory (pre-monorepo archive, not part of build)
 /backend/
-# Root-level lockfile (no root package.json — orphaned artifact)
+# Root-level lockfile — workspace package.json exists but lock is per-app
 /package-lock.json
 # Dev scratch files
 .picsum_list.json

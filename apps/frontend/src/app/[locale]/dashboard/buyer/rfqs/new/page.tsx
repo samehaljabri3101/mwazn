@@ -5,6 +5,7 @@ import { useLocale } from 'next-intl';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import { canPostRFQ } from '@/lib/permissions';
 import api from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -38,13 +39,13 @@ export default function NewRFQPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const ar = locale === 'ar';
-  const { company, isLoading } = useAuth();
+  const { user, company, isLoading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && company && company.type !== 'BUYER') {
+    if (!isLoading && user && !canPostRFQ(user.role)) {
       router.replace(`/${locale}/dashboard`);
     }
-  }, [isLoading, company, locale, router]);
+  }, [isLoading, user, locale, router]);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);

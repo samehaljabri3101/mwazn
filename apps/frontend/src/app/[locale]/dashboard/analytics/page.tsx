@@ -13,10 +13,10 @@ import {
   isAdminRole,
   isFreelancerRole as checkFreelancerRole,
   isCustomerRole as checkCustomerRole,
-  isBusinessRole,
   getAnalyticsTitle,
   getAnalyticsSubtitle,
 } from '@/lib/roles';
+import { canExportAnalytics } from '@/lib/permissions';
 import {
   TrendingUp, Package, Star, DollarSign, FileText, CheckCircle2,
   XCircle, Trophy, BarChart2, Eye, Zap, Download, ShieldCheck,
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
   const isFreelancerRole = checkFreelancerRole(user?.role);
   const isCustomerRole   = checkCustomerRole(user?.role);
   // Export CSV only for paid-plan business (CR-backed) accounts
-  const isPro = isBusinessRole(user?.role) && company?.plan === 'PRO';
+  const isPro = canExportAnalytics(user?.role, company?.plan);
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);

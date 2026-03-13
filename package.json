@@ -1,0 +1,15 @@
+{
+  "name": "mwazn-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:frontend": "npm run build --workspace=apps/frontend",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "typecheck:frontend": "npx tsc --noEmit --project apps/frontend/tsconfig.json",
+    "typecheck:backend": "npx tsc --noEmit --project apps/backend/tsconfig.json"
+  }
+}

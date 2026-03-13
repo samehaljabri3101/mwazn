@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { Listing } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { canManageProducts } from '@/lib/permissions';
 import {
   Package, Plus, Tag, DollarSign, Archive, Eye, EyeOff,
   Camera, X, ExternalLink, Clock, Pencil, Upload,
@@ -27,8 +28,13 @@ const STATUS_LABELS: Record<string, { en: string; ar: string }> = {
 
 export default function SupplierListingsPage() {
   const locale = useLocale();
-  const { company } = useAuth();
+  const { user, company } = useAuth();
   const ar = locale === 'ar';
+
+  // Guard: only seller roles can manage products
+  if (user && !canManageProducts(user.role)) {
+    return null; // router redirect handled by DashboardLayout / middleware
+  }
 
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
