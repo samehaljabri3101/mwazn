@@ -3,7 +3,7 @@ import {
   UseGuards, UseInterceptors, UploadedFiles,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes, ApiProperty } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes, ApiProperty, ApiResponse } from '@nestjs/swagger';
 import { IsString } from 'class-validator';
 import { memoryStorage } from 'multer';
 import { RFQStatus } from '@prisma/client';
@@ -58,6 +58,9 @@ export class RFQsController {
   @Post()
   @RFQPosterOnly()
   @ApiOperation({ summary: 'Create RFQ (BUYER_ADMIN, CUSTOMER, or FREELANCER)' })
+  @ApiResponse({ status: 201, description: 'RFQ created successfully' })
+  @ApiResponse({ status: 401, description: 'Unauthenticated' })
+  @ApiResponse({ status: 403, description: 'Role not allowed — only BUYER_ADMIN, CUSTOMER, FREELANCER' })
   create(@Body() dto: CreateRFQDto, @CurrentUser('id') userId: string) {
     return this.rfqsService.create(dto, userId);
   }

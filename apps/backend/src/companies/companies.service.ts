@@ -2,16 +2,21 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { CompanyType, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { VerifyCompanyDto } from './dto/verify-company.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 
 @Injectable()
 export class CompaniesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async findAll(query: PaginationDto & { type?: CompanyType; status?: VerificationStatus; search?: string }) {
     // Coerce to numbers — intersection types bypass class-transformer
@@ -72,20 +77,36 @@ export class CompaniesService {
     return this.prisma.company.update({ where: { id }, data: dto });
   }
 
-  async verify(id: string, dto: VerifyCompanyDto) {
+  async verify(id: string, dto: VerifyCompanyDto, adminUserId: string) {
     const company = await this.prisma.company.findUnique({ where: { id } });
     if (!company) throw new NotFoundException('Company not found');
     if (company.type !== CompanyType.SUPPLIER) {
       throw new ForbiddenException('Only supplier companies require verification');
     }
+    if (company.verificationStatus !== VerificationStatus.PENDING) {
+      throw new BadRequestException(
+        `Cannot change verification status: company is already ${company.verificationStatus}. Only PENDING companies can be approved or rejected.`,
+      );
+    }
 
-    return this.prisma.company.update({
+    const updated = await this.prisma.company.update({
       where: { id },
       data: {
         verificationStatus: dto.status,
         ...(dto.adminNotes !== undefined && { adminNotes: dto.adminNotes }),
       },
     });
+
+    await this.audit.log({
+      action: dto.status === 'VERIFIED' ? 'COMPANY_VERIFIED' : 'COMPANY_REJECTED',
+      entity: 'Company',
+      entityId: id,
+      userId: adminUserId,
+      before: { verificationStatus: company.verificationStatus },
+      after: { verificationStatus: dto.status, reason: dto.reason, adminNotes: dto.adminNotes },
+    });
+
+    return updated;
   }
 
   async getPendingSuppliers() {

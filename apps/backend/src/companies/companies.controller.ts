@@ -7,7 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiResponse } from '@nestjs/swagger';
 import { CompanyType, Role, VerificationStatus } from '@prisma/client';
 import { CompaniesService } from './companies.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
@@ -68,7 +68,15 @@ export class CompaniesController {
   @Patch(':id/verify')
   @Roles(Role.PLATFORM_ADMIN)
   @ApiOperation({ summary: 'Verify or reject a supplier (admin only)' })
-  verify(@Param('id') id: string, @Body() dto: VerifyCompanyDto) {
-    return this.companiesService.verify(id, dto);
+  @ApiResponse({ status: 200, description: 'Verification status updated' })
+  @ApiResponse({ status: 400, description: 'Company is not in PENDING state' })
+  @ApiResponse({ status: 403, description: 'Admin role required' })
+  @ApiResponse({ status: 404, description: 'Company not found' })
+  verify(
+    @Param('id') id: string,
+    @Body() dto: VerifyCompanyDto,
+    @CurrentUser('id') adminUserId: string,
+  ) {
+    return this.companiesService.verify(id, dto, adminUserId);
   }
 }

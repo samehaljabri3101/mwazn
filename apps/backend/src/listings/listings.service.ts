@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ListingStatus, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import { SELLER_ROLES } from '../common/constants/platform.constants';
@@ -38,7 +39,10 @@ function generateSlug(title: string, id: string): string {
 
 @Injectable()
 export class ListingsService {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {
     if (!fs.existsSync(UPLOAD_DIR)) {
       fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     }
@@ -177,6 +181,14 @@ export class ListingsService {
     // Generate slug from English title
     const slug = generateSlug(dto.titleEn, listing.id);
     await this.prisma.listing.update({ where: { id: listing.id }, data: { slug } }).catch(() => {});
+
+    await this.audit.log({
+      action: 'LISTING_CREATED',
+      entity: 'Listing',
+      entityId: listing.id,
+      userId,
+      after: { actorRole: user.role, supplierId: user.companyId, titleEn: dto.titleEn, categoryId: dto.categoryId },
+    });
 
     return { ...listing, slug };
   }
@@ -507,6 +519,15 @@ export class ListingsService {
       }
     }
 
-    return { total, imported, failed: total - imported, errors };
+    const result = { total, imported, failed: total - imported, errors };
+
+    await this.audit.log({
+      action: 'BULK_IMPORT',
+      entity: 'Listing',
+      userId,
+      after: { actorRole: user.role, supplierId: user.companyId, total, imported, failed: result.failed },
+    });
+
+    return result;
   }
 }

@@ -8,6 +8,7 @@ import { RFQStatus, Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import { RFQ_POSTER_ROLES } from '../common/constants/platform.constants';
@@ -18,6 +19,7 @@ export class RFQsService {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string; adminOverride?: boolean }) {
@@ -84,7 +86,7 @@ export class RFQsService {
       throw new ForbiddenException('Only buyers and freelancers can create RFQs');
     }
 
-    return this.prisma.rFQ.create({
+    const rfq = await this.prisma.rFQ.create({
       data: {
         title: dto.title,
         description: dto.description,
@@ -110,6 +112,16 @@ export class RFQsService {
       },
       include: { category: true, buyer: { select: { id: true, nameAr: true, nameEn: true } } },
     });
+
+    await this.audit.log({
+      action: 'RFQ_CREATED',
+      entity: 'RFQ',
+      entityId: rfq.id,
+      userId: user.id,
+      after: { actorRole: user.role, companyId: user.companyId, title: rfq.title },
+    });
+
+    return rfq;
   }
 
   async update(id: string, dto: UpdateRFQDto, userId: string) {

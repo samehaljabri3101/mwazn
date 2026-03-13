@@ -8,6 +8,7 @@ import { QuoteStatus, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { AuditService } from '../audit/audit.service';
 import { CreateQuoteDto, UpdateQuoteDto } from './dto/quote.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import { SELLER_ROLES } from '../common/constants/platform.constants';
@@ -20,6 +21,7 @@ export class QuotesService {
     private readonly prisma: PrismaService,
     private readonly email: EmailService,
     private readonly notifications: NotificationsService,
+    private readonly audit: AuditService,
   ) {}
 
   async findByRFQ(rfqId: string, userId: string) {
@@ -120,6 +122,14 @@ export class QuotesService {
       });
     }
 
+    await this.audit.log({
+      action: 'QUOTE_CREATED',
+      entity: 'Quote',
+      entityId: quote.id,
+      userId: user.id,
+      after: { actorRole: user.role, supplierId: user.companyId, rfqId: dto.rfqId, price: dto.price },
+    });
+
     // Notify buyer (email + in-app)
     for (const buyerUser of rfq.buyer.users) {
       await this.email.sendQuoteReceived(buyerUser.email, rfq.title);
@@ -151,7 +161,17 @@ export class QuotesService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (user?.companyId !== quote.supplierId) throw new ForbiddenException();
 
-    return this.prisma.quote.update({ where: { id: quoteId }, data: { status: QuoteStatus.WITHDRAWN } });
+    const withdrawn = await this.prisma.quote.update({ where: { id: quoteId }, data: { status: QuoteStatus.WITHDRAWN } });
+
+    await this.audit.log({
+      action: 'QUOTE_WITHDRAWN',
+      entity: 'Quote',
+      entityId: quoteId,
+      userId,
+      after: { supplierId: quote.supplierId, rfqId: quote.rfqId },
+    });
+
+    return withdrawn;
   }
 
   private async changeStatus(quoteId: string, userId: string, status: QuoteStatus) {
@@ -199,6 +219,14 @@ export class QuotesService {
         );
       }
     }
+
+    await this.audit.log({
+      action: status === QuoteStatus.ACCEPTED ? 'QUOTE_ACCEPTED' : 'QUOTE_REJECTED',
+      entity: 'Quote',
+      entityId: quoteId,
+      userId,
+      after: { newStatus: status, rfqId: quote.rfqId, supplierId: quote.supplierId, price: quote.price },
+    });
 
     return updated;
   }

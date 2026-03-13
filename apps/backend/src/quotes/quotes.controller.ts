@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { QuotesService } from './quotes.service';
 import { CreateQuoteDto } from './dto/quote.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
@@ -31,6 +31,10 @@ export class QuotesController {
   @Post()
   @Roles(...SELLER_ROLES)
   @ApiOperation({ summary: 'Submit a quote (SUPPLIER_ADMIN or FREELANCER, verified, quota enforced)' })
+  @ApiResponse({ status: 201, description: 'Quote submitted successfully' })
+  @ApiResponse({ status: 400, description: 'RFQ not open, duplicate quote, or FREE quota exceeded' })
+  @ApiResponse({ status: 401, description: 'Unauthenticated' })
+  @ApiResponse({ status: 403, description: 'Role not allowed — only SUPPLIER_ADMIN, FREELANCER (verified)' })
   create(@Body() dto: CreateQuoteDto, @CurrentUser('id') userId: string) {
     return this.quotesService.create(dto, userId);
   }
