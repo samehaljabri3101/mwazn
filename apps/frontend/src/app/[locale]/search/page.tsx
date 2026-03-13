@@ -101,9 +101,13 @@ export default function SearchPage() {
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query, tab, trustTierFilter, minPriceFilter, maxPriceFilter]);
 
-  // For the 'all' tab, client-side filtering is applied on the global search results
-  // (which are already small: max 8 suppliers + 10 listings + 6 categories).
-  // For supplier/product tabs, filtering is now fully server-side.
+  // NOTE on filtering strategy:
+  // - 'suppliers' tab  → server-side via /suppliers/search?trustTier=... (applied after ranking, before slice)
+  // - 'products' tab   → server-side via /listings/search?minPrice=...&maxPrice=...&trustTier=...
+  // - 'all' tab        → global /search endpoint returns at most 8 suppliers + 10 listings + 6 categories.
+  //                      Client-side useMemo filtering is intentional here — the dataset is tiny and the
+  //                      global endpoint does not expose per-field filter params.
+  // - 'categories' tab → global /search?type=categories — no price/trust filters applicable.
   const filteredResults = useMemo(() => {
     if (!results) return results;
     if (tab !== 'all') return results; // server already filtered

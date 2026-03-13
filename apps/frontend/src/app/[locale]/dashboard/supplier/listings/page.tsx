@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { canManageProducts } from '@/lib/permissions';
 import {
   Package, Plus, Tag, DollarSign, Archive, Eye, EyeOff,
-  Camera, X, ExternalLink, Clock, Pencil, Upload, Flag, AlertTriangle,
+  Camera, X, ExternalLink, Clock, Pencil, Upload, Flag, AlertTriangle, CheckCircle2,
 } from 'lucide-react';
 
 const STATUS_COLORS: Record<string, 'green' | 'amber' | 'gray'> = {
@@ -39,6 +39,9 @@ export default function SupplierListingsPage() {
   const [appealModal, setAppealModal] = useState<{ listingId: string; type: 'LISTING' } | null>(null);
   const [appealReason, setAppealReason] = useState('');
   const [appealLoading, setAppealLoading] = useState(false);
+  const [appealError, setAppealError] = useState<string | null>(null);
+  // Track which listing IDs had a successful appeal submitted this session
+  const [appealed, setAppealed] = useState<Set<string>>(new Set());
 
   const fetchListings = async () => {
     setLoading(true);
@@ -99,15 +102,25 @@ export default function SupplierListingsPage() {
   const submitAppeal = async () => {
     if (!appealModal || !appealReason.trim()) return;
     setAppealLoading(true);
+    setAppealError(null);
     try {
       await api.post('/appeals', {
         targetType: 'LISTING',
         targetId: appealModal.listingId,
         reason: appealReason.trim(),
       });
+      // Mark this listing as appealed so the button is replaced with confirmation
+      setAppealed((prev) => { const next = new Set(prev); next.add(appealModal.listingId); return next; });
       setAppealModal(null);
       setAppealReason('');
-    } catch { /* silent */ }
+    } catch (err: any) {
+      const msg: string = err?.response?.data?.message ?? '';
+      if (msg.toLowerCase().includes('already open') || err?.response?.status === 400) {
+        setAppealError(ar ? 'يوجد اعتراض مفتوح بالفعل لهذا المنتج' : 'An appeal is already open for this listing');
+      } else {
+        setAppealError(ar ? 'حدث خطأ، حاول مرة أخرى' : 'Failed to submit appeal — please try again');
+      }
+    }
     setAppealLoading(false);
   };
 
@@ -200,22 +213,33 @@ export default function SupplierListingsPage() {
                         {ar ? listing.titleAr : listing.titleEn}
                       </h3>
                       <div className="flex flex-col items-end gap-1">
-                        <Badge variant={STATUS_COLORS[listing.status]}>
-                          {ar ? STATUS_LABELS[listing.status]?.ar : STATUS_LABELS[listing.status]?.en}
-                        </Badge>
-                        {listing.moderationStatus && listing.moderationStatus !== 'ACTIVE' && (
+                        {/* Show listing status badge ONLY when platform moderation is not overriding it */}
+                        {(!listing.moderationStatus || listing.moderationStatus === 'ACTIVE') ? (
+                          <Badge variant={STATUS_COLORS[listing.status]}>
+                            {ar ? STATUS_LABELS[listing.status]?.ar : STATUS_LABELS[listing.status]?.en}
+                          </Badge>
+                        ) : (
                           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${listing.moderationStatus === 'FLAGGED' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                             <AlertTriangle className="h-2.5 w-2.5" />
-                            {listing.moderationStatus}
+                            {listing.moderationStatus === 'FLAGGED' ? (ar ? 'موقوف' : 'Flagged') : (ar ? 'محذوف' : 'Removed')}
                           </span>
                         )}
                       </div>
                     </div>
-                    {listing.moderationReason && (
-                      <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
-                        <AlertTriangle className="h-3 w-3 shrink-0" />
-                        {listing.moderationReason}
-                      </p>
+                    {/* Prominent moderation warning block */}
+                    {listing.moderationStatus && listing.moderationStatus !== 'ACTIVE' && (
+                      <div className={`mt-1.5 rounded-lg px-3 py-2 ${listing.moderationStatus === 'FLAGGED' ? 'bg-amber-50 border border-amber-100' : 'bg-red-50 border border-red-100'}`}>
+                        <p className={`text-[10px] font-semibold mb-0.5 ${listing.moderationStatus === 'FLAGGED' ? 'text-amber-700' : 'text-red-700'}`}>
+                          {listing.moderationStatus === 'FLAGGED'
+                            ? (ar ? 'موقوف للمراجعة — غير مرئي للمشترين' : 'Flagged for review — hidden from buyers')
+                            : (ar ? 'محذوف من المنصة — غير مرئي للمشترين' : 'Removed from platform — hidden from buyers')}
+                        </p>
+                        {listing.moderationReason && (
+                          <p className={`text-[10px] ${listing.moderationStatus === 'FLAGGED' ? 'text-amber-600' : 'text-red-600'}`}>
+                            {ar ? 'السبب: ' : 'Reason: '}{listing.moderationReason}
+                          </p>
+                        )}
+                      </div>
                     )}
 
                     {listing.category && (
@@ -285,15 +309,22 @@ export default function SupplierListingsPage() {
                       {ar ? 'أرشفة' : 'Archive'}
                     </Button>
                     {listing.moderationStatus && listing.moderationStatus !== 'ACTIVE' && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon={<Flag className="h-3.5 w-3.5 text-amber-500" />}
-                        onClick={() => setAppealModal({ listingId: listing.id, type: 'LISTING' })}
-                        className="text-amber-600 hover:bg-amber-50"
-                      >
-                        {ar ? 'اعتراض' : 'Appeal'}
-                      </Button>
+                      appealed.has(listing.id) ? (
+                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium px-2">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {ar ? 'تم الاعتراض' : 'Appealed'}
+                        </span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          icon={<Flag className="h-3.5 w-3.5 text-amber-500" />}
+                          onClick={() => { setAppealError(null); setAppealModal({ listingId: listing.id, type: 'LISTING' }); }}
+                          className="text-amber-600 hover:bg-amber-50"
+                        >
+                          {ar ? 'اعتراض' : 'Appeal'}
+                        </Button>
+                      )
                     )}
                   </div>
                 </div>
@@ -329,25 +360,31 @@ export default function SupplierListingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-slate-900">{ar ? 'تقديم اعتراض' : 'Submit Appeal'}</h2>
-              <button onClick={() => { setAppealModal(null); setAppealReason(''); }} className="rounded-lg p-1 text-slate-400 hover:text-slate-700">
+              <h2 className="text-base font-bold text-slate-900">{ar ? 'تقديم اعتراض على قرار الإشراف' : 'Appeal Moderation Decision'}</h2>
+              <button onClick={() => { setAppealModal(null); setAppealReason(''); setAppealError(null); }} className="rounded-lg p-1 text-slate-400 hover:text-slate-700">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-sm text-slate-500 mb-3">
               {ar
-                ? 'اشرح سبب اعتراضك على قرار الإشراف على هذا المنتج.'
-                : 'Explain why you believe the moderation decision on this listing should be reconsidered.'}
+                ? 'اشرح سبب اعتراضك على قرار الإشراف على هذا المنتج. سيراجع الفريق اعتراضك ويرد عليه.'
+                : 'Explain why the moderation decision on this listing should be reconsidered. Our team will review and respond.'}
             </p>
             <textarea
               value={appealReason}
-              onChange={(e) => setAppealReason(e.target.value)}
+              onChange={(e) => { setAppealReason(e.target.value); setAppealError(null); }}
               rows={4}
               placeholder={ar ? 'سبب الاعتراض...' : 'Reason for appeal...'}
               className="input-base w-full resize-none"
             />
+            {appealError && (
+              <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {appealError}
+              </p>
+            )}
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => { setAppealModal(null); setAppealReason(''); }}>
+              <Button variant="secondary" onClick={() => { setAppealModal(null); setAppealReason(''); setAppealError(null); }}>
                 {ar ? 'إلغاء' : 'Cancel'}
               </Button>
               <Button

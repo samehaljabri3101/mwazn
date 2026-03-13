@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import type { RFQ, PaginatedResponse } from '@/types';
-import { FileText, Plus, Calendar, Tag, DollarSign, ChevronRight, Search, Flag, AlertTriangle, X } from 'lucide-react';
+import { FileText, Plus, Calendar, Tag, DollarSign, ChevronRight, Search, Flag, AlertTriangle, X, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 
 const STATUS_COLORS: Record<string, 'green' | 'blue' | 'amber' | 'red' | 'gray'> = {
@@ -39,6 +39,9 @@ export default function BuyerRFQsPage() {
   const [appealModal, setAppealModal] = useState<{ targetId: string; type: 'RFQ' } | null>(null);
   const [appealReason, setAppealReason] = useState('');
   const [appealLoading, setAppealLoading] = useState(false);
+  const [appealError, setAppealError] = useState<string | null>(null);
+  // Track which RFQ IDs had a successful appeal submitted this session
+  const [appealed, setAppealed] = useState<Set<string>>(new Set());
 
   const fetchRFQs = async () => {
     setLoading(true);
@@ -58,15 +61,25 @@ export default function BuyerRFQsPage() {
   const submitAppeal = async () => {
     if (!appealModal || !appealReason.trim()) return;
     setAppealLoading(true);
+    setAppealError(null);
     try {
       await api.post('/appeals', {
         targetType: 'RFQ',
         targetId: appealModal.targetId,
         reason: appealReason.trim(),
       });
+      // Mark this RFQ as appealed so the button is replaced with confirmation
+      setAppealed((prev) => { const next = new Set(prev); next.add(appealModal.targetId); return next; });
       setAppealModal(null);
       setAppealReason('');
-    } catch { /* silent */ }
+    } catch (err: any) {
+      const msg: string = err?.response?.data?.message ?? '';
+      if (msg.toLowerCase().includes('already open') || err?.response?.status === 400) {
+        setAppealError(ar ? 'يوجد اعتراض مفتوح بالفعل لهذا الطلب' : 'An appeal is already open for this RFQ');
+      } else {
+        setAppealError(ar ? 'حدث خطأ، حاول مرة أخرى' : 'Failed to submit appeal — please try again');
+      }
+    }
     setAppealLoading(false);
   };
 
@@ -192,13 +205,20 @@ export default function BuyerRFQsPage() {
                         <AlertTriangle className="h-3 w-3 shrink-0" />
                         {rfq.moderationReason ?? (ar ? 'تم تقييد هذا الطلب بواسطة الإشراف' : 'This RFQ has been restricted by moderation')}
                       </p>
-                      <button
-                        onClick={() => setAppealModal({ targetId: rfq.id, type: 'RFQ' })}
-                        className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
-                      >
-                        <Flag className="h-3.5 w-3.5" />
-                        {ar ? 'اعتراض' : 'Appeal'}
-                      </button>
+                      {appealed.has(rfq.id) ? (
+                        <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium px-2">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          {ar ? 'تم الاعتراض' : 'Appealed'}
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => { setAppealError(null); setAppealModal({ targetId: rfq.id, type: 'RFQ' }); }}
+                          className="flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 transition-colors"
+                        >
+                          <Flag className="h-3.5 w-3.5" />
+                          {ar ? 'اعتراض' : 'Appeal'}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -213,25 +233,31 @@ export default function BuyerRFQsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-base font-bold text-slate-900">{ar ? 'تقديم اعتراض' : 'Submit Appeal'}</h2>
-              <button onClick={() => { setAppealModal(null); setAppealReason(''); }} className="rounded-lg p-1 text-slate-400 hover:text-slate-700">
+              <h2 className="text-base font-bold text-slate-900">{ar ? 'تقديم اعتراض على قرار الإشراف' : 'Appeal Moderation Decision'}</h2>
+              <button onClick={() => { setAppealModal(null); setAppealReason(''); setAppealError(null); }} className="rounded-lg p-1 text-slate-400 hover:text-slate-700">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <p className="text-sm text-slate-500 mb-3">
               {ar
-                ? 'اشرح سبب اعتراضك على قرار الإشراف على هذا الطلب.'
-                : 'Explain why you believe the moderation decision on this RFQ should be reconsidered.'}
+                ? 'اشرح سبب اعتراضك على قرار الإشراف على هذا الطلب. سيراجع الفريق اعتراضك ويرد عليه.'
+                : 'Explain why the moderation decision on this RFQ should be reconsidered. Our team will review and respond.'}
             </p>
             <textarea
               value={appealReason}
-              onChange={(e) => setAppealReason(e.target.value)}
+              onChange={(e) => { setAppealReason(e.target.value); setAppealError(null); }}
               rows={4}
               placeholder={ar ? 'سبب الاعتراض...' : 'Reason for appeal...'}
               className="input-base w-full resize-none"
             />
+            {appealError && (
+              <p className="mt-2 text-xs text-red-600 flex items-center gap-1">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                {appealError}
+              </p>
+            )}
             <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={() => { setAppealModal(null); setAppealReason(''); }}>
+              <Button variant="secondary" onClick={() => { setAppealModal(null); setAppealReason(''); setAppealError(null); }}>
                 {ar ? 'إلغاء' : 'Cancel'}
               </Button>
               <Button
