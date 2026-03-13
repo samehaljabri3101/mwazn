@@ -14,8 +14,17 @@ import { Role } from '@prisma/client';
 /** Roles that can act as sellers: list products, respond to RFQs */
 export const SELLER_ROLES: Role[] = [Role.SUPPLIER_ADMIN, Role.FREELANCER];
 
-/** Roles that can act as buyers: post RFQs, receive quotes */
+/** Roles whose primary identity is as buyers (company.type === BUYER) */
 export const BUYER_ROLES: Role[] = [Role.BUYER_ADMIN, Role.CUSTOMER];
+
+/**
+ * Roles that can post RFQs.
+ * FREELANCER is a dual-role — they can both sell AND post RFQs.
+ * Use this constant when checking RFQ creation permission rather than BUYER_ROLES.
+ *
+ * Mirrors RFQ_POSTER_ROLES in packages/contracts/src/index.ts.
+ */
+export const RFQ_POSTER_ROLES: Role[] = [Role.BUYER_ADMIN, Role.CUSTOMER, Role.FREELANCER];
 
 /**
  * Roles with a company subscription plan (FREE/PRO).
