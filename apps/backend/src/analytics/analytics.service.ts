@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { DealStatus, ListingStatus, QuoteStatus, RFQStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScoringService } from '../scoring/scoring.service';
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly scoringService: ScoringService,
+  ) {}
 
   async getSupplierAnalytics(companyId: string) {
     const [
@@ -14,8 +18,10 @@ export class AnalyticsService {
       withdrawnQuotes,
       totalDeals,
       completedDeals,
+      cancelledDeals,
       activeListings,
       totalListings,
+      company,
     ] = await Promise.all([
       this.prisma.quote.count({ where: { supplierId: companyId } }),
       this.prisma.quote.count({ where: { supplierId: companyId, status: QuoteStatus.ACCEPTED } }),
@@ -23,12 +29,25 @@ export class AnalyticsService {
       this.prisma.quote.count({ where: { supplierId: companyId, status: QuoteStatus.WITHDRAWN } }),
       this.prisma.deal.count({ where: { supplierId: companyId } }),
       this.prisma.deal.count({ where: { supplierId: companyId, status: DealStatus.COMPLETED } }),
+      this.prisma.deal.count({ where: { supplierId: companyId, status: DealStatus.CANCELLED } }),
       this.prisma.listing.count({ where: { supplierId: companyId, status: ListingStatus.ACTIVE } }),
       this.prisma.listing.count({ where: { supplierId: companyId } }),
+      this.prisma.company.findUnique({
+        where: { id: companyId },
+        select: { verificationStatus: true, plan: true, supplierScore: true, avgRating: true },
+      }),
     ]);
 
     const pendingQuotes = totalQuotes - acceptedQuotes - rejectedQuotes - withdrawnQuotes;
     const winRate = totalQuotes > 0 ? Math.round((acceptedQuotes / totalQuotes) * 100) : 0;
+    const deliverySuccessRate = completedDeals + cancelledDeals > 0
+      ? Math.round((completedDeals / (completedDeals + cancelledDeals)) * 100)
+      : null;
+    const trustTier = company ? this.scoringService.getTrustTier({
+      verificationStatus: String(company.verificationStatus),
+      plan: String(company.plan),
+      supplierScore: company.supplierScore ? Number(company.supplierScore) : null,
+    }) : 'STANDARD';
 
     const completedDealsData = await this.prisma.deal.findMany({
       where: { supplierId: companyId, status: DealStatus.COMPLETED },
@@ -84,11 +103,15 @@ export class AnalyticsService {
         winRate,
         totalDeals,
         completedDeals,
+        cancelledDeals,
         activeListings,
         totalListings,
         totalRevenue,
         avgRating: avgRating ? Number(avgRating.toFixed(1)) : null,
         totalRatings: ratings.length,
+        deliverySuccessRate,
+        trustTier,
+        supplierScore: company?.supplierScore ? Number(company.supplierScore) : null,
       },
       topProducts,
       monthlyQuotes: monthlyData,

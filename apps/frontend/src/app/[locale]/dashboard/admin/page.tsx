@@ -519,6 +519,57 @@ export default function AdminDashboardPage() {
               </div>
             </div>
 
+            {/* ── Trust Distribution ───────────────────────────────────────── */}
+            <div>
+              <SectionHeader title={ar ? 'توزيع الثقة' : 'Trust Distribution'} />
+              <div className="card">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {[
+                    {
+                      label: ar ? 'مورد مميز' : 'Top Supplier',
+                      sublabel: ar ? 'موثق + PRO + نقاط ≥ 75' : 'Verified + PRO + score ≥ 75',
+                      color: 'bg-gradient-to-r from-amber-400 to-yellow-500',
+                      textColor: 'text-amber-900',
+                    },
+                    {
+                      label: ar ? 'موثوق' : 'Trusted',
+                      sublabel: ar ? 'موثق + نقاط ≥ 50' : 'Verified + score ≥ 50',
+                      color: 'bg-blue-500',
+                      textColor: 'text-white',
+                    },
+                    {
+                      label: ar ? 'موثَّق' : 'CR Verified',
+                      value: data.companies.verified,
+                      sublabel: ar ? 'موردون موثقون بالسجل التجاري' : 'CR-verified suppliers',
+                      color: 'bg-emerald-500',
+                      textColor: 'text-white',
+                    },
+                    {
+                      label: ar ? 'قياسي' : 'Standard',
+                      value: Math.max(0, data.companies.suppliers - data.companies.verified),
+                      sublabel: ar ? 'غير موثّق بعد' : 'Not yet verified',
+                      color: 'bg-slate-300',
+                      textColor: 'text-slate-700',
+                    },
+                  ].map((tier) => (
+                    <div key={tier.label} className="flex flex-col items-center text-center gap-2 p-3 rounded-xl bg-slate-50">
+                      <div className={`h-2 w-full rounded-full ${tier.color}`} />
+                      <p className="text-sm font-bold text-slate-800">{tier.label}</p>
+                      {tier.value !== undefined && (
+                        <p className="text-2xl font-bold text-slate-900 tabular-nums">{tier.value}</p>
+                      )}
+                      <p className="text-[10px] text-slate-400 leading-tight">{tier.sublabel}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[10px] text-slate-400 text-center">
+                  {ar
+                    ? 'الأوزان: 30 موثق + 20 PRO + 25 تقييم + 15 إنجاز + 10 منتجات = 100 نقطة'
+                    : 'Score weights: 30 verified + 20 PRO + 25 rating + 15 completion + 10 listings = 100 pts'}
+                </p>
+              </div>
+            </div>
+
             {/* ── Moderation ───────────────────────────────────────────────── */}
             <div>
               <SectionHeader title={ar ? 'الإشراف على المحتوى' : 'Content Moderation'} />

@@ -7,6 +7,7 @@ import {
 import { CompanyType, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { ScoringService } from '../scoring/scoring.service';
 import { UpdateCompanyDto } from './dto/update-company.dto';
 import { VerifyCompanyDto } from './dto/verify-company.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
@@ -16,6 +17,7 @@ export class CompaniesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly scoringService: ScoringService,
   ) {}
 
   async findAll(query: PaginationDto & { type?: CompanyType; status?: VerificationStatus; search?: string }) {
@@ -62,7 +64,12 @@ export class CompaniesService {
       },
     });
     if (!company) throw new NotFoundException('Company not found');
-    return company;
+    const trustTier = this.scoringService.getTrustTier({
+      verificationStatus: String(company.verificationStatus),
+      plan: String(company.plan),
+      supplierScore: company.supplierScore ? Number(company.supplierScore) : null,
+    });
+    return { ...company, trustTier };
   }
 
   async update(id: string, userId: string, dto: UpdateCompanyDto) {
@@ -149,6 +156,12 @@ export class CompaniesService {
           ) / 10
         : 0;
 
-    return { company: companyData, listings, averageRating, totalRatings };
+    const trustTier = this.scoringService.getTrustTier({
+      verificationStatus: String(company.verificationStatus),
+      plan: String(company.plan),
+      supplierScore: company.supplierScore ? Number(company.supplierScore) : null,
+    });
+
+    return { company: { ...companyData, trustTier }, listings, averageRating, totalRatings };
   }
 }

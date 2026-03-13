@@ -14,6 +14,7 @@ import {
   CheckCircle2, Building2, Tag, Clock, Award, Search, Share2,
 } from 'lucide-react';
 import { resolveListingImage } from '@/lib/categoryImages';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 
 interface ShowroomListing {
   id: string;
@@ -52,6 +53,7 @@ interface ShowroomData {
     plan: string;
     verificationStatus: string;
     isFreelancer?: boolean;
+    trustTier?: string;
     createdAt: string;
   };
   listings: ShowroomListing[];
@@ -196,6 +198,9 @@ export function SupplierShowroomClient() {
                   {ar ? 'سجل تجاري موثّق' : 'CR Verified'}
                 </span>
               ) : null}
+              {company.trustTier && company.trustTier !== 'VERIFIED' && (
+                <TrustBadge tier={company.trustTier} ar={ar} />
+              )}
             </div>
 
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/60 justify-center sm:justify-start">

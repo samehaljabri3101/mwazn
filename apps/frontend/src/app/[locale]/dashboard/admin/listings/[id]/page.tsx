@@ -67,6 +67,8 @@ export default function AdminListingDetailPage({ params }: { params: { id: strin
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removeReason, setRemoveReason] = useState('');
+  const [confirmFlag, setConfirmFlag] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
 
   const fetchListing = useCallback(async () => {
     setLoading(true);
@@ -91,6 +93,8 @@ export default function AdminListingDetailPage({ params }: { params: { id: strin
     setActionLoading(null);
     setConfirmRemove(false);
     setRemoveReason('');
+    setConfirmFlag(false);
+    setFlagReason('');
   };
 
   const fmtDate = (d?: string) =>
@@ -256,15 +260,36 @@ export default function AdminListingDetailPage({ params }: { params: { id: strin
                     {ar ? 'استعادة' : 'Restore'}
                   </button>
                 )}
-                {listing.moderationStatus === 'ACTIVE' && (
+                {listing.moderationStatus === 'ACTIVE' && !confirmFlag && (
                   <button
-                    onClick={() => doAction('flag')}
+                    onClick={() => setConfirmFlag(true)}
                     disabled={!!actionLoading}
                     className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
                   >
                     <Flag className="h-4 w-4" />
                     {ar ? 'تعليم للمراجعة' : 'Flag for Review'}
                   </button>
+                )}
+                {confirmFlag && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="text"
+                      value={flagReason}
+                      onChange={(e) => setFlagReason(e.target.value)}
+                      placeholder={ar ? 'سبب التعليم (اختياري)...' : 'Reason for flagging (optional)…'}
+                      className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    />
+                    <button
+                      onClick={() => doAction('flag', flagReason || undefined)}
+                      disabled={!!actionLoading}
+                      className="rounded-xl bg-amber-500 text-white px-3 py-2 text-sm font-medium hover:bg-amber-600 disabled:opacity-50"
+                    >
+                      {ar ? 'تأكيد التعليم' : 'Confirm Flag'}
+                    </button>
+                    <button onClick={() => setConfirmFlag(false)} className="text-sm text-slate-500 hover:text-slate-700">
+                      {ar ? 'إلغاء' : 'Cancel'}
+                    </button>
+                  </div>
                 )}
                 {listing.moderationStatus !== 'REMOVED' && !confirmRemove && (
                   <button

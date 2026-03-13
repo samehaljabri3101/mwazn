@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useLocale } from 'next-intl';
-import { Flag, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+import { Flag, RefreshCw, ExternalLink } from 'lucide-react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -13,6 +14,8 @@ interface MyAppeal {
   id: string;
   targetType: 'RFQ' | 'LISTING';
   targetId: string;
+  targetTitle?: string | null;
+  targetModerationReason?: string | null;
   appealStatus: AppealStatus;
   originalModerationStatus: string;
   reason: string;
@@ -97,6 +100,25 @@ export default function SupplierAppealsPage() {
                   </div>
 
                   <div className="space-y-2">
+                    {appeal.targetTitle && (
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-700">{appeal.targetTitle}</p>
+                          {appeal.targetModerationReason && (
+                            <p className="text-xs text-slate-500 mt-0.5">
+                              {ar ? 'سبب الإشراف: ' : 'Moderation reason: '}{appeal.targetModerationReason}
+                            </p>
+                          )}
+                        </div>
+                        <Link
+                          href={`/${locale}/dashboard/supplier/listings`}
+                          className="shrink-0 flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          {ar ? 'عرض' : 'View'}
+                        </Link>
+                      </div>
+                    )}
                     <div>
                       <p className="text-xs text-slate-500 mb-0.5">{ar ? 'سبب الاعتراض' : 'Appeal reason'}</p>
                       <p className="text-sm text-slate-700">{appeal.reason}</p>

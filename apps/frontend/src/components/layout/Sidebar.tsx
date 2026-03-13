@@ -16,6 +16,7 @@ import {
   Briefcase,
   Zap,
   BarChart2,
+  BarChart3,
   Upload,
   Shield,
   Flag,
@@ -53,10 +54,11 @@ export function Sidebar() {
     { href: `${base}/supplier/deals`,    label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/listings/import`, label: locale === 'ar' ? 'استيراد المنتجات' : 'Bulk Import', icon: <Upload className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/appeals`,  label: locale === 'ar' ? 'اعتراضاتي' : 'My Appeals', icon: <Flag className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/analytics`, label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart3 className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
 
     // Common
     { href: `${base}/messages`,      label: t('messages'),  icon: <MessageSquare className="h-4 w-4" /> },
-    { href: `${base}/analytics`,     label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart2 className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'SUPPLIER_ADMIN', 'FREELANCER', 'CUSTOMER'] },
+    { href: `${base}/analytics`,     label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart2 className="h-4 w-4" />, roles: ['BUYER_ADMIN', 'CUSTOMER'] },
 
     // Supplier subscription (SUPPLIER_ADMIN only — FREELANCER has different model)
     { href: `${base}/subscription`,  label: locale === 'ar' ? 'الاشتراك' : 'Subscription', icon: <Zap className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN'] },

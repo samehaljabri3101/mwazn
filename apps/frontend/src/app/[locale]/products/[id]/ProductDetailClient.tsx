@@ -16,6 +16,7 @@ import {
   Eye, ExternalLink, Building2,
 } from 'lucide-react';
 import { resolveListingImage } from '@/lib/categoryImages';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 
 export function ProductDetailClient() {
   const locale = useLocale();
@@ -333,11 +334,14 @@ export function ProductDetailClient() {
                     {listing.supplier.verificationStatus === 'VERIFIED' && (
                       <span className="flex items-center gap-0.5 text-xs text-green-600">
                         <CheckCircle2 className="h-3 w-3" />
-                        {ar ? 'موثق' : 'Verified'}
+                        {ar ? 'موثق' : 'CR Verified'}
                       </span>
                     )}
                     {listing.supplier.plan === 'PRO' && (
                       <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700">PRO</span>
+                    )}
+                    {listing.supplier.verificationStatus === 'VERIFIED' && listing.supplier.plan === 'PRO' && (
+                      <TrustBadge tier="TOP_SUPPLIER" size="sm" ar={ar} />
                     )}
                   </div>
                 </div>

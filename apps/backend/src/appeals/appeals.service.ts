@@ -87,7 +87,8 @@ export class AppealsService {
       }),
       this.prisma.moderationAppeal.count({ where }),
     ]);
-    return paginate(items, total, _page, _limit);
+    const enriched = await this.enrichWithTargetData(items);
+    return paginate(enriched, total, _page, _limit);
   }
 
   async findOne(id: string, userId: string) {
@@ -118,7 +119,39 @@ export class AppealsService {
       }),
       this.prisma.moderationAppeal.count({ where }),
     ]);
-    return paginate(items, total, _page, _limit);
+    const enriched = await this.enrichWithTargetData(items);
+    return paginate(enriched, total, _page, _limit);
+  }
+
+  private async enrichWithTargetData(items: any[]) {
+    const rfqIds = items.filter((a) => a.targetType === AppealTargetType.RFQ).map((a) => a.targetId as string);
+    const listingIds = items.filter((a) => a.targetType === AppealTargetType.LISTING).map((a) => a.targetId as string);
+
+    const [rfqs, listings] = await Promise.all([
+      rfqIds.length > 0
+        ? this.prisma.rFQ.findMany({ where: { id: { in: rfqIds } }, select: { id: true, title: true, moderationReason: true } })
+        : [] as Array<{ id: string; title: string; moderationReason: string | null }>,
+      listingIds.length > 0
+        ? this.prisma.listing.findMany({ where: { id: { in: listingIds } }, select: { id: true, titleEn: true, titleAr: true, moderationReason: true } })
+        : [] as Array<{ id: string; titleEn: string; titleAr: string; moderationReason: string | null }>,
+    ]);
+
+    const rfqMap: Record<string, { title: string; moderationReason: string | null }> = Object.fromEntries(
+      rfqs.map((r) => [r.id, { title: r.title, moderationReason: r.moderationReason }]),
+    );
+    const listingMap: Record<string, { titleEn: string; moderationReason: string | null }> = Object.fromEntries(
+      listings.map((l) => [l.id, { titleEn: l.titleEn, moderationReason: l.moderationReason }]),
+    );
+
+    return items.map((a) => {
+      if (a.targetType === AppealTargetType.RFQ) {
+        const rfq = rfqMap[a.targetId];
+        return { ...a, targetTitle: rfq?.title ?? null, targetModerationReason: rfq?.moderationReason ?? null };
+      } else {
+        const listing = listingMap[a.targetId];
+        return { ...a, targetTitle: listing?.titleEn ?? null, targetModerationReason: listing?.moderationReason ?? null };
+      }
+    });
   }
 
   async adminRespond(id: string, dto: AdminRespondAppealDto, adminUserId: string) {

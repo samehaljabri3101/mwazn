@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getLocale } from 'next-intl/server';
 import { Navbar } from '@/components/layout/Navbar';
 import { MapPin, Star, Package, Shield } from 'lucide-react';
+import { TrustBadge } from '@/components/ui/TrustBadge';
 
 export const metadata: Metadata = {
   title: 'Verified Suppliers | موردون موثقون — Mwazn',
@@ -31,9 +32,18 @@ interface SupplierItem {
   slug: string | null;
   logoUrl: string | null;
   verificationStatus: string;
+  supplierScore?: number | null;
   averageRating: number;
   totalRatings: number;
   _count: { listings: number; dealsAsSupplier: number };
+}
+
+function computeTrustTier(verificationStatus: string, plan: string, supplierScore?: number | null): string {
+  const score = supplierScore ?? 0;
+  if (verificationStatus === 'VERIFIED' && plan === 'PRO' && score >= 75) return 'TOP_SUPPLIER';
+  if (verificationStatus === 'VERIFIED' && score >= 50) return 'TRUSTED';
+  if (verificationStatus === 'VERIFIED') return 'VERIFIED';
+  return 'STANDARD';
 }
 
 interface SearchResult {
@@ -135,7 +145,7 @@ export default async function SuppliersPage() {
                         <span className="inline-flex items-center rounded-full bg-gold-400/20 px-1.5 py-0.5 text-[10px] font-bold text-gold-600">PRO</span>
                       )}
                     </div>
-                    <div className="flex items-center justify-center gap-2 mt-1">
+                    <div className="flex items-center justify-center gap-2 mt-1 flex-wrap">
                       <p className="text-xs text-slate-400 flex items-center gap-1">
                         <MapPin className="h-3 w-3" />
                         {sup.city ?? '—'}
@@ -147,6 +157,14 @@ export default async function SuppliersPage() {
                         </span>
                       )}
                     </div>
+                    {(() => {
+                      const tier = computeTrustTier(sup.verificationStatus, sup.plan, sup.supplierScore);
+                      return tier !== 'VERIFIED' && tier !== 'STANDARD' ? (
+                        <div className="mt-1.5 flex justify-center">
+                          <TrustBadge tier={tier} size="sm" ar={ar} />
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
 
                   {/* Stats */}

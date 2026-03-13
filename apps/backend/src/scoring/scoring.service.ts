@@ -112,6 +112,14 @@ export class ScoringService implements OnApplicationBootstrap {
     this.logger.log(`Supplier scores updated: ${updated} companies`);
   }
 
+  getTrustTier(company: { verificationStatus: string; plan: string; supplierScore?: number | null }): string {
+    const score = company.supplierScore ?? 0;
+    if (company.verificationStatus === 'VERIFIED' && company.plan === 'PRO' && score >= 75) return 'TOP_SUPPLIER';
+    if (company.verificationStatus === 'VERIFIED' && score >= 50) return 'TRUSTED';
+    if (company.verificationStatus === 'VERIFIED') return 'VERIFIED';
+    return 'STANDARD';
+  }
+
   async trackEvent(event: string, companyId?: string, userId?: string, entityId?: string, meta?: any) {
     await this.prisma.analyticsEvent.create({
       data: { event, companyId, userId, entityId, meta },

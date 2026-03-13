@@ -102,6 +102,8 @@ export interface Company {
   supplierScore?: number;    // 0-100 composite platform score
   avgRating?: number;        // 1-5 customer rating average
   scoreUpdatedAt?: string;
+  trustTier?: string;        // TOP_SUPPLIER | TRUSTED | VERIFIED | STANDARD
+  deliverySuccessRate?: number | null; // 0-100 percent
   createdAt: string;
 }
 

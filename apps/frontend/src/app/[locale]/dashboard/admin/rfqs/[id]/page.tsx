@@ -128,6 +128,8 @@ export default function AdminRFQDetailPage({ params }: { params: { id: string } 
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removeReason, setRemoveReason] = useState('');
+  const [confirmFlag, setConfirmFlag] = useState(false);
+  const [flagReason, setFlagReason] = useState('');
 
   const fetchRfq = useCallback(async () => {
     setLoading(true);
@@ -171,6 +173,8 @@ export default function AdminRFQDetailPage({ params }: { params: { id: string } 
     setActionLoading(null);
     setConfirmRemove(false);
     setRemoveReason('');
+    setConfirmFlag(false);
+    setFlagReason('');
   };
 
   const fmtDate = (d?: string | null) =>
@@ -299,15 +303,36 @@ export default function AdminRFQDetailPage({ params }: { params: { id: string } 
                     {ar ? 'استعادة' : 'Restore'}
                   </button>
                 )}
-                {(!rfq.moderationStatus || rfq.moderationStatus === 'ACTIVE') && (
+                {(!rfq.moderationStatus || rfq.moderationStatus === 'ACTIVE') && !confirmFlag && (
                   <button
-                    onClick={() => doModerationAction('flag')}
+                    onClick={() => setConfirmFlag(true)}
                     disabled={!!actionLoading}
                     className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
                   >
                     <Flag className="h-4 w-4" />
                     {ar ? 'تعليم للمراجعة' : 'Flag for Review'}
                   </button>
+                )}
+                {confirmFlag && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input
+                      type="text"
+                      value={flagReason}
+                      onChange={(e) => setFlagReason(e.target.value)}
+                      placeholder={ar ? 'سبب التعليم (اختياري)...' : 'Reason for flagging (optional)…'}
+                      className="text-sm border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-300"
+                    />
+                    <button
+                      onClick={() => doModerationAction('flag', flagReason || undefined)}
+                      disabled={!!actionLoading}
+                      className="rounded-xl bg-amber-500 text-white px-3 py-2 text-sm font-medium hover:bg-amber-600 disabled:opacity-50"
+                    >
+                      {ar ? 'تأكيد التعليم' : 'Confirm Flag'}
+                    </button>
+                    <button onClick={() => setConfirmFlag(false)} className="text-sm text-slate-500">
+                      {ar ? 'إلغاء' : 'Cancel'}
+                    </button>
+                  </div>
                 )}
                 {rfq.moderationStatus !== 'REMOVED' && !confirmRemove && (
                   <button
