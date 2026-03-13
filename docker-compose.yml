@@ -1,10 +1,26 @@
+# ============================================================
+# Mwazn — Docker Compose (Development / Demo)
+#
+# ⚠️  DEMO ENVIRONMENT ONLY
+# This file contains plaintext credentials intended for local
+# development and investor demo use ONLY.
+#
+# Before any production deployment you MUST:
+#   1. Replace POSTGRES_PASSWORD with a strong random value
+#   2. Replace JWT_ACCESS_SECRET / JWT_REFRESH_SECRET with output of:
+#        openssl rand -hex 32
+#   3. Replace all SEED_*_PASSWORD values
+#   4. Use Docker secrets, Vault, or environment injection —
+#      do NOT commit real credentials to version control.
+# ============================================================
+
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: mwazn
-      POSTGRES_PASSWORD: mwazn
+      POSTGRES_PASSWORD: mwazn   # ⚠️ demo-only — replace before production
       POSTGRES_DB: mwazn
     ports:
       - '5433:5432'
@@ -51,9 +67,9 @@ services:
       JWT_EXPIRES_IN: 15m
       JWT_REFRESH_EXPIRES_IN: 7d
       SEED_ADMIN_EMAIL: admin@mwazn.sa
-      SEED_ADMIN_PASSWORD: Admin@1234
-      SEED_SUP_PASSWORD: Supplier@1234
-      SEED_BUY_PASSWORD: Buyer@1234
+      SEED_ADMIN_PASSWORD: Admin@1234    # ⚠️ demo-only — replace before production
+      SEED_SUP_PASSWORD: Supplier@1234   # ⚠️ demo-only
+      SEED_BUY_PASSWORD: Buyer@1234      # ⚠️ demo-only
     depends_on:
       db:
         condition: service_healthy
