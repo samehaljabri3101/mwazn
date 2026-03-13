@@ -31,6 +31,7 @@ import { VerificationModule } from './verification/verification.module';
 import { ScoringModule } from './scoring/scoring.module';
 import { ModerationModule } from './moderation/moderation.module';
 import { AppealsModule } from './appeals/appeals.module';
+import { MatchingModule } from './matching/matching.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -70,6 +71,7 @@ import { AppealsModule } from './appeals/appeals.module';
     ScoringModule,
     ModerationModule,
     AppealsModule,
+    MatchingModule,
     AuthModule,
     UsersModule,
     CompaniesModule,

@@ -195,6 +195,13 @@ model Company {
   avgRating           Float?         // 1-5 customer rating average
   scoreUpdatedAt      DateTime?
 
+  // ── Commerce Integration ────────────────────────────────────────────────────
+  hasExternalStore      Boolean   @default(false)
+  externalStorePlatform String?   // "ZID" | "SALLA" | "OTHER"
+  externalStoreUrl      String?
+  externalStoreName     String?
+  allowDirectOrder      Boolean   @default(false)
+
   users              User[]
   listings           Listing[]
   rfqs               RFQ[]

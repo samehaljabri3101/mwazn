@@ -1,6 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -63,6 +64,14 @@ export class UpdateCompanyDto {
   @ApiPropertyOptional() @IsOptional() @IsString() isoUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() chamberCertUrl?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() taxCertUrl?: string;
+
+  // ── Commerce Integration ──────────────────────────────────────────────────
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() hasExternalStore?: boolean;
+  @ApiPropertyOptional({ enum: ['ZID', 'SALLA', 'OTHER'] })
+  @IsOptional() @IsString() externalStorePlatform?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() externalStoreUrl?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() externalStoreName?: string;
+  @ApiPropertyOptional() @IsOptional() @IsBoolean() allowDirectOrder?: boolean;
 
   // ── Admin-only ────────────────────────────────────────
   @ApiPropertyOptional({ description: 'Internal admin notes (admin only)' })

@@ -221,4 +221,64 @@ export class EmailService {
       text: `You are invited to quote on RFQ: ${rfqTitle}.`,
     });
   }
+
+  async sendModerationAction(
+    to: string,
+    targetTitle: string,
+    action: 'flagged' | 'removed',
+    reason?: string,
+  ): Promise<void> {
+    const isFlagged = action === 'flagged';
+    const reasonNote = reason ? ` Reason: ${reason}.` : '';
+    const reasonNoteAr = reason ? ` السبب: ${reason}.` : '';
+    await this.send({
+      to,
+      subject: isFlagged
+        ? `Content flagged for review — موازن`
+        : `Content removed — موازن`,
+      html: this.htmlWrap(
+        isFlagged ? 'Content Flagged for Review' : 'Content Removed',
+        isFlagged ? 'المحتوى قيد المراجعة' : 'تم إزالة المحتوى',
+        isFlagged
+          ? `Your content "<strong>${targetTitle}</strong>" has been flagged for review.${reasonNote} You can submit an appeal through your dashboard.`
+          : `Your content "<strong>${targetTitle}</strong>" has been removed from the platform.${reasonNote} You can submit an appeal if you believe this was an error.`,
+        isFlagged
+          ? `المحتوى الخاص بك "<strong>${targetTitle}</strong>" قيد المراجعة.${reasonNoteAr} يمكنك تقديم اعتراض من لوحة التحكم.`
+          : `تم إزالة المحتوى "<strong>${targetTitle}</strong>" من المنصة.${reasonNoteAr} يمكنك تقديم اعتراض إذا اعتقدت أن ذلك خطأ.`,
+      ),
+      text: isFlagged
+        ? `Your content "${targetTitle}" has been flagged for review.`
+        : `Your content "${targetTitle}" has been removed.`,
+    });
+  }
+
+  async sendAppealUpdate(
+    to: string,
+    targetTitle: string,
+    decision: 'ACCEPTED' | 'REJECTED',
+    adminResponse?: string,
+  ): Promise<void> {
+    const isAccepted = decision === 'ACCEPTED';
+    const noteEn = adminResponse ? ` Admin note: ${adminResponse}.` : '';
+    const noteAr = adminResponse ? ` ملاحظة الإدارة: ${adminResponse}.` : '';
+    await this.send({
+      to,
+      subject: isAccepted
+        ? `Appeal accepted — موازن`
+        : `Appeal decision — موازن`,
+      html: this.htmlWrap(
+        isAccepted ? 'Appeal Accepted' : 'Appeal Rejected',
+        isAccepted ? 'تم قبول اعتراضك' : 'تم رفض اعتراضك',
+        isAccepted
+          ? `Good news! Your appeal for "<strong>${targetTitle}</strong>" has been accepted. The content has been restored.${noteEn}`
+          : `Your appeal for "<strong>${targetTitle}</strong>" has been reviewed and was not accepted.${noteEn} Contact support if you need further assistance.`,
+        isAccepted
+          ? `بشرى سارة! تم قبول اعتراضك على "<strong>${targetTitle}</strong>". تمت استعادة المحتوى.${noteAr}`
+          : `تم مراجعة اعتراضك على "<strong>${targetTitle}</strong>" ولم يتم قبوله.${noteAr} تواصل مع الدعم إذا كنت بحاجة إلى مساعدة.`,
+      ),
+      text: isAccepted
+        ? `Your appeal for "${targetTitle}" was accepted.`
+        : `Your appeal for "${targetTitle}" was not accepted.`,
+    });
+  }
 }

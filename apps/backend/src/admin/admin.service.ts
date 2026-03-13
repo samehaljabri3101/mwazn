@@ -35,6 +35,7 @@ export class AdminService {
       proSuppliers,
       dealValueCompleted,
       dealValuePipeline,
+      zeroQuoteRfqs,
     ] = await Promise.all([
       this.prisma.company.count(),
       this.prisma.company.count({ where: { type: CompanyType.SUPPLIER, verificationStatus: VerificationStatus.VERIFIED } }),
@@ -53,6 +54,14 @@ export class AdminService {
       this.prisma.company.count({ where: { type: CompanyType.SUPPLIER, plan: SubscriptionPlan.PRO } }),
       this.prisma.deal.aggregate({ _sum: { totalAmount: true }, where: { status: DealStatus.COMPLETED } }),
       this.prisma.deal.aggregate({ _sum: { totalAmount: true }, where: { status: { in: [DealStatus.AWARDED, DealStatus.IN_PROGRESS, DealStatus.DELIVERED] } } }),
+      this.prisma.rFQ.count({
+        where: {
+          status: RFQStatus.OPEN,
+          moderationStatus: ModerationStatus.ACTIVE,
+          createdAt: { lte: new Date(Date.now() - 48 * 60 * 60 * 1000) },
+          quotes: { none: {} },
+        },
+      }),
     ]);
 
     const recentAuditLogs = await this.prisma.auditLog.findMany({
@@ -76,6 +85,7 @@ export class AdminService {
         estimatedMonthlyRevenue: proSuppliers * PRO_MONTHLY_PRICE_SAR,
         avgQuotesPerRFQ: totalRFQs > 0 ? Math.round((totalQuotes / totalRFQs) * 10) / 10 : 0,
       },
+      procurement: { zeroQuoteRfqs },
       recentActivity: recentAuditLogs,
     };
   }

@@ -54,6 +54,8 @@ export function Sidebar() {
     { href: `${base}/supplier/deals`,    label: t('deals'),     icon: <Briefcase className="h-4 w-4" />,  roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/listings/import`, label: locale === 'ar' ? 'استيراد المنتجات' : 'Bulk Import', icon: <Upload className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/appeals`,  label: locale === 'ar' ? 'اعتراضاتي' : 'My Appeals', icon: <Flag className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/opportunities`, label: locale === 'ar' ? 'الفرص' : 'Opportunities', icon: <Zap className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
+    { href: `${base}/supplier/profile`, label: locale === 'ar' ? 'ملف الشركة' : 'Profile', icon: <Package className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
     { href: `${base}/supplier/analytics`, label: locale === 'ar' ? 'التحليلات' : 'Analytics', icon: <BarChart3 className="h-4 w-4" />, roles: ['SUPPLIER_ADMIN', 'FREELANCER'] },
 
     // Common

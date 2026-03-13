@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { resolveListingImage } from '@/lib/categoryImages';
 import { TrustBadge } from '@/components/ui/TrustBadge';
+import { ExternalStoreBadge } from '@/components/ui/ExternalStoreBadge';
+import { OrderNowButton } from '@/components/ui/OrderNowButton';
 
 export function ProductDetailClient() {
   const locale = useLocale();
@@ -369,6 +371,18 @@ export function ProductDetailClient() {
                 {ar ? 'عرض صفحة المورد' : 'View Showroom'}
                 <ExternalLink className="h-3 w-3" />
               </Link>
+
+              {listing.supplier.hasExternalStore && listing.supplier.externalStoreUrl && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <ExternalStoreBadge
+                    platform={listing.supplier.externalStorePlatform}
+                    storeName={listing.supplier.externalStoreName}
+                  />
+                  {listing.supplier.allowDirectOrder && (
+                    <OrderNowButton storeUrl={listing.supplier.externalStoreUrl} ar={ar} />
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

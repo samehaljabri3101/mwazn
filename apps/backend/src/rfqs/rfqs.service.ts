@@ -10,6 +10,7 @@ import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuditService } from '../audit/audit.service';
 import { ModerationService } from '../moderation/moderation.service';
+import { MatchingService } from '../matching/matching.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
 import { RFQ_POSTER_ROLES } from '../common/constants/platform.constants';
@@ -22,6 +23,7 @@ export class RFQsService {
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
     private readonly moderation: ModerationService,
+    private readonly matching: MatchingService,
   ) {}
 
   async findAll(query: PaginationDto & { categoryId?: string; status?: RFQStatus; buyerId?: string; search?: string; adminOverride?: boolean; moderationStatus?: string }) {
@@ -166,6 +168,29 @@ export class RFQsService {
         ...(moderationStatus === ModerationStatus.FLAGGED && { reasonCode: modResult.reasonCode }),
       },
     });
+
+    // Auto-notify matching suppliers (fire-and-forget, only for ACTIVE RFQs)
+    if (moderationStatus === ModerationStatus.ACTIVE) {
+      this.matching.matchSuppliersForRFQ(rfq.id, 10).then(async (matches) => {
+        for (const supplier of matches) {
+          const admins = await this.prisma.user.findMany({
+            where: { companyId: supplier.id, role: { in: ['SUPPLIER_ADMIN', 'FREELANCER'] } },
+            select: { id: true },
+          });
+          for (const admin of admins) {
+            await this.notifications.create(
+              admin.id,
+              'RFQ_MATCH',
+              `فرصة جديدة: ${rfq.title}`,
+              `New RFQ Match: ${rfq.title}`,
+              'تم نشر طلب عرض أسعار جديد يتطابق مع منتجاتك',
+              'A new RFQ matching your products has been posted',
+              '/dashboard/supplier/opportunities',
+            );
+          }
+        }
+      }).catch(() => { /* silent — notifications are best-effort */ });
+    }
 
     return rfq;
   }

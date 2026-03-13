@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { resolveListingImage } from '@/lib/categoryImages';
 import { TrustBadge } from '@/components/ui/TrustBadge';
+import { ExternalStoreBadge } from '@/components/ui/ExternalStoreBadge';
+import { OrderNowButton } from '@/components/ui/OrderNowButton';
 
 interface ShowroomListing {
   id: string;
@@ -54,6 +56,11 @@ interface ShowroomData {
     verificationStatus: string;
     isFreelancer?: boolean;
     trustTier?: string;
+    hasExternalStore?: boolean;
+    externalStorePlatform?: string | null;
+    externalStoreUrl?: string | null;
+    externalStoreName?: string | null;
+    allowDirectOrder?: boolean;
     createdAt: string;
   };
   listings: ShowroomListing[];
@@ -202,6 +209,18 @@ export function SupplierShowroomClient() {
                 <TrustBadge tier={company.trustTier} ar={ar} />
               )}
             </div>
+
+            {company.hasExternalStore && (
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <ExternalStoreBadge
+                  platform={company.externalStorePlatform}
+                  storeName={company.externalStoreName}
+                />
+                {company.allowDirectOrder && company.externalStoreUrl && (
+                  <OrderNowButton storeUrl={company.externalStoreUrl} ar={ar} />
+                )}
+              </div>
+            )}
 
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/60 justify-center sm:justify-start">
               {company.city && (

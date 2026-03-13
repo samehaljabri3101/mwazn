@@ -32,6 +32,7 @@ interface DashboardData {
     estimatedMonthlyRevenue: number;
     avgQuotesPerRFQ: number;
   };
+  procurement?: { zeroQuoteRfqs: number };
   recentActivity: Array<{
     id: string; action: string; entity: string; entityId?: string;
     createdAt: string;
@@ -641,6 +642,18 @@ export default function AdminDashboardPage() {
                     color="teal"
                   />
                 </div>
+
+                {/* Zero-quote RFQs alert */}
+                {(data.procurement?.zeroQuoteRfqs ?? 0) > 0 && (
+                  <div className="mt-4 flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-100 px-4 py-3">
+                    <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0" />
+                    <p className="text-sm text-rose-700">
+                      {ar
+                        ? `${data.procurement!.zeroQuoteRfqs} طلب عروض أسعار مفتوح لم يتلقَ أي عرض منذ أكثر من 48 ساعة`
+                        : `${data.procurement!.zeroQuoteRfqs} open RFQ${data.procurement!.zeroQuoteRfqs !== 1 ? 's' : ''} with no quotes for 48h+`}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

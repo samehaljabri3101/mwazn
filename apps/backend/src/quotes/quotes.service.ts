@@ -31,14 +31,44 @@ export class QuotesService {
     // Suppliers only see their own quotes
     if (user?.company.type === 'SUPPLIER') where.supplierId = user.companyId;
 
-    return this.prisma.quote.findMany({
+    const quotes = await this.prisma.quote.findMany({
       where,
       include: {
-        supplier: { select: { id: true, nameAr: true, nameEn: true, logoUrl: true, city: true, plan: true } },
+        supplier: { select: { id: true, nameAr: true, nameEn: true, logoUrl: true, city: true, plan: true, supplierScore: true } },
         attachments: true,
       },
       orderBy: { price: 'asc' },
     });
+
+    // Add rank labels: BEST_PRICE, TOP_RATED, FASTEST
+    const withLabels: Array<typeof quotes[number] & { rankLabels: string[] }> = quotes.map((q) => ({
+      ...q,
+      rankLabels: [] as string[],
+    }));
+
+    const prices = withLabels.map((q) => Number(q.price)).filter((p) => p > 0);
+    if (prices.length > 0) {
+      const minPrice = Math.min(...prices);
+      withLabels.forEach((q) => { if (Number(q.price) === minPrice) q.rankLabels.push('BEST_PRICE'); });
+    }
+
+    const scores = withLabels.map((q) => (q.supplier as any)?.supplierScore ?? 0);
+    if (scores.length > 0) {
+      const maxScore = Math.max(...scores);
+      withLabels.forEach((q) => {
+        if (((q.supplier as any)?.supplierScore ?? 0) === maxScore && maxScore > 0) {
+          q.rankLabels.push('TOP_RATED');
+        }
+      });
+    }
+
+    const deliveries = withLabels.map((q) => q.deliveryDays ?? 999);
+    const minDel = Math.min(...deliveries);
+    if (minDel < 999) {
+      withLabels.forEach((q) => { if ((q.deliveryDays ?? 999) === minDel) q.rankLabels.push('FASTEST'); });
+    }
+
+    return withLabels;
   }
 
   async findMyQuotes(userId: string, query: PaginationDto) {

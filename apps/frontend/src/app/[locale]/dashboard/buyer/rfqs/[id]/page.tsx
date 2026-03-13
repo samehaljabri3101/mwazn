@@ -10,12 +10,12 @@ import api from '@/lib/api';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
-import type { RFQ, Quote, RfqImage } from '@/types';
+import type { RFQ, Quote, RfqImage, RFQInsights } from '@/types';
 import {
   ChevronLeft, Calendar, Tag, DollarSign, Package,
   CheckCircle2, XCircle, Clock, Star, MessageSquare,
   AlertTriangle, ImageIcon, UserPlus, ChevronDown, ChevronUp,
-  ShieldCheck, Truck, CreditCard, Wrench,
+  ShieldCheck, Truck, CreditCard, Wrench, Users, TrendingUp,
 } from 'lucide-react';
 import { InviteSupplierModal } from '@/components/rfq/InviteSupplierModal';
 import { format } from 'date-fns';
@@ -43,6 +43,8 @@ export default function RFQDetailPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [dealByQuoteId, setDealByQuoteId] = useState<Record<string, string>>({});
   const [expandedBoq, setExpandedBoq] = useState<string | null>(null);
+  const [insights, setInsights] = useState<RFQInsights | null>(null);
+  const [matchedSuppliers, setMatchedSuppliers] = useState<any[]>([]);
   const searchParams = useSearchParams();
   const justPosted = searchParams?.get('posted') === '1';
 
@@ -52,6 +54,14 @@ export default function RFQDetailPage() {
         api.get(`/rfqs/${id}`),
         api.get(`/quotes/rfq/${id}`),
       ]);
+      // Fetch insights + matching suppliers in parallel (best-effort)
+      Promise.all([
+        api.get(`/matching/rfq/${id}/insights`).catch(() => null),
+        api.get(`/matching/rfq/${id}/suppliers`).catch(() => null),
+      ]).then(([insightsRes, suppliersRes]) => {
+        if (insightsRes?.data?.data) setInsights(insightsRes.data.data);
+        if (suppliersRes?.data) setMatchedSuppliers((suppliersRes.data.data || suppliersRes.data || []).slice(0, 5));
+      });
       const rfqData = rfqRes.data.data;
       setRfq(rfqData);
       setRfqImages(rfqData?.images ?? []);
@@ -314,6 +324,80 @@ export default function RFQDetailPage() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={activeImg} alt="" className="max-h-[90vh] max-w-full rounded-2xl object-contain shadow-2xl" />
+          </div>
+        )}
+
+        {/* Smart Insights */}
+        {insights && (
+          <div className="card bg-gradient-to-r from-brand-50 to-blue-50 border-brand-100">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="h-4 w-4 text-brand-600" />
+              <h2 className="font-semibold text-brand-800 text-sm">
+                {ar ? 'رؤى ذكية' : 'Smart Insights'}
+              </h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="rounded-xl bg-white/70 px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-brand-700">{insights.matchingSupplierCount}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{ar ? 'مورد متطابق' : 'Matching Suppliers'}</p>
+              </div>
+              <div className="rounded-xl bg-white/70 px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-brand-700">{insights.receivedQuotes}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{ar ? 'عروض مقدمة' : 'Quotes Received'}</p>
+              </div>
+              {insights.minQuotePrice !== null && (
+                <div className="rounded-xl bg-white/70 px-4 py-3 text-center">
+                  <p className="text-2xl font-bold text-green-700">{insights.minQuotePrice?.toLocaleString()}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{ar ? 'أدنى سعر (ريال)' : 'Min Quote (SAR)'}</p>
+                </div>
+              )}
+              {insights.avgQuotePrice !== null && (
+                <div className="rounded-xl bg-white/70 px-4 py-3 text-center">
+                  <p className="text-2xl font-bold text-slate-700">{insights.avgQuotePrice?.toLocaleString()}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{ar ? 'متوسط السعر (ريال)' : 'Avg Quote (SAR)'}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Recommended Suppliers */}
+        {matchedSuppliers.length > 0 && rfq.status === 'OPEN' && (
+          <div className="card">
+            <div className="flex items-center gap-2 mb-3">
+              <Users className="h-4 w-4 text-slate-500" />
+              <h2 className="font-semibold text-slate-800 text-sm">
+                {ar ? 'موردون موصى بهم' : 'Recommended Suppliers'}
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {matchedSuppliers.map((s: any) => (
+                <div key={s.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-brand-700 font-bold text-sm">
+                      {(ar ? s.nameAr : s.nameEn).charAt(0)}
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-800 text-xs">{ar ? s.nameAr : s.nameEn}</p>
+                      {s.city && <p className="text-xs text-slate-400">{s.city}</p>}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {s.matchScore !== undefined && (
+                      <span className="text-xs text-slate-500">
+                        {ar ? `تطابق ${s.matchScore}%` : `${s.matchScore}% match`}
+                      </span>
+                    )}
+                    <button
+                      onClick={(e) => { e.preventDefault(); setShowInviteModal(true); }}
+                      className="rounded-lg border border-brand-200 bg-white px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-50 transition-all"
+                    >
+                      {ar ? 'دعوة' : 'Invite'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

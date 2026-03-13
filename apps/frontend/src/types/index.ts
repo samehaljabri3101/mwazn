@@ -104,7 +104,21 @@ export interface Company {
   scoreUpdatedAt?: string;
   trustTier?: string;        // TOP_SUPPLIER | TRUSTED | VERIFIED | STANDARD
   deliverySuccessRate?: number | null; // 0-100 percent
+  // Commerce Integration
+  hasExternalStore?: boolean;
+  externalStorePlatform?: string | null;
+  externalStoreUrl?: string | null;
+  externalStoreName?: string | null;
+  allowDirectOrder?: boolean;
   createdAt: string;
+}
+
+export interface RFQInsights {
+  matchingSupplierCount: number;
+  receivedQuotes: number;
+  avgQuotePrice: number | null;
+  minQuotePrice: number | null;
+  maxQuotePrice: number | null;
 }
 
 export interface Category {
@@ -162,6 +176,12 @@ export interface Listing {
     website?: string;
     descriptionEn?: string;
     descriptionAr?: string;
+    supplierScore?: number;
+    hasExternalStore?: boolean;
+    externalStorePlatform?: string | null;
+    externalStoreUrl?: string | null;
+    externalStoreName?: string | null;
+    allowDirectOrder?: boolean;
     _count?: { ratingsReceived: number; listings: number };
   };
   _count?: { quotes: number };
