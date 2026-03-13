@@ -28,9 +28,13 @@ export function canAccessVerificationControls(role?: Role | null): boolean {
 
 // ─── RFQ / Buying ─────────────────────────────────────────────────────────────
 
-/** Can post a new RFQ (buyer roles: BUYER_ADMIN and CUSTOMER) */
+/**
+ * Can post a new RFQ.
+ * BUYER_ADMIN and CUSTOMER are pure buyer roles.
+ * FREELANCER is a dual-role and can also post RFQs (mirrors RFQ_POSTER_ROLES in contracts).
+ */
 export function canPostRFQ(role?: Role | null): boolean {
-  return role === 'BUYER_ADMIN' || role === 'CUSTOMER';
+  return role === 'BUYER_ADMIN' || role === 'CUSTOMER' || role === 'FREELANCER';
 }
 
 /** Can view buyer-side analytics (procurement performance, requests, spend) */

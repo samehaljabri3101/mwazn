@@ -8,6 +8,7 @@ import { ListingStatus, Role, VerificationStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
+import { SELLER_ROLES } from '../common/constants/platform.constants';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as XLSX from 'xlsx';
@@ -148,7 +149,7 @@ export class ListingsService {
       include: { company: true },
     });
     if (!user) throw new ForbiddenException();
-    if (user.company.type !== 'SUPPLIER') throw new ForbiddenException('Only suppliers can create listings');
+    if (!SELLER_ROLES.includes(user.role)) throw new ForbiddenException('Only suppliers can create listings');
     if (user.company.verificationStatus !== VerificationStatus.VERIFIED) {
       throw new BadRequestException('Your company must be verified to create listings');
     }
@@ -360,10 +361,7 @@ export class ListingsService {
   ): Promise<{ total: number; imported: number; failed: number; errors: Array<{ row: number; field: string; message: string }> }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { company: true } });
     if (!user) throw new ForbiddenException();
-    if (
-      user.company.type !== 'SUPPLIER' ||
-      user.company.verificationStatus !== VerificationStatus.VERIFIED
-    ) {
+    if (!SELLER_ROLES.includes(user.role) || user.company.verificationStatus !== VerificationStatus.VERIFIED) {
       throw new ForbiddenException('Only verified suppliers and freelancers can import products');
     }
 

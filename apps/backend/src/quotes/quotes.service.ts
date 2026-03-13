@@ -10,6 +10,7 @@ import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateQuoteDto, UpdateQuoteDto } from './dto/quote.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
+import { SELLER_ROLES } from '../common/constants/platform.constants';
 
 const FREE_QUOTA = 10;
 
@@ -59,7 +60,7 @@ export class QuotesService {
 
   async create(dto: CreateQuoteDto, userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { company: true } });
-    if (!user || user.company.type !== 'SUPPLIER') {
+    if (!user || !SELLER_ROLES.includes(user.role)) {
       throw new ForbiddenException('Only suppliers can submit quotes');
     }
     if (user.company.verificationStatus !== VerificationStatus.VERIFIED) {

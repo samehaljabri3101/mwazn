@@ -10,6 +10,7 @@ import { EmailService } from '../email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateRFQDto, UpdateRFQDto } from './dto/rfq.dto';
 import { PaginationDto, paginate } from '../common/dto/pagination.dto';
+import { RFQ_POSTER_ROLES } from '../common/constants/platform.constants';
 
 @Injectable()
 export class RFQsService {
@@ -79,7 +80,7 @@ export class RFQsService {
 
   async create(dto: CreateRFQDto, userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { company: true } });
-    if (!user || (user.company.type !== 'BUYER' && user.role !== Role.FREELANCER)) {
+    if (!user || !RFQ_POSTER_ROLES.includes(user.role)) {
       throw new ForbiddenException('Only buyers and freelancers can create RFQs');
     }
 
