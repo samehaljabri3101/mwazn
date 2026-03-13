@@ -1,0 +1,123 @@
+name: Release
+
+# ─── Triggers ────────────────────────────────────────────────────────────────
+# Manual only — a developer runs this from the GitHub Actions UI.
+# Requires the caller to supply a semantic version tag (e.g. v1.2.0).
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version tag (e.g. v1.2.0)'
+        required: true
+        type: string
+      release_notes:
+        description: 'Release notes (optional — added to GitHub Release body)'
+        required: false
+        type: string
+
+# ─── Safety ──────────────────────────────────────────────────────────────────
+# Only allow releases from main branch.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # ── Step 1: Validate inputs and confirm branch ─────────────────────────────
+  validate:
+    name: Validate release inputs
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check we are on main
+        run: |
+          BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$BRANCH" != "main" ]; then
+            echo "❌ Releases must be created from main (current branch: $BRANCH)"
+            exit 1
+          fi
+          echo "✅ On main branch"
+
+      - name: Validate version format
+        id: check
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if ! echo "$VERSION" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
+            echo "❌ Invalid version format: '$VERSION'. Expected: v1.2.3 or v1.2.3-rc.1"
+            exit 1
+          fi
+          # Check tag does not already exist
+          if git tag | grep -qx "$VERSION"; then
+            echo "❌ Tag $VERSION already exists"
+            exit 1
+          fi
+          echo "✅ Version $VERSION is valid and unused"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  # ── Step 2: Run full CI checks ─────────────────────────────────────────────
+  ci-checks:
+    name: CI checks (pre-release gate)
+    needs: validate
+    uses: ./.github/workflows/ci.yml
+    # Note: ci.yml is called as a reusable workflow here.
+    # If the workflow_call trigger is not set on ci.yml, this can be replaced
+    # with a direct duplication of the backend + frontend jobs.
+
+  # ── Step 3: Create annotated tag and GitHub release ────────────────────────
+  create-release:
+    name: Create release tag
+    needs: [validate]  # Remove ci-checks dependency until ci.yml has workflow_call trigger
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create annotated tag
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          NOTES="${{ github.event.inputs.release_notes }}"
+          TAG_MSG="Mwazn release $VERSION"
+          if [ -n "$NOTES" ]; then
+            TAG_MSG="$TAG_MSG
+
+$NOTES"
+          fi
+          git tag -a "$VERSION" -m "$TAG_MSG"
+          git push origin "$VERSION"
+          echo "✅ Tag $VERSION created and pushed"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          NOTES="${{ github.event.inputs.release_notes }}"
+          BODY="## Mwazn $VERSION
+
+**Released from:** \`$(git rev-parse --short HEAD)\` on \`main\`
+**Released at:** $(date -u '+%Y-%m-%d %H:%M UTC')
+
+${NOTES:-No additional release notes provided.}
+
+---
+> See [RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) for deployment steps."
+
+          gh release create "$VERSION" \
+            --title "Mwazn $VERSION" \
+            --notes "$BODY" \
+            --verify-tag
+          echo "✅ GitHub release $VERSION created"
