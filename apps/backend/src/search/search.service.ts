@@ -3,6 +3,23 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
 
+// ── Trust tier helpers ────────────────────────────────────────────────────────
+
+const TRUST_BOOST: Record<string, number> = {
+  TOP_SUPPLIER: 25,
+  TRUSTED: 15,
+  VERIFIED: 8,
+  STANDARD: 0,
+};
+
+function getTrustTier(company: { verificationStatus?: string; plan?: string; supplierScore?: number | null }): string {
+  const score = company.supplierScore ?? 0;
+  if (company.verificationStatus === 'VERIFIED' && company.plan === 'PRO' && score >= 75) return 'TOP_SUPPLIER';
+  if (company.verificationStatus === 'VERIFIED' && score >= 50) return 'TRUSTED';
+  if (company.verificationStatus === 'VERIFIED') return 'VERIFIED';
+  return 'STANDARD';
+}
+
 interface SearchFilters {
   q?: string;
   type?: string;
@@ -11,6 +28,9 @@ interface SearchFilters {
   verified?: boolean;
   pro?: boolean;
   minRating?: number;
+  minPrice?: number;
+  maxPrice?: number;
+  trustTier?: string;
   page?: number;
   limit?: number;
 }
@@ -22,6 +42,127 @@ export class SearchService {
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
+  // ── Ranking helpers ──────────────────────────────────────────────────────────
+
+  private computeListingRankScore(listing: any): number {
+    const tier = getTrustTier(listing.supplier ?? {});
+    const trustBoostPts = TRUST_BOOST[tier] ?? 0;                                    // 0–25
+    const trustScorePts = Math.round((listing.supplier?.supplierScore ?? 0) / 5);    // 0–20
+    const ratingPts = Math.round(((listing.supplier?.avgRating ?? 0) / 5) * 15);     // 0–15
+    const responsePts = Math.min((listing._count?.quotes ?? 0) * 2, 10);             // 0–10
+    const activityPts = Math.min(Math.round((listing.viewCount ?? 0) / 50), 10);     // 0–10
+    const recencyDays = (Date.now() - new Date(listing.createdAt).getTime()) / 86_400_000;
+    const recencyPts = Math.max(0, 5 - Math.floor(recencyDays / 30));                // 0–5
+    return trustBoostPts + trustScorePts + ratingPts + responsePts + activityPts + recencyPts;
+  }
+
+  private computeSupplierRankScore(supplier: any): number {
+    const tier = getTrustTier(supplier);
+    const trustBoostPts = TRUST_BOOST[tier] ?? 0;                                              // 0–25
+    const trustScorePts = Math.round((supplier.supplierScore ?? 0) / 5);                       // 0–20
+    const ratingPts = Math.round(((supplier.avgRating ?? supplier.averageRating ?? 0) / 5) * 15); // 0–15
+    const dealPts = Math.min((supplier._count?.dealsAsSupplier ?? 0) * 3, 15);                 // 0–15
+    const quotePts = Math.min((supplier._count?.quotesSubmitted ?? 0), 15);                    // 0–15
+    const rfqPts = Math.min((supplier._count?.quotesSubmitted ?? 0) * 2, 10);                  // 0–10
+    return trustBoostPts + trustScorePts + ratingPts + dealPts + quotePts + rfqPts;
+  }
+
+  // ── Observability ────────────────────────────────────────────────────────────
+
+  private trackSearch(term: string, type: string, resultCount: number): void {
+    this.prisma.analyticsEvent.create({
+      data: { event: 'SEARCH', meta: { term, type, resultCount, zeroResults: resultCount === 0 } },
+    }).catch(() => {});
+  }
+
+  // ── Typeahead suggestions ────────────────────────────────────────────────────
+
+  async getSuggestions(q: string): Promise<any> {
+    const term = q?.trim() ?? '';
+    if (term.length < 2) return { products: [], suppliers: [], categories: [] };
+
+    const cacheKey = `suggest:${term}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    const [products, suppliers, categories] = await Promise.all([
+      this.prisma.listing.findMany({
+        where: {
+          status: 'ACTIVE', moderationStatus: 'ACTIVE',
+          OR: [
+            { titleEn: { contains: term, mode: 'insensitive' } },
+            { titleAr: { contains: term } },
+          ],
+        },
+        select: { id: true, titleEn: true, titleAr: true, slug: true },
+        orderBy: { viewCount: 'desc' },
+        take: 5,
+      }),
+      this.prisma.company.findMany({
+        where: {
+          type: 'SUPPLIER', isActive: true, verificationStatus: 'VERIFIED',
+          OR: [
+            { nameEn: { contains: term, mode: 'insensitive' } },
+            { nameAr: { contains: term } },
+          ],
+        },
+        select: { id: true, nameEn: true, nameAr: true, slug: true, supplierScore: true },
+        orderBy: { supplierScore: 'desc' },
+        take: 4,
+      }),
+      this.prisma.category.findMany({
+        where: {
+          isActive: true,
+          OR: [
+            { nameEn: { contains: term, mode: 'insensitive' } },
+            { nameAr: { contains: term } },
+          ],
+        },
+        select: { id: true, nameEn: true, nameAr: true, slug: true },
+        take: 4,
+      }),
+    ]);
+
+    const result = { products, suppliers, categories };
+    await this.cache.set(cacheKey, result, 15_000); // 15s for typeahead freshness
+    return result;
+  }
+
+  // ── Search analytics (admin observability) ───────────────────────────────────
+
+  async getSearchAnalytics(days = 30): Promise<any> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    const events = await this.prisma.analyticsEvent.findMany({
+      where: { event: 'SEARCH', createdAt: { gte: since } },
+      select: { meta: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: 1000,
+    });
+
+    const termCounts: Record<string, number> = {};
+    const zeroResultTerms: Set<string> = new Set();
+    for (const e of events) {
+      const m = e.meta as any;
+      if (!m?.term) continue;
+      termCounts[m.term] = (termCounts[m.term] ?? 0) + 1;
+      if (m.zeroResults) zeroResultTerms.add(m.term);
+    }
+
+    const topTerms = Object.entries(termCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([term, count]) => ({ term, count }));
+
+    return {
+      totalSearches: events.length,
+      topTerms,
+      zeroResultQueries: Array.from(zeroResultTerms).slice(0, 20),
+      period: `${days}d`,
+    };
+  }
+
+  // ── Global search ────────────────────────────────────────────────────────────
+
   async search(q: string, type?: string) {
     const term = q?.trim() ?? '';
     if (term.length < 2) return { companies: [], listings: [], categories: [] };
@@ -30,7 +171,7 @@ export class SearchService {
     const cached = await this.cache.get(cacheKey);
     if (cached) return cached;
 
-    const [companies, listings, categories] = await Promise.all([
+    const [rawCompanies, rawListings, categories] = await Promise.all([
       !type || type === 'suppliers'
         ? this.prisma.company.findMany({
             where: {
@@ -47,11 +188,10 @@ export class SearchService {
             select: {
               id: true, nameEn: true, nameAr: true, logoUrl: true,
               city: true, plan: true, slug: true, verificationStatus: true,
-              supplierScore: true,
-              _count: { select: { listings: true } },
+              supplierScore: true, avgRating: true,
+              _count: { select: { listings: true, quotesSubmitted: true, dealsAsSupplier: true } },
             },
-            orderBy: [{ supplierScore: 'desc' }, { plan: 'desc' }],
-            take: 8,
+            take: 20,
           })
         : [],
 
@@ -71,11 +211,19 @@ export class SearchService {
             select: {
               id: true, titleEn: true, titleAr: true, price: true,
               currency: true, unit: true, slug: true, stockAvailability: true,
-              supplier: { select: { id: true, nameEn: true, nameAr: true, slug: true, verificationStatus: true } },
+              viewCount: true, createdAt: true,
+              supplier: {
+                select: {
+                  id: true, nameEn: true, nameAr: true, slug: true,
+                  verificationStatus: true, plan: true,
+                  supplierScore: true, avgRating: true,
+                },
+              },
               category: { select: { nameEn: true, nameAr: true, slug: true } },
               images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+              _count: { select: { quotes: true } },
             },
-            take: 10,
+            take: 30,
           })
         : [],
 
@@ -97,17 +245,40 @@ export class SearchService {
         : [],
     ]);
 
+    // Apply trust-boosted ranking
+    const companies = rawCompanies
+      .map((c) => ({
+        ...c,
+        trustTier: getTrustTier(c),
+        rankScore: this.computeSupplierRankScore(c),
+      }))
+      .sort((a, b) => b.rankScore - a.rankScore)
+      .slice(0, 8);
+
+    const listings = rawListings
+      .map((l) => ({
+        ...l,
+        trustTier: getTrustTier((l.supplier as any) ?? {}),
+        rankScore: this.computeListingRankScore(l),
+      }))
+      .sort((a, b) => b.rankScore - a.rankScore)
+      .slice(0, 10);
+
+    const totalResults = companies.length + listings.length + categories.length;
+    this.trackSearch(term, type ?? 'all', totalResults);
+
     const result = { companies, listings, categories };
-    await this.cache.set(cacheKey, result, 30_000); // cache 30s
+    await this.cache.set(cacheKey, result, 30_000);
     return result;
   }
 
+  // ── Advanced supplier search ─────────────────────────────────────────────────
+
   async searchSuppliers(filters: SearchFilters) {
-    const { q, category, city, verified, pro, minRating, page = 1, limit = 20 } = filters;
+    const { q, category, city, verified, pro, minRating, trustTier, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
     const where: any = { type: 'SUPPLIER', isActive: true };
-
     if (verified !== false) where.verificationStatus = 'VERIFIED';
     if (pro === true) where.plan = 'PRO';
     if (city) where.city = { contains: city, mode: 'insensitive' };
@@ -127,9 +298,8 @@ export class SearchService {
         where,
         include: {
           ratingsReceived: { select: { score: true } },
-          _count: { select: { listings: true, dealsAsSupplier: true } },
+          _count: { select: { listings: true, dealsAsSupplier: true, quotesSubmitted: true } },
         },
-        orderBy: [{ supplierScore: 'desc' }, { plan: 'desc' }],
         skip,
         take: limit,
       }),
@@ -144,15 +314,23 @@ export class SearchService {
           totalRatings > 0
             ? Math.round((ratingsReceived.reduce((s, r) => s + r.score, 0) / totalRatings) * 10) / 10
             : 0;
-        return { ...rest, averageRating, totalRatings };
+        const tier = getTrustTier(c);
+        const rankScore = this.computeSupplierRankScore({ ...rest, averageRating });
+        return { ...rest, averageRating, totalRatings, trustTier: tier, rankScore };
       })
-      .filter((c) => !minRating || c.averageRating >= minRating);
+      .filter((c) => !minRating || c.averageRating >= minRating)
+      .filter((c) => !trustTier || c.trustTier === trustTier);
+
+    enriched.sort((a, b) => b.rankScore - a.rankScore);
+    if (q) this.trackSearch(q, 'suppliers', enriched.length);
 
     return { items: enriched, total, page, limit, pages: Math.ceil(total / limit) };
   }
 
+  // ── Advanced listing search ──────────────────────────────────────────────────
+
   async searchListings(filters: SearchFilters) {
-    const { q, category, city, page = 1, limit = 20 } = filters;
+    const { q, category, city, minPrice, maxPrice, trustTier, page = 1, limit = 20 } = filters;
     const skip = (page - 1) * limit;
 
     const where: any = {
@@ -170,27 +348,44 @@ export class SearchService {
     }
     if (category) where.category = { slug: category };
     if (city) where.supplier = { ...where.supplier, city: { contains: city, mode: 'insensitive' } };
+    if (minPrice !== undefined) where.price = { ...(where.price ?? {}), gte: minPrice };
+    if (maxPrice !== undefined) where.price = { ...(where.price ?? {}), lte: maxPrice };
 
     const [items, total] = await Promise.all([
       this.prisma.listing.findMany({
         where,
         include: {
           supplier: {
-            select: { id: true, nameEn: true, nameAr: true, slug: true, verificationStatus: true, plan: true, city: true },
+            select: {
+              id: true, nameEn: true, nameAr: true, slug: true,
+              verificationStatus: true, plan: true, city: true,
+              supplierScore: true, avgRating: true,
+            },
           },
           category: { select: { id: true, nameEn: true, nameAr: true, slug: true } },
           images: { where: { isPrimary: true }, take: 1 },
           _count: { select: { quotes: true } },
         },
-        orderBy: [{ viewCount: 'desc' }, { createdAt: 'desc' }],
         skip,
         take: limit,
       }),
       this.prisma.listing.count({ where }),
     ]);
 
-    return { items, total, page, limit, pages: Math.ceil(total / limit) };
+    const ranked = items
+      .map((l) => {
+        const tier = getTrustTier(l.supplier as any);
+        return { ...l, trustTier: tier, rankScore: this.computeListingRankScore(l) };
+      })
+      .filter((l) => !trustTier || l.trustTier === trustTier)
+      .sort((a, b) => b.rankScore - a.rankScore);
+
+    if (q) this.trackSearch(q, 'listings', ranked.length);
+
+    return { items: ranked, total, page, limit, pages: Math.ceil(total / limit) };
   }
+
+  // ── Marketplace stats / homepage ─────────────────────────────────────────────
 
   async getMarketplaceStats() {
     const cacheKey = 'marketplace:stats';
@@ -205,7 +400,7 @@ export class SearchService {
     ]);
 
     const result = { totalRFQs, totalVendors, totalProducts, totalTransactions };
-    await this.cache.set(cacheKey, result, 300_000); // cache 5 min
+    await this.cache.set(cacheKey, result, 300_000);
     return result;
   }
 
@@ -218,9 +413,8 @@ export class SearchService {
       where: { type: 'SUPPLIER', verificationStatus: 'VERIFIED', isActive: true },
       include: {
         ratingsReceived: { select: { score: true } },
-        _count: { select: { listings: true, quotesSubmitted: true } },
+        _count: { select: { listings: true, quotesSubmitted: true, dealsAsSupplier: true } },
       },
-      orderBy: [{ supplierScore: 'desc' }, { plan: 'desc' }],
       take: limit * 3,
     });
 
@@ -232,15 +426,14 @@ export class SearchService {
           totalRatings > 0
             ? Math.round((ratingsReceived.reduce((s, r) => s + r.score, 0) / totalRatings) * 10) / 10
             : 0;
-        return { ...rest, averageRating, totalRatings };
+        const tier = getTrustTier(v);
+        const rankScore = this.computeSupplierRankScore({ ...rest, averageRating });
+        return { ...rest, averageRating, totalRatings, trustTier: tier, rankScore };
       })
-      .sort((a, b) => {
-        if (a.plan !== b.plan) return a.plan === 'PRO' ? -1 : 1;
-        return b.averageRating - a.averageRating || b.totalRatings - a.totalRatings;
-      })
+      .sort((a, b) => b.rankScore - a.rankScore)
       .slice(0, limit);
 
-    await this.cache.set(cacheKey, result, 120_000); // cache 2 min
+    await this.cache.set(cacheKey, result, 120_000);
     return result;
   }
 
@@ -253,15 +446,28 @@ export class SearchService {
       where: { status: 'ACTIVE', moderationStatus: 'ACTIVE', supplier: { verificationStatus: 'VERIFIED' } },
       include: {
         images: { where: { isPrimary: true }, take: 1 },
-        supplier: { select: { id: true, nameEn: true, nameAr: true, slug: true, verificationStatus: true, plan: true } },
+        supplier: {
+          select: {
+            id: true, nameEn: true, nameAr: true, slug: true,
+            verificationStatus: true, plan: true,
+            supplierScore: true, avgRating: true,
+          },
+        },
         category: { select: { id: true, nameEn: true, nameAr: true } },
         _count: { select: { quotes: true } },
       },
-      orderBy: [{ viewCount: 'desc' }, { createdAt: 'desc' }],
       take: limit * 4,
     });
 
-    const result = listings.sort((a, b) => b._count.quotes - a._count.quotes).slice(0, limit);
+    const result = listings
+      .map((l) => ({
+        ...l,
+        trustTier: getTrustTier(l.supplier as any),
+        rankScore: this.computeListingRankScore(l),
+      }))
+      .sort((a, b) => b.rankScore - a.rankScore)
+      .slice(0, limit);
+
     await this.cache.set(cacheKey, result, 120_000);
     return result;
   }
@@ -282,7 +488,7 @@ export class SearchService {
       take: limit,
     });
 
-    await this.cache.set(cacheKey, rfqs, 60_000); // cache 1 min
+    await this.cache.set(cacheKey, rfqs, 60_000);
     return rfqs;
   }
 
@@ -301,9 +507,8 @@ export class SearchService {
           orderBy: { createdAt: 'desc' },
         },
         ratingsReceived: { select: { score: true } },
-        _count: { select: { listings: true } },
+        _count: { select: { listings: true, quotesSubmitted: true, dealsAsSupplier: true } },
       },
-      orderBy: [{ supplierScore: 'desc' }, { plan: 'desc' }],
       take: limit * 4,
     });
 
@@ -315,12 +520,11 @@ export class SearchService {
           totalRatings > 0
             ? Math.round((ratingsReceived.reduce((s, r) => s + r.score, 0) / totalRatings) * 10) / 10
             : 0;
-        return { ...rest, averageRating, totalRatings };
+        const tier = getTrustTier(c);
+        const rankScore = this.computeSupplierRankScore({ ...rest, averageRating });
+        return { ...rest, averageRating, totalRatings, trustTier: tier, rankScore };
       })
-      .sort((a, b) => {
-        if (a.plan !== b.plan) return a.plan === 'PRO' ? -1 : 1;
-        return b.averageRating - a.averageRating;
-      })
+      .sort((a, b) => b.rankScore - a.rankScore)
       .slice(0, limit);
 
     await this.cache.set(cacheKey, result, 120_000);

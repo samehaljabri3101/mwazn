@@ -290,6 +290,8 @@ export interface Rating {
   ratedId: string;
   raterId: string;
   createdAt: string;
+  isDisputed?: boolean;
+  disputedAt?: string | null;
 }
 
 export interface Message {

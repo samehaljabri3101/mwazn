@@ -95,6 +95,7 @@ export default function SupplierDealDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showRating, setShowRating] = useState(false);
+  const [disputingRatingId, setDisputingRatingId] = useState<string | null>(null);
   const [boqExpanded, setBoqExpanded] = useState(false);
   const [trackingInput, setTrackingInput] = useState('');
   const [carrierInput, setCarrierInput] = useState('');
@@ -124,6 +125,15 @@ export default function SupplierDealDetailPage() {
     setShowTrackingForm(false);
     setTrackingInput('');
     setCarrierInput('');
+  };
+
+  const disputeRating = async (ratingId: string) => {
+    setDisputingRatingId(ratingId);
+    try {
+      await api.patch(`/ratings/${ratingId}/dispute`);
+      await fetchDeal();
+    } catch { /* silent */ }
+    setDisputingRatingId(null);
   };
 
   const startConversation = async () => {
@@ -395,15 +405,37 @@ export default function SupplierDealDetailPage() {
         {deal.ratings && deal.ratings.length > 0 && (
           <div className="card">
             <h2 className="font-semibold text-slate-800 mb-3">{ar ? 'التقييمات' : 'Ratings'}</h2>
-            <div className="space-y-3">
-              {deal.ratings.map((r) => (
-                <div key={r.id} className="flex items-start gap-3">
-                  <div className="flex items-center gap-1 text-amber-400 text-lg">
-                    {'★'.repeat(r.score)}{'☆'.repeat(5 - r.score)}
+            <div className="space-y-4">
+              {deal.ratings.map((r) => {
+                const isReceived = r.ratedId === company?.id;
+                return (
+                  <div key={r.id} className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-amber-400 text-lg mb-1">
+                        {'★'.repeat(r.score)}{'☆'.repeat(5 - r.score)}
+                        <span className="text-xs text-slate-400 font-normal">
+                          {isReceived ? (ar ? 'تقييم مُستَلَم' : 'Received') : (ar ? 'أرسلته' : 'Sent')}
+                        </span>
+                      </div>
+                      {r.comment && <p className="text-sm text-slate-600">{r.comment}</p>}
+                      {r.isDisputed && (
+                        <span className="mt-1 inline-flex items-center text-xs font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">
+                          {ar ? 'مُعترَض عليه' : 'Disputed'}
+                        </span>
+                      )}
+                    </div>
+                    {isReceived && !r.isDisputed && (
+                      <button
+                        disabled={disputingRatingId === r.id}
+                        onClick={() => disputeRating(r.id)}
+                        className="shrink-0 text-xs text-slate-500 border border-slate-200 rounded-lg px-2.5 py-1 hover:border-rose-300 hover:text-rose-600 transition-colors disabled:opacity-50"
+                      >
+                        {disputingRatingId === r.id ? '...' : (ar ? 'اعتراض' : 'Dispute')}
+                      </button>
+                    )}
                   </div>
-                  {r.comment && <p className="text-sm text-slate-600">{r.comment}</p>}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -36,5 +36,11 @@ export class RatingsController {
   @ApiOperation({ summary: 'Rate a deal counterpart — buyer rates supplier, supplier rates buyer' })
   create(@Body() dto: CreateRatingDto, @CurrentUser('id') userId: string) {
     return this.ratingsService.create(dto.dealId, dto.score, dto.comment, userId);
+  }
+
+  @Patch(':id/dispute')
+  @ApiOperation({ summary: 'Flag a received rating as disputed (supplier only)' })
+  flagDisputed(@Param('id') id: string, @CurrentUser('id') userId: string) {
+    return this.ratingsService.flagDisputed(id, userId);
   }
 }

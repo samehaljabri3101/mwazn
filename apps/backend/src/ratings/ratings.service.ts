@@ -89,6 +89,28 @@ export class RatingsService {
     return { ...paginate(items, total, _page, _limit), averageScore: avg };
   }
 
+  async flagDisputed(ratingId: string, userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new ForbiddenException('User not found');
+
+    const rating = await this.prisma.rating.findUnique({ where: { id: ratingId } });
+    if (!rating) throw new NotFoundException('Rating not found');
+
+    // Only the rated company (supplier who received the rating) can dispute it
+    if (rating.ratedId !== user.companyId) {
+      throw new ForbiddenException('Only the rated party can flag a rating as disputed');
+    }
+
+    if (rating.isDisputed) {
+      throw new BadRequestException('Rating is already flagged as disputed');
+    }
+
+    return this.prisma.rating.update({
+      where: { id: ratingId },
+      data: { isDisputed: true, disputedAt: new Date() },
+    });
+  }
+
   async findForBuyer(buyerId: string, query: PaginationDto) {
     const where = { ratedId: buyerId };
     const _page = Number(query.page) || 1;

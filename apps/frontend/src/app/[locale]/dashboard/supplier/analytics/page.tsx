@@ -206,6 +206,67 @@ export default function SupplierAnalyticsPage() {
               </div>
             </div>
 
+            {/* ── Trust Tier Explanation ────────────────────────────────── */}
+            <div>
+              <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">
+                {ar ? 'كيف تُحسّن مستواك؟' : 'How to Improve Your Trust Tier'}
+              </h2>
+              <div className="card bg-slate-50/50">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                  {[
+                    {
+                      tier: 'TOP_SUPPLIER',
+                      color: 'bg-amber-50 border-amber-200 text-amber-800',
+                      badge: 'bg-amber-100 text-amber-700',
+                      en: 'Top Supplier', ar: 'مورد متميز',
+                      reqEn: 'CR Verified + PRO plan + score ≥ 75',
+                      reqAr: 'موثق + خطة برو + نقاط ≥ 75',
+                    },
+                    {
+                      tier: 'TRUSTED',
+                      color: 'bg-blue-50 border-blue-200 text-blue-800',
+                      badge: 'bg-blue-100 text-blue-700',
+                      en: 'Trusted', ar: 'موثوق',
+                      reqEn: 'CR Verified + score ≥ 50',
+                      reqAr: 'موثق + نقاط ≥ 50',
+                    },
+                    {
+                      tier: 'VERIFIED',
+                      color: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+                      badge: 'bg-emerald-100 text-emerald-700',
+                      en: 'Verified', ar: 'موثق',
+                      reqEn: 'CR Verified (any score)',
+                      reqAr: 'سجل تجاري موثّق',
+                    },
+                    {
+                      tier: 'STANDARD',
+                      color: 'bg-slate-50 border-slate-200 text-slate-700',
+                      badge: 'bg-slate-100 text-slate-600',
+                      en: 'Standard', ar: 'قياسي',
+                      reqEn: 'Not yet verified',
+                      reqAr: 'غير موثق بعد',
+                    },
+                  ].map((t) => (
+                    <div
+                      key={t.tier}
+                      className={`rounded-xl border p-4 ${t.color} ${ov?.trustTier === t.tier ? 'ring-2 ring-offset-1 ring-brand-400' : ''}`}
+                    >
+                      <span className={`inline-block text-xs font-bold px-2 py-0.5 rounded-full mb-2 ${t.badge}`}>
+                        {ar ? t.ar : t.en}
+                        {ov?.trustTier === t.tier && ' ✓'}
+                      </span>
+                      <p className="text-xs leading-relaxed">{ar ? t.reqAr : t.reqEn}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-400 mt-4">
+                  {ar
+                    ? 'نقاط المنصة تُحتسب من: التحقق (30) + خطة PRO (20) + التقييمات (25) + إتمام الصفقات (15) + المنتجات النشطة (10)'
+                    : 'Score formula: Verified (30) + PRO plan (20) + ratings (25) + deal completion (15) + active listings (10)'}
+                </p>
+              </div>
+            </div>
+
             {/* ── Quotes Overview ───────────────────────────────────────── */}
             <div>
               <h2 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">

@@ -1,6 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { Public } from '../common/decorators/public.decorator';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { SearchService } from './search.service';
 
 @ApiTags('Search & Marketplace')
@@ -27,11 +28,12 @@ export class SearchController {
     @Query('verified') verified?: string,
     @Query('pro') pro?: string,
     @Query('minRating') minRating?: string,
+    @Query('trustTier') trustTier?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
     return this.searchService.searchSuppliers({
-      q, category, city,
+      q, category, city, trustTier,
       verified: verified !== 'false',
       pro: pro === 'true',
       minRating: minRating ? Number(minRating) : undefined,
@@ -47,14 +49,35 @@ export class SearchController {
     @Query('q') q?: string,
     @Query('category') category?: string,
     @Query('city') city?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('trustTier') trustTier?: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
     return this.searchService.searchListings({
-      q, category, city,
+      q, category, city, trustTier,
+      minPrice: minPrice ? Number(minPrice) : undefined,
+      maxPrice: maxPrice ? Number(maxPrice) : undefined,
       page: page ? Number(page) : 1,
       limit: Math.min(limit ? Number(limit) : 20, 50),
     });
+  }
+
+  @Get('search/suggestions')
+  @Public()
+  @ApiOperation({ summary: 'Typeahead suggestions for search bar' })
+  @ApiQuery({ name: 'q', required: true })
+  getSuggestions(@Query('q') q: string) {
+    return this.searchService.getSuggestions(q);
+  }
+
+  @Get('search/analytics')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Search term analytics (admin)' })
+  @ApiQuery({ name: 'days', required: false })
+  getSearchAnalytics(@Query('days') days?: string) {
+    return this.searchService.getSearchAnalytics(days ? Number(days) : 30);
   }
 
   @Get('marketplace/stats')
