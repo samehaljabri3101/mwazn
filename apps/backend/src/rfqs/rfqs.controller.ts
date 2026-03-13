@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { RFQPosterOnly } from '../common/decorators/auth.decorators';
 
 class InviteSupplierDto {
   @ApiProperty() @IsString() supplierId: string;
@@ -55,9 +56,8 @@ export class RFQsController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create RFQ (buyer only)' })
+  @RFQPosterOnly()
+  @ApiOperation({ summary: 'Create RFQ (BUYER_ADMIN, CUSTOMER, or FREELANCER)' })
   create(@Body() dto: CreateRFQDto, @CurrentUser('id') userId: string) {
     return this.rfqsService.create(dto, userId);
   }

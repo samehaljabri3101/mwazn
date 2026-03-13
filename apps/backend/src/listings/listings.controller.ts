@@ -12,6 +12,7 @@ import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { SellerOnly } from '../common/decorators/auth.decorators';
 
 @ApiTags('Listings')
 @Controller()
@@ -32,10 +33,9 @@ export class ListingsController {
   }
 
   @Post('listings/bulk-import')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
+  @SellerOnly()
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Bulk import products from Excel (verified supplier / freelancer only)' })
+  @ApiOperation({ summary: 'Bulk import products from Excel (SUPPLIER_ADMIN or FREELANCER, verified)' })
   @UseInterceptors(FileInterceptor('file', { storage: memoryStorage(), limits: { fileSize: 10_485_760 } }))
   bulkImport(
     @UploadedFile() file: Express.Multer.File,
@@ -80,9 +80,8 @@ export class ListingsController {
   // ─── Authenticated CRUD ─────────────────────────────────────────────────────
 
   @Post('listings')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('access-token')
-  @ApiOperation({ summary: 'Create listing (verified supplier only)' })
+  @SellerOnly()
+  @ApiOperation({ summary: 'Create listing (SUPPLIER_ADMIN or FREELANCER, verified)' })
   create(@Body() dto: CreateListingDto, @CurrentUser('id') userId: string) {
     return this.listingsService.create(dto, userId);
   }

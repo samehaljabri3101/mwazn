@@ -3,12 +3,15 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { QuotesService } from './quotes.service';
 import { CreateQuoteDto } from './dto/quote.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { PaginationDto } from '../common/dto/pagination.dto';
+import { SELLER_ROLES } from '../common/constants/platform.constants';
 
 @ApiTags('Quotes')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('quotes')
 export class QuotesController {
   constructor(private readonly quotesService: QuotesService) {}
@@ -20,13 +23,14 @@ export class QuotesController {
   }
 
   @Get('rfq/:rfqId')
-  @ApiOperation({ summary: 'Get all quotes for an RFQ' })
+  @ApiOperation({ summary: 'Get all quotes for an RFQ (buyer sees all; supplier sees own)' })
   findByRFQ(@Param('rfqId') rfqId: string, @CurrentUser('id') userId: string) {
     return this.quotesService.findByRFQ(rfqId, userId);
   }
 
   @Post()
-  @ApiOperation({ summary: 'Submit a quote (verified supplier, quota enforced)' })
+  @Roles(...SELLER_ROLES)
+  @ApiOperation({ summary: 'Submit a quote (SUPPLIER_ADMIN or FREELANCER, verified, quota enforced)' })
   create(@Body() dto: CreateQuoteDto, @CurrentUser('id') userId: string) {
     return this.quotesService.create(dto, userId);
   }
