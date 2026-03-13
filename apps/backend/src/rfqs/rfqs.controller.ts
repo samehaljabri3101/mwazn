@@ -50,9 +50,10 @@ export class RFQsController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get RFQ details with images' })
-  findOne(@Param('id') id: string) {
-    return this.rfqsService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Get RFQ details — REMOVED content hidden from public, visible to owner/admin' })
+  findOne(@Param('id') id: string, @CurrentUser() user?: any) {
+    return this.rfqsService.findOne(id, user?.id);
   }
 
   @Post()

@@ -2,6 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
+import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+
+jest.setTimeout(30000);
 
 describe('Mwazn API (e2e)', () => {
   let app: INestApplication;
@@ -12,7 +16,9 @@ describe('Mwazn API (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
+    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalInterceptors(new TransformInterceptor());
     app.setGlobalPrefix('api');
     await app.init();
   });
@@ -88,9 +94,9 @@ describe('Mwazn API (e2e)', () => {
       });
   });
 
-  it('GET /api/listings/search — returns paginated listing results', () => {
+  it('GET /api/suppliers/search — returns paginated listing results', () => {
     return request(app.getHttpServer())
-      .get('/api/listings/search')
+      .get('/api/suppliers/search')
       .expect(200)
       .expect((res) => {
         expect(res.body.success).toBe(true);

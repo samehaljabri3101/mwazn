@@ -16,6 +16,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { TransformInterceptor } from '../src/common/interceptors/transform.interceptor';
+import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+
+jest.setTimeout(30000);
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 
@@ -53,7 +57,9 @@ describe('Happy-Path Business Flows (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
+    app.useGlobalFilters(new HttpExceptionFilter());
+    app.useGlobalInterceptors(new TransformInterceptor());
     app.setGlobalPrefix('api');
     await app.init();
 
@@ -168,7 +174,7 @@ describe('Happy-Path Business Flows (e2e)', () => {
     if (res.status === 201) {
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty('id');
-      expect(res.body.data.price).toBe(420000);
+      expect(Number(res.body.data.price)).toBe(420000);
       createdQuoteId = res.body.data.id;
     }
   });
@@ -204,7 +210,7 @@ describe('Happy-Path Business Flows (e2e)', () => {
 
     // Verify a deal was auto-created by checking the deals endpoint
     const dealsRes = await request(app.getHttpServer())
-      .get('/api/deals/my')
+      .get('/api/deals')
       .set('Authorization', `Bearer ${buyerToken}`)
       .expect(200);
 

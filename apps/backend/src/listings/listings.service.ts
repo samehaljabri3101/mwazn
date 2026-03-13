@@ -108,7 +108,7 @@ export class ListingsService {
     return paginate(items, total, Number(query.page) || 1, limitNum);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, callerUserId?: string) {
     // Try by ID or slug
     const listing = await this.prisma.listing.findFirst({
       where: { OR: [{ id }, { slug: id }], status: { not: ListingStatus.ARCHIVED } },
@@ -128,6 +128,19 @@ export class ListingsService {
     });
     if (!listing) throw new NotFoundException('Listing not found');
 
+    // Guard: non-ACTIVE moderation → only owner or admin may see it
+    if (listing.moderationStatus !== ModerationStatus.ACTIVE) {
+      let allowed = false;
+      if (callerUserId) {
+        const caller = await this.prisma.user.findUnique({
+          where: { id: callerUserId },
+          select: { role: true, companyId: true },
+        });
+        allowed = caller?.role === Role.PLATFORM_ADMIN || caller?.companyId === listing.supplierId;
+      }
+      if (!allowed) throw new NotFoundException('Listing not found');
+    }
+
     // Increment view count
     await this.prisma.listing.update({ where: { id: listing.id }, data: { viewCount: { increment: 1 } } }).catch(() => {});
 
@@ -142,6 +155,7 @@ export class ListingsService {
       where: {
         categoryId: listing.categoryId,
         status: ListingStatus.ACTIVE,
+        moderationStatus: ModerationStatus.ACTIVE,
         id: { not: listingId },
       },
       take: limit,
@@ -234,13 +248,46 @@ export class ListingsService {
       throw new ForbiddenException("Cannot modify another supplier's listing");
     }
 
+    const updateData: any = {
+      ...dto,
+      tags: dto.tags ?? listing.tags,
+      certifications: dto.certifications ?? listing.certifications,
+    };
+
+    // Re-run moderation if text content is changing
+    if (dto.titleEn !== undefined || dto.titleAr !== undefined || dto.descriptionEn !== undefined) {
+      const modResult = this.moderation.moderate({
+        titleEn: dto.titleEn ?? listing.titleEn,
+        titleAr: dto.titleAr ?? (listing.titleAr ?? undefined),
+        description: dto.descriptionEn ?? (listing.descriptionEn ?? undefined),
+      });
+      if (modResult.decision === 'BLOCK') {
+        await this.audit.log({
+          action: 'LISTING_BLOCKED_BY_SYSTEM',
+          entity: 'Listing',
+          entityId: id,
+          userId,
+          after: { reasonCode: modResult.reasonCode, matchedTerms: modResult.matchedTerms, event: 'UPDATE' },
+        });
+        throw new BadRequestException('Content violates platform guidelines');
+      }
+      if (modResult.decision === 'FLAG') {
+        updateData.moderationStatus = ModerationStatus.FLAGGED;
+        updateData.moderationReason = modResult.reasonCode;
+        updateData.moderationSource = ModerationSource.SYSTEM;
+        await this.audit.log({
+          action: 'LISTING_FLAGGED_BY_SYSTEM',
+          entity: 'Listing',
+          entityId: id,
+          userId,
+          after: { reasonCode: modResult.reasonCode, event: 'UPDATE' },
+        });
+      }
+    }
+
     return this.prisma.listing.update({
       where: { id },
-      data: {
-        ...dto,
-        tags: dto.tags ?? listing.tags,
-        certifications: dto.certifications ?? listing.certifications,
-      },
+      data: updateData,
       include: { category: true, images: true },
     });
   }
@@ -515,11 +562,26 @@ export class ListingsService {
         const minOrderQty = parseInt(get('minimum_order_qty')) || undefined;
         const leadTimeDays = parseInt(get('lead_time_days')) || undefined;
         const sku = get('model_number') || undefined;
+        const titleAr = get('product_name_ar') || productNameEn;
+
+        // Content moderation per row
+        const modResult = this.moderation.moderate({ titleEn: productNameEn, titleAr, description: descriptionEn });
+        if (modResult.decision === 'BLOCK') {
+          errors.push({ row: rowNum, field: 'content', message: `Content violates platform guidelines (${modResult.reasonCode})` });
+          await this.audit.log({
+            action: 'LISTING_BLOCKED_BY_SYSTEM',
+            entity: 'Listing',
+            userId,
+            after: { reasonCode: modResult.reasonCode, row: rowNum, event: 'BULK_IMPORT' },
+          });
+          continue;
+        }
+        const bulkModerationStatus = modResult.decision === 'FLAG' ? ModerationStatus.FLAGGED : ModerationStatus.ACTIVE;
 
         const listing = await this.prisma.listing.create({
           data: {
             titleEn: productNameEn,
-            titleAr: get('product_name_ar') || productNameEn,
+            titleAr,
             descriptionEn,
             descriptionAr: get('description_ar') || undefined,
             price: price ?? undefined,
@@ -533,6 +595,9 @@ export class ListingsService {
             status: listingStatus,
             supplierId: user.companyId,
             categoryId,
+            moderationStatus: bulkModerationStatus,
+            moderationSource: bulkModerationStatus === ModerationStatus.FLAGGED ? ModerationSource.SYSTEM : undefined,
+            moderationReason: bulkModerationStatus === ModerationStatus.FLAGGED ? modResult.reasonCode : undefined,
           },
         });
 

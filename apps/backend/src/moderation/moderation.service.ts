@@ -62,7 +62,7 @@ export class ModerationService {
         return {
           decision: 'BLOCK',
           reasonCode: code,
-          matchedTerms: match.slice(0, 3).map((m) => m.trim()),
+          matchedTerms: match.slice(0, 3).filter((m): m is string => typeof m === 'string').map((m) => m.trim()),
         };
       }
     }
@@ -74,7 +74,7 @@ export class ModerationService {
       const match = combined.match(pattern);
       if (match) {
         if (!flagCode) flagCode = code;
-        flaggedTerms.push(...match.slice(0, 2).map((m) => m.trim()));
+        flaggedTerms.push(...match.slice(0, 2).filter((m): m is string => typeof m === 'string').map((m) => m.trim()));
       }
     }
     if (flaggedTerms.length > 0) {

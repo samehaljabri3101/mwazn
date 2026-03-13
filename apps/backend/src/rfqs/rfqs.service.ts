@@ -62,7 +62,7 @@ export class RFQsService {
     return paginate(items, total, _page, _limit);
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, callerUserId?: string) {
     const rfq = await this.prisma.rFQ.findUnique({
       where: { id },
       include: {
@@ -80,6 +80,20 @@ export class RFQsService {
       },
     });
     if (!rfq) throw new NotFoundException('RFQ not found');
+
+    // Guard: non-ACTIVE moderation → only owner or admin may see it
+    if (rfq.moderationStatus !== ModerationStatus.ACTIVE) {
+      let allowed = false;
+      if (callerUserId) {
+        const caller = await this.prisma.user.findUnique({
+          where: { id: callerUserId },
+          select: { role: true, companyId: true },
+        });
+        allowed = caller?.role === Role.PLATFORM_ADMIN || caller?.companyId === rfq.buyerId;
+      }
+      if (!allowed) throw new NotFoundException('RFQ not found');
+    }
+
     return rfq;
   }
 
@@ -161,10 +175,40 @@ export class RFQsService {
       throw new ForbiddenException('Cannot modify another buyer\'s RFQ');
     }
 
-    return this.prisma.rFQ.update({
-      where: { id },
-      data: { ...dto, deadline: dto.deadline ? new Date(dto.deadline) : undefined },
-    });
+    const updateData: any = { ...dto };
+    if (dto.deadline) updateData.deadline = new Date(dto.deadline);
+
+    // Re-run moderation if text content is changing
+    if (dto.title !== undefined || dto.description !== undefined) {
+      const modResult = this.moderation.moderate({
+        title: dto.title ?? rfq.title,
+        description: dto.description ?? rfq.description,
+      });
+      if (modResult.decision === 'BLOCK') {
+        await this.audit.log({
+          action: 'RFQ_BLOCKED_BY_SYSTEM',
+          entity: 'RFQ',
+          entityId: id,
+          userId,
+          after: { reasonCode: modResult.reasonCode, matchedTerms: modResult.matchedTerms, event: 'UPDATE' },
+        });
+        throw new BadRequestException('Content violates platform guidelines');
+      }
+      if (modResult.decision === 'FLAG') {
+        updateData.moderationStatus = ModerationStatus.FLAGGED;
+        updateData.moderationReason = modResult.reasonCode;
+        updateData.moderationSource = ModerationSource.SYSTEM;
+        await this.audit.log({
+          action: 'RFQ_FLAGGED_BY_SYSTEM',
+          entity: 'RFQ',
+          entityId: id,
+          userId,
+          after: { reasonCode: modResult.reasonCode, event: 'UPDATE' },
+        });
+      }
+    }
+
+    return this.prisma.rFQ.update({ where: { id }, data: updateData });
   }
 
   async cancel(id: string, userId: string) {

@@ -59,6 +59,7 @@ export class SearchService {
         ? this.prisma.listing.findMany({
             where: {
               status: 'ACTIVE',
+              moderationStatus: 'ACTIVE',
               supplier: { verificationStatus: 'VERIFIED' },
               OR: [
                 { titleEn: { contains: term, mode: 'insensitive' } },
@@ -111,7 +112,7 @@ export class SearchService {
     if (pro === true) where.plan = 'PRO';
     if (city) where.city = { contains: city, mode: 'insensitive' };
     if (category) {
-      where.listings = { some: { category: { slug: category }, status: 'ACTIVE' } };
+      where.listings = { some: { category: { slug: category }, status: 'ACTIVE', moderationStatus: 'ACTIVE' } };
     }
     if (q && q.trim().length >= 2) {
       where.OR = [
@@ -156,6 +157,7 @@ export class SearchService {
 
     const where: any = {
       status: 'ACTIVE',
+      moderationStatus: 'ACTIVE',
       supplier: { verificationStatus: 'VERIFIED', isActive: true },
     };
 
@@ -248,7 +250,7 @@ export class SearchService {
     if (cached) return cached;
 
     const listings = await this.prisma.listing.findMany({
-      where: { status: 'ACTIVE', supplier: { verificationStatus: 'VERIFIED' } },
+      where: { status: 'ACTIVE', moderationStatus: 'ACTIVE', supplier: { verificationStatus: 'VERIFIED' } },
       include: {
         images: { where: { isPrimary: true }, take: 1 },
         supplier: { select: { id: true, nameEn: true, nameAr: true, slug: true, verificationStatus: true, plan: true } },
@@ -270,7 +272,7 @@ export class SearchService {
     if (cached) return cached;
 
     const rfqs = await this.prisma.rFQ.findMany({
-      where: { status: 'OPEN', visibility: 'PUBLIC' },
+      where: { status: 'OPEN', visibility: 'PUBLIC', moderationStatus: 'ACTIVE' },
       include: {
         category: { select: { nameEn: true, nameAr: true, slug: true } },
         buyer: { select: { nameEn: true, nameAr: true, city: true } },
@@ -293,7 +295,7 @@ export class SearchService {
       where: { type: 'SUPPLIER', verificationStatus: 'VERIFIED', isActive: true },
       include: {
         listings: {
-          where: { status: 'ACTIVE' },
+          where: { status: 'ACTIVE', moderationStatus: 'ACTIVE' },
           include: { images: { where: { isPrimary: true }, take: 1 } },
           take: 4,
           orderBy: { createdAt: 'desc' },

@@ -3,6 +3,7 @@ import {
   Body, Param, Query, UseGuards, Res, BadRequestException,
   UseInterceptors, UploadedFiles, UploadedFile, ParseIntPipe, DefaultValuePipe,
 } from '@nestjs/common';
+import { OptionalJwtAuthGuard } from '../common/guards/optional-jwt-auth.guard';
 import { FilesInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Response } from 'express';
@@ -11,6 +12,7 @@ import { ListingsService } from './listings.service';
 import { CreateListingDto, UpdateListingDto } from './dto/listing.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+
 import { PaginationDto } from '../common/dto/pagination.dto';
 import { SellerOnly } from '../common/decorators/auth.decorators';
 
@@ -72,9 +74,10 @@ export class ListingsController {
   }
 
   @Get('listings/:id')
-  @ApiOperation({ summary: 'Get listing details (by ID or slug)' })
-  findOne(@Param('id') id: string) {
-    return this.listingsService.findOne(id);
+  @UseGuards(OptionalJwtAuthGuard)
+  @ApiOperation({ summary: 'Get listing details — REMOVED content hidden from public, visible to owner/admin' })
+  findOne(@Param('id') id: string, @CurrentUser() user?: any) {
+    return this.listingsService.findOne(id, user?.id);
   }
 
   // ─── Authenticated CRUD ─────────────────────────────────────────────────────
